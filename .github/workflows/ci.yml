@@ -28,7 +28,7 @@ jobs:
 
       - name: Cross-tenant leakage test
         run: |
-                uv run pytest -k leakage -q
-                code=$?
-                if [ $code -eq 5 ]; then echo "no leakage tests yet — skipping"; exit 0; fi
-                exit $code
+          code=0
+          uv run pytest -k leakage -q || code=$?
+          if [ "$code" -eq 5 ]; then echo "no leakage tests yet — skipping"; exit 0; fi
+          exit "$code"
