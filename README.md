@@ -1,6 +1,6 @@
 # Vigil — repo scaffold (Phase 0)
 
-Spec-driven clinical-trial retention platform. This scaffold contains the Phase 0 foundation:
+Clinical-trial retention platform. This scaffold contains the Phase 0 foundation:
 the project memory, the spec contracts, and the Claude Code tooling.
 
 ## Tooling

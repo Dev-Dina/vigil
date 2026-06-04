@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+      - name: Spec conformance
+        run: uv run python scripts/check_specs.py
+
+      - name: Cross-tenant leakage test
+        # Exit 5 = "no tests collected"; tolerate until the leakage test lands,
+        # but fail on any real test failure.
+        run: |
+          uv run pytest -k leakage -q
+          code=$?
+          if [ $code -ne 0 ] && [ $code -ne 5 ]; then exit $code; fi

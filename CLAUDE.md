@@ -1,7 +1,9 @@
-## Response style (terse mode)
-No preamble, no postamble. No "I'll now…" / "Let me…". Don't restate the plan or summarize
-what you did unless asked. Act, then report results only — one-line status max. Prefer diffs
-and specific edits over full-file reprints. Point to paths instead of pasting files.
+## Response style (terse mode) — STRICT
+After any action, output ONLY: a one-line status, and a bullet list of changed files. 
+Nothing else. FORBIDDEN: "What I did", "walked", "The key insight", "This ties into", 
+recaps, restating the spec, explaining reasoning unless asked. Do not describe a change 
+you already made. If you want to add detail, stop — the user will ask. Max ~3 lines unless 
+the user asks "why" or "explain".
 
 # Vigil — Project Memory (CLAUDE.md)
 
