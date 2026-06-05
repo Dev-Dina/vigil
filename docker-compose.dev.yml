@@ -1,0 +1,40 @@
+# Local-dev datastores for the backend spine (infra.md app side).
+# Secrets come from Vault dev (or the env shim); never from this file.
+# The Guide surface is intentionally NOT here — it shares no datastore with the app side.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: vigil
+      POSTGRES_PASSWORD: vigil
+      POSTGRES_DB: vigil
+    ports:
+      - "55432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vigil"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Vault dev mode: in-memory, root token "vigil-dev-root". The app reads secrets via the
+  # KV v2 engine (see vigil/core/secrets.py). For local dev you may instead use the env
+  # shim (VIGIL_SECRETS_BACKEND=env). Seed the secrets with scripts/vault_dev_seed.sh.
+  vault:
+    image: hashicorp/vault:1.17
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: vigil-dev-root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    ports:
+      - "8200:8200"

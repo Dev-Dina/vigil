@@ -7,6 +7,41 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: vigil
+          POSTGRES_PASSWORD: vigil
+          POSTGRES_DB: vigil
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U vigil"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Secrets via the local-dev env shim (Vault is the prod source; not run in CI).
+      VIGIL_SECRETS_BACKEND: env
+      VIGIL_JWT_SIGNING_KEY: ci-signing-key-not-a-secret-32bytes!
+      VIGIL_LLM_API_KEY: ci-llm-key
+      # Admin (superuser) DSN runs migrations; the app connects as the least-privilege
+      # vigil_app role created by the test harness so RLS actually binds.
+      VIGIL_DB_ADMIN_DSN: postgresql+psycopg://vigil:vigil@localhost:55432/vigil
+      VIGIL_REDIS_URL: redis://localhost:6379/15
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,9 +61,8 @@ jobs:
       - name: Spec conformance
         run: uv run python scripts/check_specs.py
 
-      - name: Cross-tenant leakage test
-        run: |
-          code=0
-          uv run pytest -k leakage -q || code=$?
-          if [ "$code" -eq 5 ]; then echo "no leakage tests yet — skipping"; exit 0; fi
-          exit "$code"
+      - name: Cross-tenant leakage test (the sacred test)
+        run: uv run pytest tests/spine/test_leakage.py -q
+
+      - name: Spine suite (auth, RLS, worker, API)
+        run: uv run pytest tests/spine -q

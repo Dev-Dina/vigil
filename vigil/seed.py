@@ -1,0 +1,181 @@
+"""Seed for demonstrable isolation (domain.md seed entities; CLAUDE.md sacred-test fixture).
+
+Creates:
+- Sponsor A and Sponsor B (tenant roots), each with one trial, one site.
+- One coordinator per sponsor, scoped to that sponsor's site/trial.
+- One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant).
+- One platform admin and one auditor.
+- One participant per sponsor (so a leak is visible: A's coordinator / the CRO user see
+  only A; nobody crosses the sponsor wall).
+
+All writes go through repositories on a platform-privileged session (bootstrap only). Run:
+    uv run python -m vigil.seed
+Returns the created ids (printed as JSON) so tests can pin the fixture.
+
+NOTE: passwords here are demo fixtures, sourced from env (SEED_PASSWORD) with a documented
+local default — never a production secret, never logged.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import uuid
+
+from vigil.core.logging import configure_logging, get_logger
+from vigil.core.security import hash_password
+from vigil.db.models import AssignmentGrant, Participant, Site, Trial, User
+from vigil.domain import Role
+from vigil.repositories import tenancy as tenancy_repo
+from vigil.repositories.session import platform_session, sponsor_bootstrap_session
+
+log = get_logger("vigil.seed")
+
+# Demo password for every seeded user. Local-dev default; override via env.
+SEED_PASSWORD = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
+
+
+def _add_user(session, *, email, role, **kw) -> User:  # type: ignore[no-untyped-def]
+    user = User(
+        email=email,
+        password_hash=hash_password(SEED_PASSWORD),
+        role=str(role),
+        **kw,
+    )
+    session.add(user)
+    session.flush()
+    return user
+
+
+def _seed_sponsor_tenant_rows(
+    sponsor_id: uuid.UUID, prefix: str
+) -> dict[str, uuid.UUID]:
+    """Insert one trial/site/participant under a sponsor-bound session (RLS binds to that
+    sponsor). UUIDs are minted here and returned so the platform pass can FK to them."""
+    trial_id = uuid.uuid4()
+    site_id = uuid.uuid4()
+    participant_id = uuid.uuid4()
+    risk = (0.82, "high") if prefix == "A" else (0.40, "medium")
+    with sponsor_bootstrap_session(str(sponsor_id)) as session:
+        session.add(Trial(id=trial_id, sponsor_id=sponsor_id, name=f"Trial {prefix}1"))
+        session.flush()
+        session.add(
+            Site(
+                id=site_id,
+                sponsor_id=sponsor_id,
+                trial_id=trial_id,
+                name=f"Site {prefix}1",
+            )
+        )
+        session.flush()
+        session.add(
+            Participant(
+                id=participant_id,
+                sponsor_id=sponsor_id,
+                trial_id=trial_id,
+                site_id=site_id,
+                coded_ref=f"{prefix}-0001",
+                risk_score=risk[0],
+                risk_band=risk[1],
+            )
+        )
+        session.flush()
+    return {"trial": trial_id, "site": site_id, "participant": participant_id}
+
+
+def seed() -> dict[str, str]:
+    configure_logging("INFO")
+    ids: dict[str, str] = {}
+
+    # 1) Tenant roots + global CRO registry (platform-privileged bootstrap).
+    with platform_session() as session:
+        cro = tenancy_repo.create_cro(session, name="Acme CRO")
+        sponsor_a = tenancy_repo.create_sponsor(session, name="Sponsor A")
+        sponsor_b = tenancy_repo.create_sponsor(session, name="Sponsor B")
+        cro_id, sponsor_a_id, sponsor_b_id = cro.id, sponsor_a.id, sponsor_b.id
+    ids.update(
+        cro_id=str(cro_id), sponsor_a=str(sponsor_a_id), sponsor_b=str(sponsor_b_id)
+    )
+
+    # 2) Each sponsor's operational rows, inserted bound to that sponsor (RLS enforced).
+    tenant_a = _seed_sponsor_tenant_rows(sponsor_a_id, "A")
+    tenant_b = _seed_sponsor_tenant_rows(sponsor_b_id, "B")
+    ids.update(
+        trial_a=str(tenant_a["trial"]),
+        site_a=str(tenant_a["site"]),
+        participant_a=str(tenant_a["participant"]),
+        trial_b=str(tenant_b["trial"]),
+        site_b=str(tenant_b["site"]),
+        participant_b=str(tenant_b["participant"]),
+    )
+
+    # 3) Users + the single CRO grant (cross-tenant by design → platform bootstrap session).
+    with platform_session() as session:
+        admin = _add_user(
+            session, email="admin@vigil.example", role=Role.PLATFORM_ADMIN
+        )
+        auditor = _add_user(session, email="auditor@vigil.example", role=Role.AUDITOR)
+        ids.update(platform_admin=str(admin.id), auditor=str(auditor.id))
+
+        oversight_a = _add_user(
+            session,
+            email="oversight.a@vigil.example",
+            role=Role.SPONSOR_OVERSIGHT,
+            home_sponsor_id=sponsor_a_id,
+        )
+        oversight_b = _add_user(
+            session,
+            email="oversight.b@vigil.example",
+            role=Role.SPONSOR_OVERSIGHT,
+            home_sponsor_id=sponsor_b_id,
+        )
+        ids.update(oversight_a=str(oversight_a.id), oversight_b=str(oversight_b.id))
+
+        coord_a = _add_user(
+            session,
+            email="coord.a@vigil.example",
+            role=Role.COORDINATOR,
+            home_sponsor_id=sponsor_a_id,
+            home_trial_id=tenant_a["trial"],
+            home_site_id=tenant_a["site"],
+        )
+        coord_b = _add_user(
+            session,
+            email="coord.b@vigil.example",
+            role=Role.COORDINATOR,
+            home_sponsor_id=sponsor_b_id,
+            home_trial_id=tenant_b["trial"],
+            home_site_id=tenant_b["site"],
+        )
+        ids.update(coordinator_a=str(coord_a.id), coordinator_b=str(coord_b.id))
+
+        # One CRO study manager staffed on Sponsor A ONLY (single grant → cannot see B).
+        cro_mgr = _add_user(
+            session,
+            email="cro.manager@vigil.example",
+            role=Role.STUDY_MANAGER,
+            home_cro_id=cro_id,
+        )
+        ids["cro_manager"] = str(cro_mgr.id)
+        session.add(
+            AssignmentGrant(
+                user_id=cro_mgr.id,
+                sponsor_id=sponsor_a_id,  # A only — no grant for B
+                trial_id=None,
+                site_id=None,
+                granted_by=admin.id,
+            )
+        )
+        session.flush()
+
+    log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
+    return ids
+
+
+def main() -> None:
+    ids = seed()
+    print(json.dumps(ids, indent=2))
+
+
+if __name__ == "__main__":
+    main()
