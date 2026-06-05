@@ -23,7 +23,7 @@ SAMPLE_DIR = Path(__file__).resolve().parent / "aact_sample"
 SAMPLE_SEED = 7
 N_TRIALS = 60
 
-_PHASES = ["Phase 1", "Phase 2", "Phase 3", "Phase 4"]
+_PHASES = ["PHASE1", "PHASE2", "PHASE3", "PHASE4"]
 _AREAS = [
     ("Breast Neoplasms", "ONCOLOGY"),
     ("Heart Failure", "CARDIOVASCULAR"),
@@ -35,7 +35,7 @@ _AREAS = [
     ("Rheumatoid Arthritis", "IMMUNOLOGY_RHEUMATOLOGY"),
 ]
 _SPONSOR_CLASSES = ["INDUSTRY", "NIH", "FED", "OTHER"]
-_MASKINGS = ["None (Open Label)", "Double", "Single", "Quadruple"]
+_MASKINGS = ["NONE", "DOUBLE", "SINGLE", "QUADRUPLE"]
 _REASONS = [
     "Adverse Event",
     "Lack of Efficacy",
@@ -46,7 +46,16 @@ _REASONS = [
     "Death",
     "Pregnancy",
     "Non-compliance",
+    "Study terminated by sponsor",  # -> STUDY_TERMINATED
+    "Did not complete mid-study survey",  # -> ADMINISTRATIVE
     "Unknown other reason",  # falls to OTHER on purpose
+]
+
+# Censoring / still-ongoing terms exercised as a separate, dropped-from-reason-mix path: they
+# must be recorded as excluded-censoring, never as a category nor OTHER (specs/data.md).
+_CENSORING_REASONS = [
+    "Participants entered open label period",
+    "Ongoing",
 ]
 
 
@@ -94,7 +103,7 @@ def build(out_dir: Path | None = None) -> Path:
         tables["studies"].append(
             {
                 "nct_id": nct_id,
-                "study_type": "Interventional",
+                "study_type": "INTERVENTIONAL",
                 "overall_status": "Completed",
                 "phase": phase,
                 "enrollment": enrollment,
@@ -120,7 +129,7 @@ def build(out_dir: Path | None = None) -> Path:
         tables["eligibilities"].append(
             {
                 "nct_id": nct_id,
-                "gender": ["All", "Female", "Male"][int(rng.integers(0, 3))],
+                "gender": ["ALL", "FEMALE", "MALE"][int(rng.integers(0, 3))],
                 "minimum_age": "18 Years",
                 "maximum_age": "85 Years",
                 "healthy_volunteers": "No"
@@ -132,11 +141,9 @@ def build(out_dir: Path | None = None) -> Path:
         tables["designs"].append(
             {
                 "nct_id": nct_id,
-                "allocation": "Randomized" if n_arms > 1 else "N/A",
-                "intervention_model": "Parallel Assignment"
-                if n_arms > 1
-                else "Single Group Assignment",
-                "primary_purpose": "Treatment",
+                "allocation": "RANDOMIZED" if n_arms > 1 else "NA",
+                "intervention_model": "PARALLEL" if n_arms > 1 else "SINGLE_GROUP",
+                "primary_purpose": "TREATMENT",
                 "masking": masking,
             }
         )
@@ -165,7 +172,7 @@ def build(out_dir: Path | None = None) -> Path:
         # Arms with participant flow. Dropout calibrated to realistic levels that vary
         # with phase / blinding / multi-site so synthetic calibration has real signal.
         base = 0.18 + 0.03 * _PHASES.index(phase)
-        if masking == "None (Open Label)":
+        if masking == "NONE":
             base += 0.04
         if n_sites > 10:
             base += 0.03
@@ -241,6 +248,22 @@ def build(out_dir: Path | None = None) -> Path:
                         }
                     )
                     remaining -= cnt
+            # Add censoring rows on a deterministic subset of arms. These are NOT dropout
+            # reasons: the clean stage must exclude them from ref_withdrawal_reason and record
+            # them as excluded-censoring. Their count is independent of not_completed so they
+            # never affect the cross-record check or arm-level counts.
+            if a == 0:
+                censor_reason = _CENSORING_REASONS[i % len(_CENSORING_REASONS)]
+                tables["drop_withdrawals"].append(
+                    {
+                        "nct_id": nct_id,
+                        "result_group_id": i * 10 + a,
+                        "ctgov_group_code": code,
+                        "period": "Overall Study",
+                        "reason": censor_reason,
+                        "count": int(rng.integers(1, 6)),
+                    }
+                )
 
     row_counts = {}
     for table, rows in tables.items():

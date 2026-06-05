@@ -10,7 +10,7 @@ from ingestion.clean import clean_snapshot
 from ingestion.errors import DataValidationError
 from ingestion.extract import read_ndjson
 from ingestion.report import QualityReport
-from ingestion.vocab import normalize_reason
+from ingestion.vocab import CENSORED, normalize_reason
 
 
 def test_clean_emits_three_ref_tables(clean_frames) -> None:
@@ -55,6 +55,74 @@ def test_known_reason_maps_with_no_loss() -> None:
     canonical, original = normalize_reason("Adverse Event leading to discontinuation")
     assert canonical == "ADVERSE_EVENT"
     assert original is None
+
+
+def test_study_terminated_maps() -> None:
+    for text in (
+        "Study terminated by sponsor",
+        "DSMB design modification",
+        "Sponsor decision",
+        "Study halted",
+    ):
+        canonical, original = normalize_reason(text)
+        assert canonical == "STUDY_TERMINATED", text
+        assert original is None
+
+
+def test_administrative_maps() -> None:
+    for text in (
+        "Did not complete mid-study survey",
+        "Did not complete any study assessment",
+        "Withdrawal information not recorded",
+        "Administrative",
+    ):
+        canonical, original = normalize_reason(text)
+        assert canonical == "ADMINISTRATIVE", text
+        assert original is None
+
+
+def test_censoring_is_excluded_not_a_reason() -> None:
+    """Censoring/ongoing returns the CENSORED sentinel with the original — never a category."""
+    for text in (
+        "Participants entered open label period",
+        "Ongoing",
+        "Still on study",
+        "Option to switch to a rollover study",
+    ):
+        canonical, original = normalize_reason(text)
+        assert canonical == CENSORED, text
+        assert original == text
+
+
+def test_censoring_excluded_from_withdrawal_table(
+    tmp_path, sample_fixture_root
+) -> None:
+    report = QualityReport()
+    frames = clean_snapshot(
+        sample_fixture_root, report=report, fail_loud=True, out_root=tmp_path
+    )
+    # Recorded separately, never lost.
+    assert report.excluded_censoring, (
+        "censoring rows must be recorded as excluded-censoring"
+    )
+    assert sum(r["count"] for r in report.excluded_censoring) > 0
+    # Never a withdrawal-reason category and never OTHER-via-censoring text.
+    reasons = set(frames["ref_withdrawal_reason"]["reason"].unique())
+    assert CENSORED not in reasons
+    censor_terms = {r["term"].lower() for r in report.excluded_censoring}
+    assert any("open label" in t or "ongoing" in t for t in censor_terms)
+
+
+def test_new_categories_present_in_withdrawal_table(
+    tmp_path, sample_fixture_root
+) -> None:
+    report = QualityReport()
+    frames = clean_snapshot(
+        sample_fixture_root, report=report, fail_loud=True, out_root=tmp_path
+    )
+    reasons = set(frames["ref_withdrawal_reason"]["reason"].unique())
+    assert "STUDY_TERMINATED" in reasons
+    assert "ADMINISTRATIVE" in reasons
 
 
 def test_inconsistent_milestone_fails_loud(tmp_path, sample_fixture_root) -> None:

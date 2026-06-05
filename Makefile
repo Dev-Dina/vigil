@@ -10,6 +10,10 @@ data:  ## Run the Phase 1 data pipeline (raw->clean->synthetic) on the sample fi
 data-fixture:  ## Regenerate the committed SAMPLE AACT fixture (deterministic)
 	uv run python -m ingestion.fixtures.build_sample
 
+.PHONY: eda
+eda:  ## Run EDA over the cleaned ref_* tables (writes figures + summary to data/eda/)
+	uv run python -m ingestion.eda
+
 .PHONY: db-up
 db-up:  ## Start local Postgres + Redis for the backend spine
 	docker compose -f docker-compose.dev.yml up -d postgres redis

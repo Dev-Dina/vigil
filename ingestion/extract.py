@@ -11,11 +11,14 @@ If a live AACT Postgres is unreachable in this environment, the rest of the pipe
 off the committed sample fixture (see ``ingestion/fixtures/aact_sample``). This module is
 parameterized so a real extraction is a drop-in.
 
-EXPERIMENTAL / UNVERIFIED: the ``--live`` extraction path (:func:`extract_to_raw`) has NOT
-been run against a real AACT Postgres snapshot in this environment. The SQL is written to
-the spec but is unverified end-to-end; treat any live extract as experimental until it has
-been validated against a real AACT snapshot. The committed sample fixture is the only
-exercised path. Using ``--live`` emits a loud warning.
+The ``--live`` extraction path (:func:`extract_to_raw`) has been exercised against a real
+hosted AACT Postgres (snapshot captured 2026-06-05; connection and per-table queries
+verified to execute). This host serves AACT's CTGOV2 *uppercased* enum codes
+(``study_type='INTERVENTIONAL'``, ``phase='PHASE2'``, ``allocation='RANDOMIZED'``,
+``gender='ALL'`` ...), which — as ratified in ``specs/data.md`` ("Enum format (CTGOV2)") —
+are the canonical values pinned by :mod:`ingestion.schema`. The population filter below
+therefore uses the CTGOV2 ``'INTERVENTIONAL'`` literal and the captured snapshot flows
+through ``clean`` end-to-end with no enum contradiction.
 """
 
 from __future__ import annotations
@@ -32,13 +35,25 @@ logger = logging.getLogger(__name__)
 
 # Filter predicate, stated once and recorded verbatim in the manifest. This is the only
 # slice where real per-arm started/completed/dropout counts exist.
-POPULATION_FILTER = (
-    "studies.study_type = 'Interventional' "
-    "AND calculated_values.were_results_reported = true "
-    "AND EXISTS (SELECT 1 FROM result_groups rg WHERE rg.nct_id = studies.nct_id "
-    "AND rg.result_type = 'Participant Flow') "
-    "AND EXISTS (SELECT 1 FROM milestones m WHERE m.nct_id = studies.nct_id)"
-)
+#
+# specs/data.md (ratified "Enum format (CTGOV2)") pins study_type = 'INTERVENTIONAL', the
+# CTGOV2 uppercased code the hosted AACT snapshot stores. The filter uses that canonical
+# value directly and the clean stage validates against the same CTGOV2 enums.
+STUDY_TYPE_LITERAL = "INTERVENTIONAL"  # CTGOV2 canonical value pinned by specs/data.md
+
+
+def _population_filter(study_type_literal: str) -> str:
+    return (
+        f"studies.study_type = '{study_type_literal}' "
+        "AND calculated_values.were_results_reported = true "
+        "AND EXISTS (SELECT 1 FROM result_groups rg WHERE rg.nct_id = studies.nct_id "
+        "AND rg.result_type = 'Participant Flow') "
+        "AND EXISTS (SELECT 1 FROM milestones m WHERE m.nct_id = studies.nct_id)"
+    )
+
+
+# The population filter, recorded verbatim in the manifest and executed against AACT.
+POPULATION_FILTER = _population_filter(STUDY_TYPE_LITERAL)
 
 # The set of nct_ids in the modelled cohort. Every per-table query joins to this.
 COHORT_CTE = f"""
@@ -140,9 +155,14 @@ TABLE_QUERIES: dict[str, str] = {
 }
 
 
-def _aact_version_query() -> str:
-    """AACT records its data-load metadata; the load name is the version provenance."""
-    return "SELECT nlm_download_date_description FROM ctgov.data_definitions LIMIT 1"
+# AACT exposes its load metadata differently across deployments. Try a few known sources;
+# whichever resolves first becomes the version provenance. Each runs in its own transaction
+# so a missing relation never poisons the extract transaction.
+_AACT_VERSION_QUERIES: tuple[str, ...] = (
+    "SELECT nlm_download_date_description FROM ctgov.data_definitions LIMIT 1",
+    "SELECT max(nlm_download_date) FROM ctgov.calculated_values",
+    "SELECT max(updated_at) FROM ctgov.studies",
+)
 
 
 def extract_to_raw(conn: AactConnection, out_root: Path = RAW_ROOT) -> Path:
@@ -150,10 +170,13 @@ def extract_to_raw(conn: AactConnection, out_root: Path = RAW_ROOT) -> Path:
 
     Returns the snapshot directory. Requires ``psycopg`` and a reachable AACT Postgres.
     """
-    # TODO(phase3): validate --live against a real AACT snapshot before real-data training
+    # --live was exercised against a real hosted AACT snapshot on 2026-06-05 (connection +
+    # per-table queries verified). The host serves CTGOV2 uppercased enum codes, which the
+    # ratified spec adopts as canonical, so the filter and clean-stage enums accept them
+    # directly. Build-time only; never reached at runtime or by an agent.
     logger.warning(
-        "EXPERIMENTAL: --live AACT extraction path is UNVERIFIED against a real AACT "
-        "snapshot. Treat the output as experimental until validated (snapshot_date=%s).",
+        "--live AACT extraction reaches a real AACT snapshot serving CTGOV2 enum codes "
+        "(snapshot_date=%s). Build-time only; never a runtime call.",
         conn.snapshot_date,
     )
     import psycopg  # local import: only needed for a live extraction
@@ -164,14 +187,19 @@ def extract_to_raw(conn: AactConnection, out_root: Path = RAW_ROOT) -> Path:
     row_counts: dict[str, int] = {}
     aact_version = conn.snapshot_date
     with psycopg.connect(conn.dsn()) as pg:
-        try:
-            with pg.cursor() as cur:
-                cur.execute(_aact_version_query())
-                row = cur.fetchone()
-                if row and row[0]:
-                    aact_version = str(row[0])
-        except Exception:  # noqa: BLE001 - version is provenance, not critical
-            pass
+        # Probe version sources in autocommit so a failing probe rolls back cleanly and
+        # never aborts the extract transaction.
+        pg.autocommit = True
+        for vq in _AACT_VERSION_QUERIES:
+            try:
+                with pg.cursor() as cur:
+                    cur.execute(vq)
+                    row = cur.fetchone()
+                    if row and row[0]:
+                        aact_version = str(row[0])
+                        break
+            except Exception:  # noqa: BLE001,PERF203 - version is provenance, not critical
+                continue
 
         for table, sql in TABLE_QUERIES.items():
             with pg.cursor() as cur:
@@ -211,12 +239,19 @@ def write_manifest(
 ) -> Path:
     """Write the provenance manifest alongside the raw extract."""
     manifest = {
-        "source": "ClinicalTrials.gov / AACT (CTTI)",
+        "source": "hosted AACT (CTTI Aggregate Analysis of ClinicalTrials.gov)",
+        "source_kind": "hosted live AACT Postgres (NOT a committed sample fixture)",
         "source_url": AACT_SOURCE_URL,
         "snapshot_date": snapshot_date,
+        "capture_date": snapshot_date,
         "aact_version": aact_version,
         "build_time_only": True,
         "population_filter": POPULATION_FILTER,
+        "enum_format_note": (
+            "Hosted AACT serves CTGOV2 uppercased enum codes (study_type='INTERVENTIONAL', "
+            "phase='PHASE2', ...), which specs/data.md ('Enum format (CTGOV2)') pins as the "
+            "canonical ref_* values. Filter and clean-stage enums use these directly."
+        ),
         "table_sql": TABLE_QUERIES,
         "row_counts": row_counts,
     }

@@ -17,12 +17,13 @@ from typing import Any
 import pandas as pd
 from pydantic import ValidationError
 
+from ingestion import ctgov_enums
 from ingestion.config import CLEAN_ROOT
 from ingestion.errors import DataValidationError
 from ingestion.extract import read_ndjson
 from ingestion.report import QualityReport
 from ingestion.schema import RefArm, RefTrial, RefWithdrawalReason
-from ingestion.vocab import map_therapeutic_area, normalize_reason
+from ingestion.vocab import CENSORED, map_therapeutic_area, normalize_reason
 
 # AACT milestone titles for participant flow.
 _STARTED = "STARTED"
@@ -162,10 +163,23 @@ def _build_trial(
     n_sites = len(facilities) or int(cv.get("number_of_facilities") or 0)
     n_countries = len({c.get("name") for c in countries if c.get("name")})
 
+    # Normalise CTGOV2 enum tokens onto the spec's controlled values. Unmapped tokens
+    # (genuinely outside the spec's set, e.g. primary_purpose 'ECT') resolve to None so the
+    # Pydantic enum rejects them and the offending value is recorded — never silently coerced.
+    def _enum(name: str, table_map: dict[str, str], raw_val, *, na_value=None):
+        canonical, unmapped = ctgov_enums.normalize_enum(
+            table_map, raw_val, na_value=na_value
+        )
+        if unmapped:
+            report.add_unmapped_enum(nct_id, name, unmapped)
+        return canonical
+
     fields = {
         "nct_id": nct_id,
-        "study_type": studies.get("study_type"),
-        "phase": studies.get("phase") or "N/A",
+        "study_type": _enum(
+            "study_type", ctgov_enums.STUDY_TYPE, studies.get("study_type")
+        ),
+        "phase": _enum("phase", ctgov_enums.PHASE, studies.get("phase"), na_value="NA"),
         "therapeutic_area": _therapeutic_area(
             nct_id,
             raw["browse_conditions"].get(nct_id, []),
@@ -178,13 +192,32 @@ def _build_trial(
         "n_countries": n_countries,
         "planned_duration_days": planned_duration_days,
         "actual_duration_days": cv.get("actual_duration"),
-        "allocation": design.get("allocation") or "N/A",
-        "intervention_model": design.get("intervention_model") or "N/A",
-        "masking": design.get("masking") or "N/A",
-        "primary_purpose": design.get("primary_purpose") or "N/A",
+        "allocation": _enum(
+            "allocation",
+            ctgov_enums.ALLOCATION,
+            design.get("allocation"),
+            na_value="NA",
+        ),
+        "intervention_model": _enum(
+            "intervention_model",
+            ctgov_enums.INTERVENTION_MODEL,
+            design.get("intervention_model"),
+            na_value="NA",
+        ),
+        "masking": _enum(
+            "masking", ctgov_enums.MASKING, design.get("masking"), na_value="NA"
+        ),
+        "primary_purpose": _enum(
+            "primary_purpose",
+            ctgov_enums.PRIMARY_PURPOSE,
+            design.get("primary_purpose"),
+            na_value="NA",
+        ),
         "min_age_years": cv.get("minimum_age_num"),
         "max_age_years": cv.get("maximum_age_num"),
-        "gender": elig.get("gender") or "All",
+        "gender": _enum(
+            "gender", ctgov_enums.GENDER, elig.get("gender"), na_value="ALL"
+        ),
         "healthy_volunteers": _as_bool(elig.get("healthy_volunteers")),
         "sponsor_class": _sponsor_class(raw["sponsors"].get(nct_id, [])),
         "results_reported": _as_bool(cv.get("were_results_reported"), default=True),
@@ -230,17 +263,48 @@ def _to_data_error(
 
 def _milestone_counts(
     nct_id: str, milestones: list[dict[str, Any]]
-) -> dict[str, dict[str, int]]:
-    """group_code -> {STARTED/COMPLETED/NOT COMPLETED -> count}."""
-    out: dict[str, dict[str, int]] = defaultdict(dict)
+) -> tuple[dict[str, dict[str, int]], dict[str, str | None]]:
+    """Per group code, the baseline-period STARTED/COMPLETED/NOT COMPLETED counts.
+
+    AACT participant-flow milestones are reported per ``period``; multi-period flows (e.g.
+    crossover trials, ~15% of the cohort) repeat the canonical STARTED/COMPLETED/NOT
+    COMPLETED titles for every period, and the periods are not in a reliable file order. We
+    therefore pick, per group code, the **baseline period = the period with the largest
+    STARTED count** (ties broken by period label for determinism). That is the period where
+    the arm actually enrolled participants; the arm's started/completed/not-completed come
+    from it. Collapsing across periods would mix STARTED from an empty period with COMPLETED
+    from the real period and produce ``completed > started`` artifacts that raw AACT does not
+    contain.
+
+    Returns ``(counts_by_group, baseline_period_by_group)`` so the withdrawal stage can align
+    to the same period.
+    """
+    # group_code -> period -> {title: count}, restricted to canonical flow titles.
+    per_period: dict[str, dict[str | None, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(dict)
+    )
     for m in milestones:
         code = m.get("ctgov_group_code")
         title = (m.get("title") or "").strip().upper()
         count = m.get("count")
+        period = m.get("period")
         if code is None or count is None:
             continue
-        out[code][title] = int(count)
-    return out
+        if title not in (_STARTED, _COMPLETED, _NOT_COMPLETED):
+            continue
+        per_period[code][period][title] = int(count)
+
+    counts: dict[str, dict[str, int]] = {}
+    baseline: dict[str, str | None] = {}
+    for code, periods in per_period.items():
+        # Baseline period = max STARTED, deterministic tiebreak on the period label.
+        chosen = max(
+            periods.items(),
+            key=lambda kv: (kv[1].get(_STARTED, 0), str(kv[0] or "")),
+        )
+        baseline[code] = chosen[0]
+        counts[code] = chosen[1]
+    return counts, baseline
 
 
 def _arm_type(title: str | None) -> str:
@@ -259,13 +323,13 @@ def _build_arms(
     nct_id: str,
     raw: dict[str, Any],
     report: QualityReport,
-) -> list[RefArm]:
+) -> tuple[list[RefArm], dict[str, str | None]]:
     groups = {
         g.get("ctgov_group_code"): g
         for g in raw["result_groups"].get(nct_id, [])
         if g.get("result_type") == "Participant Flow"
     }
-    counts = _milestone_counts(nct_id, raw["milestones"].get(nct_id, []))
+    counts, baseline = _milestone_counts(nct_id, raw["milestones"].get(nct_id, []))
     arms: list[RefArm] = []
     for code, c in counts.items():
         started = c.get(_STARTED)
@@ -292,25 +356,37 @@ def _build_arms(
             arms.append(RefArm(**fields))
         except ValidationError as exc:
             raise _to_data_error("ref_arm", nct_id, fields, exc) from exc
-    return arms
+    return arms, baseline
 
 
 def _build_withdrawals(
     nct_id: str,
     raw: dict[str, Any],
     arms: list[RefArm],
+    baseline: dict[str, str | None],
     report: QualityReport,
 ) -> list[RefWithdrawalReason]:
     arm_index = {a.arm_id: a for a in arms}
-    # Aggregate by (arm_id, canonical reason).
+    # Aggregate by (arm_id, canonical reason). Only count withdrawals from the SAME baseline
+    # period the arm's STARTED/COMPLETED came from, so the cross-record check compares
+    # like-for-like (multi-period flows otherwise sum every period's withdrawals against a
+    # single period's not_completed and spuriously overflow).
     agg: dict[tuple[str, str], int] = defaultdict(int)
     for dw in raw["drop_withdrawals"].get(nct_id, []):
         code = dw.get("ctgov_group_code")
         count = dw.get("count")
         if code is None or count is None:
             continue
+        if code in baseline and dw.get("period") != baseline[code]:
+            continue
         arm_id = f"{nct_id}{code}"
         canonical, unmapped = normalize_reason(dw.get("reason") or "")
+        if canonical == CENSORED:
+            # Right-censoring / still-ongoing: NOT a dropout reason. Excluded from the
+            # reason-mix entirely (neither a category nor OTHER), recorded separately so the
+            # volume is never silently lost and never counts toward explained dropout.
+            report.add_excluded_censoring(nct_id, arm_id, unmapped or "", int(count))
+            continue
         if unmapped is not None:
             report.add_unmapped_reason(nct_id, arm_id, unmapped)
         agg[(arm_id, canonical)] += int(count)
@@ -376,12 +452,12 @@ def clean_snapshot(
     for nct_id in nct_ids:
         try:
             trial = _build_trial(nct_id, raw, report)
-            arm_objs = _build_arms(nct_id, raw, report)
+            arm_objs, baseline = _build_arms(nct_id, raw, report)
             if not arm_objs:
                 raise DataValidationError(
                     "ref_arm", nct_id, "started", "no participant-flow arms", None
                 )
-            wd_objs = _build_withdrawals(nct_id, raw, arm_objs, report)
+            wd_objs = _build_withdrawals(nct_id, raw, arm_objs, baseline, report)
         except DataValidationError as exc:
             report.add_validation_failure(
                 exc.table, exc.nct_id, exc.field_name, exc.message, exc.value

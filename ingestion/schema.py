@@ -18,24 +18,24 @@ from ingestion.vocab import THERAPEUTIC_AREAS, WITHDRAWAL_REASONS
 
 
 class StudyType(StrEnum):
-    INTERVENTIONAL = "Interventional"
+    INTERVENTIONAL = "INTERVENTIONAL"
 
 
 class Phase(StrEnum):
-    PHASE1 = "Phase 1"
-    PHASE2 = "Phase 2"
-    PHASE3 = "Phase 3"
-    PHASE4 = "Phase 4"
-    EARLY_PHASE1 = "Early Phase 1"
-    PHASE1_2 = "Phase 1/Phase 2"
-    PHASE2_3 = "Phase 2/Phase 3"
-    NA = "N/A"
+    EARLY_PHASE1 = "EARLY_PHASE1"
+    PHASE1 = "PHASE1"
+    PHASE1_2 = "PHASE1/PHASE2"
+    PHASE2 = "PHASE2"
+    PHASE2_3 = "PHASE2/PHASE3"
+    PHASE3 = "PHASE3"
+    PHASE4 = "PHASE4"
+    NA = "NA"
 
 
 class Gender(StrEnum):
-    ALL = "All"
-    FEMALE = "Female"
-    MALE = "Male"
+    ALL = "ALL"
+    FEMALE = "FEMALE"
+    MALE = "MALE"
 
 
 class SponsorClass(StrEnum):
@@ -46,40 +46,41 @@ class SponsorClass(StrEnum):
 
 
 class Allocation(StrEnum):
-    RANDOMIZED = "Randomized"
-    NON_RANDOMIZED = "Non-Randomized"
-    NA = "N/A"
+    RANDOMIZED = "RANDOMIZED"
+    NON_RANDOMIZED = "NON_RANDOMIZED"
+    NA = "NA"
 
 
 class InterventionModel(StrEnum):
-    PARALLEL = "Parallel Assignment"
-    CROSSOVER = "Crossover Assignment"
-    SINGLE_GROUP = "Single Group Assignment"
-    FACTORIAL = "Factorial Assignment"
-    SEQUENTIAL = "Sequential Assignment"
-    NA = "N/A"
+    PARALLEL = "PARALLEL"
+    CROSSOVER = "CROSSOVER"
+    SINGLE_GROUP = "SINGLE_GROUP"
+    FACTORIAL = "FACTORIAL"
+    SEQUENTIAL = "SEQUENTIAL"
+    NA = "NA"
 
 
 class Masking(StrEnum):
-    NONE = "None (Open Label)"
-    SINGLE = "Single"
-    DOUBLE = "Double"
-    TRIPLE = "Triple"
-    QUADRUPLE = "Quadruple"
-    NA = "N/A"
+    NONE = "NONE"
+    SINGLE = "SINGLE"
+    DOUBLE = "DOUBLE"
+    TRIPLE = "TRIPLE"
+    QUADRUPLE = "QUADRUPLE"
+    NA = "NA"
 
 
 class PrimaryPurpose(StrEnum):
-    TREATMENT = "Treatment"
-    PREVENTION = "Prevention"
-    DIAGNOSTIC = "Diagnostic"
-    SUPPORTIVE_CARE = "Supportive Care"
-    SCREENING = "Screening"
-    HEALTH_SERVICES = "Health Services Research"
-    BASIC_SCIENCE = "Basic Science"
-    DEVICE_FEASIBILITY = "Device Feasibility"
-    OTHER = "Other"
-    NA = "N/A"
+    TREATMENT = "TREATMENT"
+    PREVENTION = "PREVENTION"
+    DIAGNOSTIC = "DIAGNOSTIC"
+    SUPPORTIVE_CARE = "SUPPORTIVE_CARE"
+    SCREENING = "SCREENING"
+    HEALTH_SERVICES_RESEARCH = "HEALTH_SERVICES_RESEARCH"
+    BASIC_SCIENCE = "BASIC_SCIENCE"
+    DEVICE_FEASIBILITY = "DEVICE_FEASIBILITY"
+    ECT = "ECT"
+    OTHER = "OTHER"
+    NA = "NA"
 
 
 class ArmType(StrEnum):

@@ -8,4 +8,5 @@ __pycache__/
 
 # Generated SAMPLE AACT fixture — deterministically built via `make data-fixture`,
 # never committed, NOT a real AACT extract.
-ingestion/fixtures/aact_sample/.vscode/
+ingestion/fixtures/aact_sample/
+.vscode/

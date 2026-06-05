@@ -184,7 +184,7 @@ def generate(
 
 
 def _draw_covariates(rng: np.random.Generator, trial: dict) -> dict:
-    phase_idx = {"Phase 1": 0, "Phase 2": 1, "Phase 3": 2, "Phase 4": 3}.get(
+    phase_idx = {"PHASE1": 0, "PHASE2": 1, "PHASE3": 2, "PHASE4": 3}.get(
         str(trial["phase"]), 1
     )
     severity = float(np.clip(rng.normal(40 + 8 * phase_idx, 15), 0, 100))
