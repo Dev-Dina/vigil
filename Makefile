@@ -10,9 +10,13 @@ data:  ## Run the Phase 1 data pipeline (raw->clean->synthetic) on the sample fi
 data-fixture:  ## Regenerate the committed SAMPLE AACT fixture (deterministic)
 	uv run python -m ingestion.fixtures.build_sample
 
-.PHONY: eda
-eda:  ## Run EDA over the cleaned ref_* tables (writes figures + summary to data/eda/)
+.PHONY: eda-report
+eda-report:  ## Generate EDA figures + summary into data/eda/ from the cleaned ref_* tables
 	uv run python -m ingestion.eda
+
+.PHONY: eda
+eda:  ## Open the marimo EDA notebook (interactive view of data/eda outputs + ref_*)
+	uv run marimo edit ingestion/eda/notebook.py
 
 .PHONY: db-up
 db-up:  ## Start local Postgres + Redis for the backend spine

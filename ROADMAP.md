@@ -17,6 +17,7 @@ Legend: [x] done · [~] in progress / pending review · [ ] not started
 - [x] Pipeline built and green (clean + EDA now run on REAL AACT; synthetic still pending real calibration)
 - [x] **Ran `--live` against a real AACT snapshot** (2026-06-05, hosted AACT): raw+manifest pinned under `data/raw/aact/2026-06-05/`; cleaned to ref_* (73,073 trials / 182,240 arms / 377,888 reasons), 760 fail-loud rows recorded
 - [x] **EDA on real `ref_*` data** → `data/eda/` (overall dropout trial-mean 0.202 / participant-weighted 0.151; by phase/area/enrollment; reason mix; missingness; covariate↔dropout signs as expected)
+  - viewable interactively: `make eda` → marimo notebook (`ingestion/eda/notebook.py`); generator is now `make eda-report`. Read-only `eda` subagent (`.claude/agents/eda.md`) answers data questions over the snapshot.
 - [x] **SPEC RATIFIED to CTGOV2** (commit `1b65d08`): `specs/data.md` adopts CTGOV2 enum codes (+`ECT`); `schema.py`/`ctgov_enums.py`/`clean.py`/`vocab.py`/fixture reconciled (HELD for review). Quality report now 0 spec-contradictions / 0 unmapped-enums.
 - [ ] **Derive calibration targets from real EDA** (replace assumed values, e.g. early_fraction)
 - [ ] Regenerate synthetic cohort calibrated to the REAL targets

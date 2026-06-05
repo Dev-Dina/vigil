@@ -13,7 +13,8 @@ them; run anything via `uv run ...` (e.g. `uv run python scripts/check_specs.py`
 - `pyproject.toml` — uv-managed project metadata and dev deps (`ruff`, `pytest`).
 - `specs/` — the contracts (source of truth). Start with `isolation.md` and `data.md`.
 - `.claude/skills/` — `data-cleaning`, `schema-migration`, `spec-conformance`.
-- `.claude/agents/` — `ingestion`, `skeleton`, `public-demo`, `release` subagents.
+- `.claude/agents/` — `ingestion`, `skeleton`, `public-demo`, `release`, `eda` (read-only
+  analysis of the captured AACT snapshot) subagents.
 - `.claude/commands/check-specs.md` — `/check-specs` slash command.
 - `scripts/check_specs.py` — the conformance check. `make check-specs`.
 
