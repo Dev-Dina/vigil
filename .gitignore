@@ -5,3 +5,7 @@ __pycache__/
 .venv/
 .ruff_cache/
 .pytest_cache/
+
+# Generated SAMPLE AACT fixture — deterministically built via `make data-fixture`,
+# never committed, NOT a real AACT extract.
+ingestion/fixtures/aact_sample/.vscode/
