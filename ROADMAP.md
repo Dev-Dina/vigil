@@ -40,9 +40,13 @@ calibration + SHAP · temporal-only eval (PR-AUC, recall@precision, lead-time ga
 **Done when:** reproducible training from Phase 1 REAL data; metrics logged; scores behind RLS.
 > Blocked on Phase 1 real data + EDA.
 
-## Phase 4 — Console, API & model routing  [ ]
+## Phase 4 — Console, API & model routing  [~]
 FastAPI per api spec · four screens (v0) via scoped layer · routing (regime, champion/challenger, drift-fallback, audited promotion).
+- [~] Frontend v0 scaffolded (`frontend/`): four screens + login + docked assistant, shared `AppNav`/`AppChrome` (assistant gated off `/login`), fake auth context. **All data STUBBED** in `lib/stubs.ts`, typed to `specs/api.md` schemas (`lib/types.ts`). No backend, no real auth, no model routing.
+- [ ] FastAPI endpoints per `specs/api.md`; wire each stub boundary to the scoped data layer (see frontend register below)
+- [ ] Model routing (regime, champion/challenger, drift-fallback, audited promotion)
 **Done when:** coordinator sees only scoped cohort; routing decisions audited.
+> Frontend is stubs-only (typed to api.md). Stays [~] until the API exists and the boundaries below are wired through the scoped layer.
 
 ## Phase 5 — Agentic layer & RAG (local)  [ ]
 Retention/Report/Operations agents via MCP in caller scope · hybrid RAG (structured + pgvector) ·
@@ -72,6 +76,17 @@ Synced from `TODO(...)` comments in the tree + decisions. (file:line · note)
 - [x] **SPEC FIX (main):** CTGOV2 enum format ratified in `specs/data.md` (commit `1b65d08`); `ctgov_enums.py` normalization kept; `ECT` added as a `primary_purpose`. Code reconciliation held for review.
 - [x] **Withdrawal-reason vocab**: SET expanded (commit `9e15c2c`) — added `STUDY_TERMINATED` (12.2%) + `ADMINISTRATIVE` (8.2%); censoring/ongoing now excluded from the mix (183,815 vol / 2,490 rows recorded separately, never counted as dropout). `OTHER` 50.7% → **17.54%** (honest floor; arm-level dropout unchanged, trial-mean 0.2018). `vocab.py`/`clean.py`/`report.py` reconciliation HELD for review.
 - [x] Sample fixture: gitignored (`ingestion/fixtures/aact_sample/`); conftest builds a temp sample (`tmp_path_factory`) so tests/CI don't need the file
+
+### Frontend wiring register (Phase 4/5) — endpoint → screen/boundary
+Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `frontend/lib/types.ts`). Each `// TODO(phase4/5)` below is unwired.
+- [ ] `POST /auth/login` + `GET /auth/me` → login + auth context (`app/login/page.tsx`, `lib/auth-context.tsx:26,32`, `lib/stubs.ts:26`)
+- [ ] `GET /cohort` + `GET /cohort/summary` → Dashboard + Triage (`app/page.tsx:39`, `app/triage/page.tsx:45`, `lib/stubs.ts:93,98`)
+- [ ] `GET /participants/{id}` + `/risk` → Participant detail (`app/participant/[id]/page.tsx:33,35`, `lib/stubs.ts:108,121`)
+- [ ] `POST /participants/{id}/interventions` → triage Call + detail "Schedule Intervention" (`app/triage/page.tsx:63`, `app/participant/[id]/page.tsx:54`, `lib/stubs.ts:138`)
+- [ ] `GET /monitoring/models` + `/drift` → Monitoring (`app/monitoring/page.tsx:28,30`, `lib/stubs.ts:154,185`)
+- [ ] `GET /monitoring/cost` (+`/models`) → Cost & Routing — CostReport schema not yet in api.md (`app/costs/page.tsx:10`)
+- [ ] `POST /assistant/conversations` + `/messages` (202) + poll `GET /assistant/jobs/{id}` → docked assistant (async flow stubbed) (`components/vigil/assistant-panel.tsx:209,216,219`, `lib/stubs.ts:225,230,243`)
+- [ ] No-endpoint gaps to flag at wire time: per-participant risk history (sparkline/trend), `daysEnrolled` in cohort rows, assistant-generated prose for the explanation card — none have an api.md field (`app/page.tsx:27,29`, `app/triage/page.tsx:31,33`, `app/participant/[id]/page.tsx:59`)
 
 ## Decisions log (settled)
 - Sponsor = hard tenant boundary (RLS). CRO scoped per assignment.
