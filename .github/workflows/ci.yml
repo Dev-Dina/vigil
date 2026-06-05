@@ -61,6 +61,9 @@ jobs:
       - name: Spec conformance
         run: uv run python scripts/check_specs.py
 
+      - name: Fast suite (Phase-1 ingestion + units, no slow markers)
+        run: uv run pytest -m "not slow"
+
       - name: Cross-tenant leakage test (the sacred test)
         run: uv run pytest tests/spine/test_leakage.py -q
 

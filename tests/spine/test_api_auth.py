@@ -66,6 +66,44 @@ def test_login_me_and_scoped_cohort(client, migrated_db):
     assert all(r["participant_id"] != ids["participant_a"] for r in rows)
 
 
+def test_all_seven_roles_login_and_me(client, migrated_db):
+    ids = migrated_db
+    # (email, expected role, expected home_sponsor_id key | None)
+    cases = [
+        ("admin@vigil.example", "platform_admin", None),
+        ("auditor@vigil.example", "auditor", None),
+        ("oversight.a@vigil.example", "sponsor_oversight", "sponsor_a"),
+        ("coord.a@vigil.example", "coordinator", "sponsor_a"),
+        ("pi.a@vigil.example", "principal_investigator", "sponsor_a"),
+        ("cro.manager@vigil.example", "study_manager", None),
+        ("cra@vigil.example", "cra", None),
+    ]
+    seen_roles: set[str] = set()
+    for email, expected_role, sponsor_key in cases:
+        token = _login(client, email)
+        me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+        assert me.status_code == 200, (email, me.text)
+        body = me.json()
+        assert body["role"] == expected_role, email
+        if sponsor_key is not None:
+            assert body["home_sponsor_id"] == ids[sponsor_key], email
+        else:
+            assert body["home_sponsor_id"] is None, email
+        # CRO roles carry no home sponsor but a home CRO.
+        if expected_role in {"study_manager", "cra"}:
+            assert body["home_cro_id"] == ids["cro_id"], email
+        seen_roles.add(body["role"])
+    assert seen_roles == {
+        "platform_admin",
+        "auditor",
+        "sponsor_oversight",
+        "coordinator",
+        "principal_investigator",
+        "study_manager",
+        "cra",
+    }
+
+
 def test_logout_revokes_session(client):
     token = _login(client, "coord.a@vigil.example")
     headers = {"Authorization": f"Bearer {token}"}

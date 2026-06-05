@@ -1,9 +1,9 @@
 """Backend-spine test harness: real Postgres (RLS is not mockable), migrate, seed.
 
 The leakage test needs a live Postgres because row-level security is a database feature. The
-DSN comes from ``VIGIL_DB_DSN`` (CI provides a Postgres service; locally a docker container).
-If no Postgres is reachable, the DB-backed tests skip — but CI runs them for real, which is
-where the sacred test gates.
+reachability/migration DSN comes from ``VIGIL_DB_ADMIN_DSN`` (CI provides a Postgres service;
+locally a docker container). If no Postgres is reachable, the DB-backed tests skip — but CI
+runs them for real, which is where the sacred test gates.
 
 Secrets use the env backend so no Vault is needed in tests; the signing key is a throwaway.
 """

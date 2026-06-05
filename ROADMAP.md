@@ -23,11 +23,14 @@ Legend: [x] done · [~] in progress / pending review · [ ] not started
 **Done when:** one command runs raw → clean → synthetic from REAL data, quality + calibration reports pass, validates against data spec.
 > Note: current "done" is a dry run on the fake fixture. Not real until the live + EDA steps land.
 
-## Phase 2 — Skeleton: secrets, DB, auth, sessions, queue  [~]
+## Phase 2 — Skeleton: secrets, DB, auth, sessions, queue  [x]
 - [x] Vault → Postgres+RLS → auth → scoped layer → Redis → Arq → seed → scoped user creation
-- [x] Leakage test 7/7; RLS via NOBYPASSRLS `vigil_app` role
-- [ ] Review pass (this review)
-**Done when:** login per role + both sponsors; leakage test passes (data + user creation); job round-trips. ✅ pending review
+- [x] Leakage test 7/7 (data isolation + user-creation subset), VERIFIED on real Postgres as NOBYPASSRLS `vigil_app`
+- [x] Review pass (2026-06-05): RLS policies, JWT claim shape, scoped-creation match `domain.md`; job round-trip green
+- [x] All 7 roles login + `/me` (platform admin, auditor, sponsor oversight, coordinator, PI, study manager, CRA) — `test_all_seven_roles_login_and_me`; CRA + PI now seeded
+- [x] CI runs the fast suite (`pytest -m "not slow"`) so Phase-1 ingestion tests execute in CI, plus leakage + spine
+**Done when:** login per role + both sponsors; leakage test passes (data + user creation); job round-trips. ✅
+> Verified on real Postgres+Redis (full suite 45 passed, leakage 7/7).
 
 ## Phase 3 — Models  [ ]
 Baselines (logistic + GBT) on real registry · sequence model (synthetic cohort) · survival ·

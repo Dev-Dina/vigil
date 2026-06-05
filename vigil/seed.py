@@ -3,7 +3,9 @@
 Creates:
 - Sponsor A and Sponsor B (tenant roots), each with one trial, one site.
 - One coordinator per sponsor, scoped to that sponsor's site/trial.
-- One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant).
+- One PI on Sponsor A's site/trial (site role).
+- One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant) and
+  one CRA/monitor staffed via a grant narrowed to a specific site within Sponsor A's trial.
 - One platform admin and one auditor.
 - One participant per sponsor (so a leak is visible: A's coordinator / the CRO user see
   only A; nobody crosses the sponsor wall).
@@ -149,6 +151,17 @@ def seed() -> dict[str, str]:
         )
         ids.update(coordinator_a=str(coord_a.id), coordinator_b=str(coord_b.id))
 
+        # PI on Sponsor A's site/trial (site role: own site & trial, like the coordinator).
+        pi_a = _add_user(
+            session,
+            email="pi.a@vigil.example",
+            role=Role.PRINCIPAL_INVESTIGATOR,
+            home_sponsor_id=sponsor_a_id,
+            home_trial_id=tenant_a["trial"],
+            home_site_id=tenant_a["site"],
+        )
+        ids["pi_a"] = str(pi_a.id)
+
         # One CRO study manager staffed on Sponsor A ONLY (single grant → cannot see B).
         cro_mgr = _add_user(
             session,
@@ -163,6 +176,26 @@ def seed() -> dict[str, str]:
                 sponsor_id=sponsor_a_id,  # A only — no grant for B
                 trial_id=None,
                 site_id=None,
+                granted_by=admin.id,
+            )
+        )
+        session.flush()
+
+        # One CRO CRA/monitor staffed via a grant narrowed to a specific site within
+        # Sponsor A's trial (site-level CRO scope; no home sponsor, home_cro_id set).
+        cra = _add_user(
+            session,
+            email="cra@vigil.example",
+            role=Role.CRA,
+            home_cro_id=cro_id,
+        )
+        ids["cra"] = str(cra.id)
+        session.add(
+            AssignmentGrant(
+                user_id=cra.id,
+                sponsor_id=sponsor_a_id,  # A only
+                trial_id=tenant_a["trial"],  # narrowed to A's trial
+                site_id=tenant_a["site"],  # narrowed to A's site
                 granted_by=admin.id,
             )
         )
