@@ -56,6 +56,7 @@ LangGraph + Langfuse · queued with caps + jittered retries + cost tracking · g
 ## Phase 6 — Observability (both surfaces)  [ ]
 `message_events` + structured logs · Langfuse · admin page (inspect/verify-guardrails/debug-retrieval/show-redaction) · wire monitoring + cost screens.
 **Done when:** every message → event row; guardrails + retrieval inspectable; redaction verifiable.
+> NOT STARTED. `message_events` has no implementation and has never been run — no table writes, no Langfuse, no admin page. The Phase-4 monitoring/cost screens are stubbed UI only (no event data behind them).
 
 ## Phase 7 — Public Guide demo (isolated)  [ ]
 Separate service, own creds · landing/demo site · Guide RAG over approved docs only · guardrails · emits message_events.
@@ -87,6 +88,11 @@ Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `fronten
 - [ ] `GET /monitoring/cost` (+`/models`) → Cost & Routing — CostReport schema not yet in api.md (`app/costs/page.tsx:10`)
 - [ ] `POST /assistant/conversations` + `/messages` (202) + poll `GET /assistant/jobs/{id}` → docked assistant (async flow stubbed) (`components/vigil/assistant-panel.tsx:209,216,219`, `lib/stubs.ts:225,230,243`)
 - [ ] No-endpoint gaps to flag at wire time: per-participant risk history (sparkline/trend), `daysEnrolled` in cohort rows, assistant-generated prose for the explanation card — none have an api.md field (`app/page.tsx:27,29`, `app/triage/page.tsx:31,33`, `app/participant/[id]/page.tsx:59`)
+
+### Process / housekeeping TODOs
+- [ ] **Add frontend lint/typecheck to CI at Phase 4** — `frontend/` is not in CI; add `tsc --noEmit` (+ eslint) once the API/build lands. Note: `next.config.mjs` has `typescript.ignoreBuildErrors: true`, so `next build` will not catch type errors — CI must run `tsc` explicitly.
+- [ ] **Group tests by phase** — reorganize into `tests/ingestion`, `tests/spine`, `tests/models` (markers/paths) so phase suites run independently.
+- [ ] **Remove unused frontend files if any remain** — currently `frontend/components/vigil/header.tsx` and `participant-table.tsx` are superseded by `AppNav` / `TriageTable` and unused; delete or repurpose.
 
 ## Decisions log (settled)
 - Sponsor = hard tenant boundary (RLS). CRO scoped per assignment.
