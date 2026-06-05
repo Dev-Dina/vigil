@@ -102,8 +102,19 @@ tokens.
 
 Reason controlled vocabulary (normalised from free-text `drop_withdrawals.reason`):
 `ADVERSE_EVENT, LACK_OF_EFFICACY, WITHDRAWAL_BY_SUBJECT, LOST_TO_FOLLOWUP, PHYSICIAN_DECISION,
-PROTOCOL_VIOLATION, DEATH, PREGNANCY, NONCOMPLIANCE, OTHER`. Unmapped strings → `OTHER` **with the
-original text recorded** in the quality report (no silent loss).
+PROTOCOL_VIOLATION, DEATH, PREGNANCY, NONCOMPLIANCE, STUDY_TERMINATED, ADMINISTRATIVE, OTHER`.
+Unmapped strings → `OTHER` **with the original text recorded** in the quality report (no silent loss).
+
+- `STUDY_TERMINATED` — the trial (or an arm) was stopped by the sponsor/DSMB, not a
+  participant-level retention event (e.g. "study terminated by sponsor", "DSMB design
+  modification", "arm closed"). It is a real exit in the flow counts but is **sponsor-driven**.
+- `ADMINISTRATIVE` — survey/data-collection bookkeeping with no clinical retention meaning
+  (e.g. "did not complete mid-study survey", "data incomplete").
+- **Censoring / still-ongoing is NOT a dropout reason.** Strings denoting right-censoring or
+  continuation ("participants entered open-label period", "ongoing", "still on study", "completed
+  per protocol → rolled over") are **excluded from the withdrawal reason-mix** entirely — neither a
+  dropout-reason category nor `OTHER`. They are recorded separately in the quality report as
+  excluded-censoring, never counted toward `not_completed`-explained dropout.
 
 Cross-record validations (fail LOUD): `completed ≤ started` per arm; `sum(withdrawal counts) ≤
 not_completed` per arm (the unexplained remainder is reported, not hidden); `dropout_rate ∈ [0,1]`;
