@@ -51,22 +51,33 @@ from the operational tenant-scoped entities (`trial`, `site`, `participant`, …
 **sponsor-scoped with RLS on**. The `ref_` prefix is the visible marker of that boundary: a
 `ref_*` table is never sponsor-keyed and an operational table never lives in the AACT pipeline.
 
+**Enum format (CTGOV2).** The pinned hosted-AACT snapshot serves ClinicalTrials.gov's **CTGOV2**
+enum codes — uppercased machine tokens (`INTERVENTIONAL`, `PHASE2`, `RANDOMIZED`, `ALL`,
+`NONE` …), not the legacy human-readable strings. Those CTGOV2 codes **are** the canonical values
+stored in `ref_*`; `ingestion/ctgov_enums.py` normalises any raw token onto the spec's controlled
+set, and a token with no spec category (e.g. an unexpected code) returns `None` so the clean stage
+fails loud and records it — never a silent coercion. The controlled sets below are the CTGOV2
+tokens.
+
 **`ref_trial`** (one row per NCT):
 | column | type | rule |
 |---|---|---|
 | nct_id | str PK | `^NCT\d{8}$` |
 | study_url | str (derived) | `https://clinicaltrials.gov/study/{nct_id}` — computed, not stored raw; for UI / citation linking |
-| study_type | enum | Interventional only (post-filter) |
-| phase | enum | Phase 1–4 / N/A |
+| study_type | enum | `INTERVENTIONAL` only (post-filter) |
+| phase | enum | `EARLY_PHASE1` / `PHASE1` / `PHASE1/PHASE2` / `PHASE2` / `PHASE2/PHASE3` / `PHASE3` / `PHASE4` / `NA` |
 | therapeutic_area | str | mapped from MeSH; unmapped → `OTHER` (original logged) |
 | enrollment | int | > 0 |
 | n_arms | int | ≥ 1 |
 | n_sites, n_countries | int | ≥ 0 |
 | planned_duration_days | int | > 0 = primary_completion_date − start_date |
 | actual_duration_days | int? | nullable |
-| allocation, intervention_model, masking, primary_purpose | enum | from `designs` |
+| allocation | enum | from `designs`: `RANDOMIZED` / `NON_RANDOMIZED` / `NA` |
+| intervention_model | enum | `PARALLEL` / `CROSSOVER` / `SINGLE_GROUP` / `FACTORIAL` / `SEQUENTIAL` / `NA` |
+| masking | enum | `NONE` / `SINGLE` / `DOUBLE` / `TRIPLE` / `QUADRUPLE` / `NA` |
+| primary_purpose | enum | `TREATMENT` / `PREVENTION` / `DIAGNOSTIC` / `SUPPORTIVE_CARE` / `SCREENING` / `HEALTH_SERVICES_RESEARCH` / `BASIC_SCIENCE` / `DEVICE_FEASIBILITY` / `ECT` / `OTHER` / `NA` |
 | min_age_years, max_age_years | float? | nullable |
-| gender | enum | All / Female / Male |
+| gender | enum | `ALL` / `FEMALE` / `MALE` |
 | healthy_volunteers | bool | |
 | sponsor_class | enum | INDUSTRY / NIH / OTHER_GOV / ACADEMIC_OTHER |
 | results_reported | bool | true for the modelled cohort |
