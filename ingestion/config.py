@@ -1,0 +1,65 @@
+"""Pipeline configuration. Connection details come from env, never hardcoded."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+# Repo-root-relative output roots. ``data/`` is git-ignored; extracts never committed.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DATA_ROOT = REPO_ROOT / "data"
+RAW_ROOT = DATA_ROOT / "raw" / "aact"
+CLEAN_ROOT = DATA_ROOT / "clean"
+SYNTHETIC_ROOT = DATA_ROOT / "synthetic"
+REPORT_ROOT = DATA_ROOT / "reports"
+
+# Committed sample fixture (clearly marked SAMPLE) so clean->synthetic is runnable
+# end-to-end without a live AACT Postgres.
+FIXTURE_ROOT = REPO_ROOT / "ingestion" / "fixtures" / "aact_sample"
+
+AACT_SOURCE_URL = "https://aact.ctti-clinicaltrials.org/"
+
+# Default prediction horizon in days for the dropout label.
+DEFAULT_HORIZON_DAYS = 28
+
+
+@dataclass(frozen=True)
+class AactConnection:
+    """AACT Postgres connection, sourced from the environment.
+
+    AACT publishes monthly static snapshots; the snapshot date is the provenance key.
+    """
+
+    host: str
+    port: int
+    dbname: str
+    user: str
+    password: str
+    snapshot_date: str  # YYYY-MM-DD, the pinned monthly snapshot
+
+    @classmethod
+    def from_env(cls) -> AactConnection:
+        def _req(key: str) -> str:
+            val = os.environ.get(key)
+            if not val:
+                raise RuntimeError(
+                    f"Missing required env var {key}. AACT connection details must come "
+                    f"from the environment, never hardcoded."
+                )
+            return val
+
+        return cls(
+            host=_req("AACT_HOST"),
+            port=int(os.environ.get("AACT_PORT", "5432")),
+            dbname=_req("AACT_DB"),
+            user=_req("AACT_USER"),
+            password=_req("AACT_PASSWORD"),
+            snapshot_date=_req("AACT_SNAPSHOT_DATE"),
+        )
+
+    def dsn(self) -> str:
+        return (
+            f"host={self.host} port={self.port} dbname={self.dbname} "
+            f"user={self.user} password={self.password}"
+        )
