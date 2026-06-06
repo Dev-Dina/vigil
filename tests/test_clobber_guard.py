@@ -53,7 +53,9 @@ def test_run_non_live_override_to_clean_root_raises(golden_raw_root) -> None:
     assert _existing_parquet_hashes() == before
 
 
-def test_run_non_live_override_to_report_root_raises_and_leaves_reports_untouched() -> None:
+def test_run_non_live_override_to_report_root_raises_and_leaves_reports_untouched() -> (
+    None
+):
     """A non-live run pointed at the REAL reports dir fails loud and writes nothing there."""
     before = _existing_report_hashes()
 

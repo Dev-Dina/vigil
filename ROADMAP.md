@@ -104,6 +104,8 @@ Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `fronten
 - [ ] **Remove unused frontend files if any remain** — currently `frontend/components/vigil/header.tsx` and `participant-table.tsx` are superseded by `AppNav` / `TriageTable` and unused; delete or repurpose.
 
 ROADMAP TODO (RAG stage): build the public "receptionist" RAG agent over real analyzed studies — name, sponsor/industry (class + name), results/findings, study_url link, searchable by condition/phase/sponsor. Behaviour: on broad query (e.g. "oncology studies") either return a list or ask 1–3 narrowing questions (phase, sponsor type, status). Requires re-extract of AACT text + sponsor name into a ref_corpus (NOT modelling features, NOT tenant data). Isolated from app DB. Spec in data.md + rag.md at that stage.
+
+ROADMAP TODO (Phase 6 / demo): live demo script that generates fresh synthetic participants on the fly and feeds them through ingest→score→rank, shown updating on the dashboard. Two modes: (1) in-distribution → demonstrates live scoring; (2) --drift → generator parameters shifted so PSI/KS cross threshold, drift fires on the monitoring screen and triggers audited fallback (Phase 4 routing). Builds on 5a-(i) participants-as-synthetic-members-with-series. Frame to audience as simulated incoming ePRO batches (synthetic, no PHI).
 ## Decisions log (settled)
 - Sponsor = hard tenant boundary (RLS). CRO scoped per assignment.
 - ClinicalTrials.gov/AACT = build-time only; synthetic cohort proves method validity, not clinical prediction.

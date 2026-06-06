@@ -38,7 +38,9 @@ def test_sum_withdrawals_le_not_completed(clean_frames) -> None:
 def test_unmapped_reason_recorded_not_dropped(golden_report) -> None:
     # The real golden slice contains free-text reasons outside the controlled vocab; each is
     # mapped to OTHER but its ORIGINAL text is recorded (never silently lost).
-    assert golden_report.unmapped_reasons, "unmapped reasons must be recorded, never lost"
+    assert golden_report.unmapped_reasons, (
+        "unmapped reasons must be recorded, never lost"
+    )
     assert all(u["original"] for u in golden_report.unmapped_reasons)
 
 

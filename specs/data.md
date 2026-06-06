@@ -13,7 +13,7 @@ stated once: **golden = transforms, eval set = RAG, held-out split = models.**
 | Layer | Test artifact | What it is | Hard rules |
 |---|---|---|---|
 | **Transforms** (ingestion raw→`ref_*`) | **Golden set** | A frozen slice of **real public** AACT input committed alongside its **expected** cleaned output; the transform is asserted to reproduce it (`assert_frame_equal`). | Real public trial-level data only. **No synthetic, no PHI.** No held-out split, no model metrics. |
-| **Models** (Phase 3) | **Held-out split** | A **temporal, group-disjoint-by-`nct_id`** held-out evaluation — one trial's participants never span splits, evaluation is on later time / unseen trials. | Fixed metrics: **PR-AUC (primary)**, recall@fixed-precision, calibration/Brier, lead-time gain — **reported per `sponsor_class`**. **No golden set. No rebalancing.** Scalers/encoders **fit on train only**. |
+| **Models** (Phase 3) | **Held-out split** | A **temporal (axis = `ref_trial.start_date`), group-disjoint-by-`nct_id`** held-out evaluation — one trial's participants never span splits, evaluation is on later-starting / unseen trials. | Fixed metrics: **PR-AUC (primary)**, recall@fixed-precision, calibration/Brier, lead-time gain — **reported per `sponsor_class`**. **No golden set. No rebalancing.** Scalers/encoders **fit on train only**. |
 | **RAG** (app assistant + demo receptionist, Phase 5 / demo) | **Eval set** | A set of **question → expected-grounding** pairs scored for **faithfulness** + **citation accuracy**. | **No golden set.** App-RAG and demo-RAG get **separate** eval sets, specced in `rag.md` at that phase. |
 
 ## Modelling cohort
@@ -95,6 +95,7 @@ tokens.
 | study_type | enum | `INTERVENTIONAL` only (post-filter) |
 | phase | enum | `EARLY_PHASE1` / `PHASE1` / `PHASE1/PHASE2` / `PHASE2` / `PHASE2/PHASE3` / `PHASE3` / `PHASE4` / `NA` |
 | therapeutic_area | str | mapped from MeSH; unmapped → `OTHER` (original logged) |
+| start_date | date | from `studies.start_date`; **non-null** (a row with no `start_date` already fails the `planned_duration_days` check). It is the **temporal axis** for the Phase-3 held-out split (earlier-starting trials → train, later → test) and is surfaced to the RAG corpus later. |
 | enrollment | int | > 0 |
 | n_arms | int | ≥ 1 |
 | n_sites, n_countries | int | ≥ 0 |
@@ -109,6 +110,10 @@ tokens.
 | healthy_volunteers | bool | |
 | sponsor_class | enum | INDUSTRY / NIH / OTHER_GOV / ACADEMIC_OTHER |
 | results_reported | bool | true for the modelled cohort |
+
+> `start_date` is already present in the raw `studies` extract, so adopting it requires a
+> **re-clean of the existing `2026-06-05` raw snapshot — no re-extract**. The cleaned row
+> counts are unchanged (73,073 trials / 182,240 arms); only the new column is added.
 
 **`ref_arm`** (one row per trial-arm):
 | column | type | rule |
