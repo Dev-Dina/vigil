@@ -6,6 +6,16 @@
   per-participant cohort (clearly labelled) for the deep-learning layer.
 - Claim is method validity / partner-readiness, never clinical prediction. No PHI.
 
+## Evaluation contract
+**One artifact per purpose. Choosing the wrong artifact type is a spec violation.** The principle,
+stated once: **golden = transforms, eval set = RAG, held-out split = models.**
+
+| Layer | Test artifact | What it is | Hard rules |
+|---|---|---|---|
+| **Transforms** (ingestion raw→`ref_*`) | **Golden set** | A frozen slice of **real public** AACT input committed alongside its **expected** cleaned output; the transform is asserted to reproduce it (`assert_frame_equal`). | Real public trial-level data only. **No synthetic, no PHI.** No held-out split, no model metrics. |
+| **Models** (Phase 3) | **Held-out split** | A **temporal, group-disjoint-by-`nct_id`** held-out evaluation — one trial's participants never span splits, evaluation is on later time / unseen trials. | Fixed metrics: **PR-AUC (primary)**, recall@fixed-precision, calibration/Brier, lead-time gain — **reported per `sponsor_class`**. **No golden set. No rebalancing.** Scalers/encoders **fit on train only**. |
+| **RAG** (app assistant + demo receptionist, Phase 5 / demo) | **Eval set** | A set of **question → expected-grounding** pairs scored for **faithfulness** + **citation accuracy**. | **No golden set.** App-RAG and demo-RAG get **separate** eval sets, specced in `rag.md` at that phase. |
+
 ## Raw ingestion
 AACT (CTTI's "Aggregate Analysis of ClinicalTrials.gov") is a published Postgres mirror of
 ClinicalTrials.gov. We pin a **monthly static snapshot** (its date is the provenance key) and

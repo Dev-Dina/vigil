@@ -89,6 +89,7 @@ Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `fronten
 - [ ] No-endpoint gaps to flag at wire time: per-participant risk history (sparkline/trend), `daysEnrolled` in cohort rows, assistant-generated prose for the explanation card — none have an api.md field (`app/page.tsx:27,29`, `app/triage/page.tsx:31,33`, `app/participant/[id]/page.tsx:59`)
 
 ### Process / housekeeping TODOs
+- [ ] **Enforce the evaluation contract in `check_specs.py`** — extend the conformance check as each phase lands: a **models** phase must have a held-out split; a **RAG** phase must have an eval set; a **transform** must have a golden set (per `specs/data.md` "Evaluation contract").
 - [ ] **Add frontend lint/typecheck to CI at Phase 4** — `frontend/` is not in CI; add `tsc --noEmit` (+ eslint) once the API/build lands. Note: `next.config.mjs` has `typescript.ignoreBuildErrors: true`, so `next build` will not catch type errors — CI must run `tsc` explicitly.
 - [ ] **Group tests by phase** — reorganize into `tests/ingestion`, `tests/spine`, `tests/models` (markers/paths) so phase suites run independently.
 - [ ] **Remove unused frontend files if any remain** — currently `frontend/components/vigil/header.tsx` and `participant-table.tsx` are superseded by `AppNav` / `TriageTable` and unused; delete or repurpose.
@@ -100,4 +101,5 @@ ROADMAP TODO (RAG stage): build the public "receptionist" RAG agent over real an
 - pgvector (not Pinecone); LangGraph orchestration; Langfuse tracing.
 - Two surfaces; public Guide isolated in three layers.
 - uv toolchain; release agent prepares commits; CI runs the same checks.
+- **Evaluation contract ratified** (`specs/data.md` + CLAUDE.md per-phase ritual): one test artifact per purpose — **golden = transforms, eval set = RAG, held-out split = models**. Choosing the wrong type is a spec violation. `check_specs.py` enforcement tracked in housekeeping TODOs.
 

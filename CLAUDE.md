@@ -70,6 +70,15 @@ routers (`api/`) -> services (`services/`) -> repositories (`repositories/`) -> 
 - The deep-learning signal uses a **clearly-labelled synthetic cohort** calibrated to real
   aggregate statistics. Proves METHOD validity, never clinical prediction. No PHI in the build.
 
+## Per-phase ritual (every phase, in order)
+1. **Spec the artifact in `/specs` FIRST** — name which test artifact applies:
+   **golden set** (transforms) / **eval set** (RAG) / **held-out split** (models). See
+   `/specs/data.md` "Evaluation contract".
+2. **Build to the spec.**
+3. **The correct test artifact exists and is green.**
+4. **spec-conformance + `release` gate before commit.**
+If reality contradicts the spec, **STOP and ratify the spec on `main` first** — never diverge silently.
+
 ## Definition of done
 Each phase ends in something runnable + a test. The sacred test is the **cross-tenant
 leakage test**: create data as sponsor A, authenticate as sponsor B, assert invisible.
