@@ -118,7 +118,7 @@ def run(
     # is generated from the REAL clean ref_* tables when present (stratified subsample so the
     # stratum mix mirrors the real population and the marginal targets are reproduced) — the
     # cleaned snapshot above is only the fallback substrate (e.g. fixture-only environments).
-    gen_trials, gen_arms, gen_withdrawals = _generation_source(
+    gen_trials, gen_arms, gen_withdrawals, gen_source = _generation_source(
         real_source, trials, arms, withdrawals
     )
     # Scaffold (composite-stratum enrollment/arm means) is built from the GENERATION frames so
@@ -132,14 +132,18 @@ def run(
         seed=SYNTHETIC_SEED,
         participants_per_trial=PARTICIPANTS_PER_TRIAL,
     )
-    write_synthetic(cohort, out_root=out_synth)
+    write_synthetic(cohort, out_root=out_synth, generation_source=gen_source)
     report.notes.append(
         f"synthetic_generation_trials={len(gen_trials)} "
         f"participants_per_trial={PARTICIPANTS_PER_TRIAL}"
     )
 
     synth_manifest = _write_synthetic_manifest(
-        out_synth, targets, cohort.seed, n_gen_trials=len(gen_trials)
+        out_synth,
+        targets,
+        cohort.seed,
+        n_gen_trials=len(gen_trials),
+        generation_source=gen_source,
     )
 
     # Always compute every target, print the table, and write the report BEFORE failing loud,
@@ -205,20 +209,25 @@ def _generation_source(real_source, trials, arms, withdrawals):
     (stratified, deterministic) to stay tractable. Use it only if materially larger than this
     run's cleaned frames (i.e. a real snapshot, not the same small fixture). Otherwise fall back
     to the frames just cleaned in this run.
+
+    Returns ``(trials, arms, withdrawals, source)`` where ``source`` is ``"real"`` or
+    ``"sample"`` — stamped into the synthetic manifest/README so a cohort is never ambiguous.
     """
     if real_source is not None:
         rt, ra, rw = real_source
         if len(rt) > len(trials):
-            return subsample_trials(rt, ra, rw, seed=SYNTHETIC_SEED)
-    return trials, arms, withdrawals
+            st, sa, sw = subsample_trials(rt, ra, rw, seed=SYNTHETIC_SEED)
+            return st, sa, sw, "real"
+    return trials, arms, withdrawals, "sample"
 
 
 def _write_synthetic_manifest(
-    out_synth: Path, targets, seed: int, *, n_gen_trials: int
+    out_synth: Path, targets, seed: int, *, n_gen_trials: int, generation_source: str
 ) -> Path:
     out_synth.mkdir(parents=True, exist_ok=True)
     manifest = {
         "synthetic_seed": seed,
+        "generation_source": generation_source,  # "real" | "sample" — never ambiguous
         "deterministic": "single numpy.random.Generator(seed); bit-identical regen",
         "participants_per_trial": PARTICIPANTS_PER_TRIAL,
         "generation_trials": n_gen_trials,

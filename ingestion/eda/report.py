@@ -248,6 +248,33 @@ def run_eda(clean_root: Path = CLEAN_ROOT, out_root: Path = EDA_ROOT) -> dict[st
             for k, v in g.iterrows()
         }
 
+    td = td.assign(
+        site_band=np.where(td["n_sites"] <= 1, "SINGLE_SITE", "MULTI_SITE"),
+        blinding=np.where(td["masking"].ne("NONE"), "BLINDED", "OPEN_LABEL"),
+    )
+
+    def _by_weighted(col: str) -> dict[str, dict[str, float]]:
+        """Participant-weighted (sum not_completed / sum started) marginal by ``col``.
+
+        This is the aggregation consistent with the participant-weighted OVERALL rate and
+        with a participant-level synthetic cohort, so the synthetic calibration grades against
+        these (the trial-mean ``dropout_by_*`` blocks are for human display).
+        """
+        g = td.groupby(col, observed=True).agg(
+            started=("started", "sum"),
+            not_completed=("not_completed", "sum"),
+            n_trials=("nct_id", "nunique"),
+        )
+        return {
+            str(k): {
+                "mean_dropout": round(float(v["not_completed"] / v["started"]), 4)
+                if v["started"] > 0
+                else 0.0,
+                "n_trials": int(v["n_trials"]),
+            }
+            for k, v in g.iterrows()
+        }
+
     summary: dict[str, Any] = {
         "source": "real hosted AACT snapshot (data/clean/ref_*.parquet); build-time only",
         "study_count_post_filter": int(len(data.trials)),
@@ -264,6 +291,16 @@ def run_eda(clean_root: Path = CLEAN_ROOT, out_root: Path = EDA_ROOT) -> dict[st
         "dropout_by_phase": _by("phase"),
         "dropout_by_therapeutic_area": _by("therapeutic_area"),
         "dropout_by_enrollment_size": _by("enrollment_bucket"),
+        "dropout_by_sponsor_class": _by("sponsor_class"),
+        "dropout_by_site_count": _by("site_band"),
+        # Participant-weighted marginals — the calibration targets (consistent with the
+        # participant-weighted overall and a participant-level synthetic cohort).
+        "dropout_by_phase_pw": _by_weighted("phase"),
+        "dropout_by_therapeutic_area_pw": _by_weighted("therapeutic_area"),
+        "dropout_by_sponsor_class_pw": _by_weighted("sponsor_class"),
+        "dropout_by_blinding_pw": _by_weighted("blinding"),
+        "dropout_by_site_count_pw": _by_weighted("site_band"),
+        "dropout_by_enrollment_size_pw": _by_weighted("enrollment_bucket"),
         "withdrawal_reason_mix": {
             str(k): round(float(v), 4) for k, v in reason_mix.items()
         },
@@ -318,6 +355,12 @@ def _to_markdown(s: dict[str, Any]) -> str:
         lines.append(f"- {k}: {v['mean_dropout']} (n={v['n_trials']})")
     lines += ["", "## Dropout by enrollment size"]
     for k, v in s["dropout_by_enrollment_size"].items():
+        lines.append(f"- {k}: {v['mean_dropout']} (n={v['n_trials']})")
+    lines += ["", "## Dropout by sponsor class"]
+    for k, v in s["dropout_by_sponsor_class"].items():
+        lines.append(f"- {k}: {v['mean_dropout']} (n={v['n_trials']})")
+    lines += ["", "## Dropout by site count (single vs multi-site)"]
+    for k, v in s["dropout_by_site_count"].items():
         lines.append(f"- {k}: {v['mean_dropout']} (n={v['n_trials']})")
     lines += ["", "## Withdrawal-reason mix (controlled vocab)"]
     for k, v in s["withdrawal_reason_mix"].items():

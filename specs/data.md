@@ -12,7 +12,7 @@ ClinicalTrials.gov. We pin a **monthly static snapshot** (its date is the proven
 extract server-side SQL — never a live/runtime call.
 
 **Population filter** (the studies the real dropout statistics are computed from): interventional
-studies with reported participant-flow results — `studies.study_type = 'Interventional'`,
+studies with reported participant-flow results — `studies.study_type = 'INTERVENTIONAL'`,
 `calculated_values.were_results_reported = true`, and a `result_groups` row of
 `result_type = 'Participant Flow'` with `milestones` present. This is the only slice where real
 per-arm started/completed/dropout counts exist.

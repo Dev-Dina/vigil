@@ -18,8 +18,10 @@ import pandas as pd
 import pytest
 
 from ingestion.clean import clean_snapshot
+from ingestion.config import CLEAN_ROOT
 from ingestion.fixtures.build_sample import build as build_sample_fixture
 from ingestion.report import QualityReport
+from ingestion.synthetic import subsample_trials
 
 # Number of trials kept in the default (fast) fixture. Small enough that synthetic
 # generation + feature build is quick, large enough to span multiple strata so calibration
@@ -65,3 +67,32 @@ def full_clean_frames(
 def clean_frames(full_clean_frames) -> dict[str, pd.DataFrame]:
     """Small deterministic subset for the fast default suite."""
     return _subset_frames(full_clean_frames, DEFAULT_TRIAL_LIMIT)
+
+
+@pytest.fixture(scope="session")
+def real_calibration_frames(clean_frames) -> dict[str, pd.DataFrame]:
+    """The production-size stratified subsample of the REAL cleaned ``ref_*`` tables, when present.
+
+    Calibration is only meaningful against a cohort whose stratum mix mirrors the real
+    population, so this draws from ``data/clean/ref_*.parquet`` (the AACT snapshot) using the same
+    default ``subsample_trials`` size the pipeline uses. When that snapshot is absent (CI /
+    fixture-only), it falls back to the SAMPLE-fixture frames; the slow calibration test skips.
+    """
+    paths = {
+        name: CLEAN_ROOT / f"{name}.parquet"
+        for name in ("ref_trial", "ref_arm", "ref_withdrawal_reason")
+    }
+    if not all(p.exists() for p in paths.values()):
+        return {"_real": False, **clean_frames}
+    rt = pd.read_parquet(paths["ref_trial"])
+    ra = pd.read_parquet(paths["ref_arm"])
+    rw = pd.read_parquet(paths["ref_withdrawal_reason"])
+    if len(rt) <= len(clean_frames["ref_trial"]):
+        return {"_real": False, **clean_frames}
+    st, sa, sw = subsample_trials(rt, ra, rw)  # production default size
+    return {
+        "_real": True,
+        "ref_trial": st,
+        "ref_arm": sa,
+        "ref_withdrawal_reason": sw,
+    }

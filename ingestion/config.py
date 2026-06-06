@@ -11,6 +11,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = REPO_ROOT / "data"
 RAW_ROOT = DATA_ROOT / "raw" / "aact"
 CLEAN_ROOT = DATA_ROOT / "clean"
+# A non-live (fixture) pipeline run cleans here so it never clobbers a real ``data/clean``
+# snapshot (which is the preferred synthetic-generation source and the EDA input).
+CLEAN_FIXTURE_ROOT = DATA_ROOT / "clean_fixture"
 SYNTHETIC_ROOT = DATA_ROOT / "synthetic"
 REPORT_ROOT = DATA_ROOT / "reports"
 

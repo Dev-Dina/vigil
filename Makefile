@@ -3,7 +3,7 @@ check-specs:  ## Verify the repo conforms to /specs
 	uv run python scripts/check_specs.py
 
 .PHONY: data
-data:  ## Run the Phase 1 data pipeline (raw->clean->synthetic) on the sample fixture
+data:  ## Run the Phase 1 data pipeline (raw->clean->synthetic + quality/calibration reports)
 	uv run python -m ingestion.pipeline
 
 .PHONY: data-fixture

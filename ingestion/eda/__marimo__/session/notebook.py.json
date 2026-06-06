@@ -1,0 +1,93 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.23.9",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "0930b4deae017bc61cf70e553eb90067",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "3a56c7ffe2e3ccae4d0218bbacdea07c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "efc5be147d8e7d2c5671df68d820d698",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"vigil-real-aact-reference-cohort-eda\">Vigil \u2014 Real AACT Reference Cohort EDA</h1>\n<span class=\"paragraph\">Build-time snapshot only (ClinicalTrials.gov / AACT, pinned). This is <strong>public\nreference data, no PHI</strong>; it calibrates the synthetic cohort and proves method\nvalidity \u2014 never a clinical claim. Numbers below are read live from\n<code>data/clean/ref_*.parquet</code> and <code>data/eda/</code>.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "42225deb62de23e999a6fff17899831e",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"post-filter-study-count\">Post-filter study count</h2>\n<ul>\n<li>Raw studies after the population filter (interventional + posted\n  participant-flow): <strong>73,833</strong></li>\n<li>Cleaned <code>ref_trial</code> rows after fail-loud validation drops: <strong>73,073</strong></li>\n<li><code>ref_arm</code> rows (one per trial-arm): <strong>182,240</strong></li>\n<li>Arm-level dropout \u2014 trial-mean <strong>0.2093</strong>,\n  participant-weighted\n  <strong>0.1510</strong></li>\n</ul>\n<span class=\"paragraph\"><strong>Decision:</strong> raw vs cleaned are stated separately \u2014 the 760 dropped rows are\ngenuine missing/invalid source data (fail-loud), never silently coerced.</span></span>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "25cb67aa2652f4311dbde25c5f67d243",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/html": "<div style='display: flex;flex: 1;flex-direction: column;justify-content: flex-start;align-items: normal;flex-wrap: nowrap;gap: 0.5rem'><span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"computed-eda-summary-dataedaeda_summarymd\">Computed EDA summary (<code>data/eda/eda_summary.md</code>)</h2></span><span class=\"markdown prose dark:prose-invert contents\"><h1 id=\"vigil-eda-real-aact-reference-cohort\">Vigil EDA \u2014 real AACT reference cohort</h1>\n<ul>\n<li>Source: real hosted AACT snapshot (data/clean/ref_*.parquet); build-time only</li>\n<li>Studies after population filter: <strong>73,073</strong></li>\n<li>Trials with participant-flow arms: 72,842</li>\n<li>Arms: 182,240 | Withdrawal rows: 384,802</li>\n</ul>\n<h2 id=\"overall-dropout-rate\">Overall dropout rate</h2>\n<ul>\n<li>trial mean: 0.2018</li>\n<li>trial median: 0.0933</li>\n<li>participant-weighted: 0.151</li>\n</ul>\n<h2 id=\"dropout-by-phase\">Dropout by phase</h2>\n<ul>\n<li>EARLY_PHASE1: 0.1389 (n=464)</li>\n<li>NA: 0.1418 (n=21918)</li>\n<li>PHASE1: 0.1929 (n=5512)</li>\n<li>PHASE1/PHASE2: 0.2945 (n=3935)</li>\n<li>PHASE2: 0.2524 (n=18807)</li>\n<li>PHASE2/PHASE3: 0.2156 (n=1319)</li>\n<li>PHASE3: 0.2323 (n=13102)</li>\n<li>PHASE4: 0.158 (n=7785)</li>\n</ul>\n<h2 id=\"dropout-by-therapeutic-area\">Dropout by therapeutic area</h2>\n<ul>\n<li>ONCOLOGY: 0.3597 (n=14339)</li>\n<li>MUSCULOSKELETAL: 0.2421 (n=2613)</li>\n<li>PSYCHIATRY: 0.2048 (n=6244)</li>\n<li>IMMUNOLOGY_RHEUMATOLOGY: 0.1996 (n=3366)</li>\n<li>GASTROENTEROLOGY: 0.1892 (n=1819)</li>\n<li>CARDIOVASCULAR: 0.1845 (n=6716)</li>\n<li>RENAL_UROLOGY: 0.1704 (n=1643)</li>\n<li>NEUROLOGY: 0.1661 (n=4682)</li>\n<li>DERMATOLOGY: 0.1599 (n=2104)</li>\n<li>ENDOCRINE_METABOLIC: 0.156 (n=4399)</li>\n<li>RESPIRATORY: 0.142 (n=3212)</li>\n<li>OTHER: 0.1351 (n=12086)</li>\n<li>INFECTIOUS_DISEASE: 0.1289 (n=7282)</li>\n<li>OPHTHALMOLOGY: 0.1136 (n=2337)</li>\n</ul>\n<h2 id=\"dropout-by-enrollment-size\">Dropout by enrollment size</h2>\n<ul>\n<li>1-50: 0.2035 (n=32249)</li>\n<li>51-100: 0.1899 (n=12971)</li>\n<li>101-250: 0.2038 (n=13114)</li>\n<li>251-500: 0.2051 (n=7027)</li>\n<li>501-1000: 0.2251 (n=4263)</li>\n<li>1000+: 0.1857 (n=3218)</li>\n</ul>\n<h2 id=\"dropout-by-sponsor-class\">Dropout by sponsor class</h2>\n<ul>\n<li>ACADEMIC_OTHER: 0.1618 (n=35544)</li>\n<li>INDUSTRY: 0.2445 (n=33218)</li>\n<li>NIH: 0.2343 (n=2319)</li>\n<li>OTHER_GOV: 0.161 (n=1761)</li>\n</ul>\n<h2 id=\"dropout-by-site-count-single-vs-multi-site\">Dropout by site count (single vs multi-site)</h2>\n<ul>\n<li>MULTI_SITE: 0.2558 (n=34065)</li>\n<li>SINGLE_SITE: 0.1544 (n=38777)</li>\n</ul>\n<h2 id=\"withdrawal-reason-mix-controlled-vocab\">Withdrawal-reason mix (controlled vocab)</h2>\n<ul>\n<li>OTHER: 0.1754</li>\n<li>WITHDRAWAL_BY_SUBJECT: 0.1477</li>\n<li>STUDY_TERMINATED: 0.1217</li>\n<li>LOST_TO_FOLLOWUP: 0.1071</li>\n<li>PROTOCOL_VIOLATION: 0.0959</li>\n<li>DEATH: 0.0909</li>\n<li>ADMINISTRATIVE: 0.0818</li>\n<li>ADVERSE_EVENT: 0.0817</li>\n<li>LACK_OF_EFFICACY: 0.0762</li>\n<li>PHYSICIAN_DECISION: 0.0142</li>\n<li>NONCOMPLIANCE: 0.0053</li>\n<li>PREGNANCY: 0.002</li>\n</ul>\n<h2 id=\"covariate-dropout-associations-sign-effect-size\">Covariate -&gt; dropout associations (sign + effect size)</h2>\n<ul>\n<li>{'covariate': 'enrollment', 'pearson_r': -0.0057, 'sign': 'negative', 'high_minus_low_tercile_dropout_gap': -0.0055, 'n': 72842}</li>\n<li>{'covariate': 'n_arms', 'pearson_r': -0.004, 'sign': 'negative', 'high_minus_low_tercile_dropout_gap': nan, 'n': 72842}</li>\n<li>{'covariate': 'n_sites', 'pearson_r': 0.1353, 'sign': 'positive', 'high_minus_low_tercile_dropout_gap': 0.1332, 'n': 72842}</li>\n<li>{'covariate': 'n_countries', 'pearson_r': 0.1844, 'sign': 'positive', 'high_minus_low_tercile_dropout_gap': nan, 'n': 72842}</li>\n<li>{'covariate': 'planned_duration_days', 'pearson_r': 0.1277, 'sign': 'positive', 'high_minus_low_tercile_dropout_gap': 0.1126, 'n': 72842}</li>\n<li>{'covariate': 'min_age_years', 'pearson_r': -0.0277, 'sign': 'negative', 'high_minus_low_tercile_dropout_gap': nan, 'n': 70391}</li>\n<li>{'covariate': 'max_age_years', 'pearson_r': 0.0692, 'sign': 'positive', 'high_minus_low_tercile_dropout_gap': 0.0432, 'n': 35256}</li>\n<li>{'covariate': 'blinded(vs open label)', 'blinded_mean_dropout': 0.1618, 'open_mean_dropout': 0.2344, 'n': 72842}</li>\n</ul>\n<h2 id=\"figures\">Figures</h2>\n<ul>\n<li>dropout_rate_hist: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_rate_hist.png</code></li>\n<li>dropout_by_phase: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_phase.png</code></li>\n<li>dropout_by_therapeutic_area: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_therapeutic_area.png</code></li>\n<li>dropout_by_enrollment_size: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_enrollment_size.png</code></li>\n<li>enrollment_hist: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\enrollment_hist.png</code></li>\n<li>withdrawal_reason_mix: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\withdrawal_reason_mix.png</code></li>\n<li>missingness: <code>C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\missingness.png</code></li>\n</ul></span></div>"
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "ed919fb59b7a06d9615b9570cb8b1213",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "9ff6ce27e052e7d6af7a57486c984e8c",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/markdown": "<span class=\"markdown prose dark:prose-invert contents\"><h2 id=\"modelling-decisions-carried-from-this-eda\">Modelling decisions carried from this EDA</h2>\n<ul>\n<li><strong>Covariate signs (real):</strong> \u2191 dropout with more sites, more countries, longer\n  planned duration; blinded &lt; open-label. These signs must survive in the synthetic\n  cohort.</li>\n<li><strong>Strata:</strong> phase \u00d7 therapeutic_area \u00d7 sponsor_class (+ blinded, single/multi-site)\n  drive calibration targets.</li>\n<li><strong>Censoring is not dropout:</strong> right-censored / still-ongoing participants are\n  excluded from labels they cannot have \u2014 never labelled \"no dropout\".</li>\n<li><strong>Group split by trial</strong> (<code>nct_id</code>) so one trial never spans train/val/test; scalers\n  fit on train only. <code>synthetic</code> is metadata, never a feature.</li>\n</ul></span>"
+          }
+        }
+      ],
+      "console": []
+    }
+  ]
+}
