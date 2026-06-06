@@ -1,0 +1,222 @@
+{
+  "cells": {
+    "PHASE1/PHASE2|ACADEMIC_OTHER|wd=False|max_age=False": [
+      "NCT00050986",
+      "NCT00068718"
+    ],
+    "PHASE1/PHASE2|ACADEMIC_OTHER|wd=False|max_age=True": [
+      "NCT00003726",
+      "NCT00005803"
+    ],
+    "PHASE1/PHASE2|ACADEMIC_OTHER|wd=True|max_age=False": [
+      "NCT00002558",
+      "NCT00003102"
+    ],
+    "PHASE1/PHASE2|ACADEMIC_OTHER|wd=True|max_age=True": [
+      "NCT00014495",
+      "NCT00058825"
+    ],
+    "PHASE1/PHASE2|INDUSTRY|wd=False|max_age=False": [
+      "NCT00052442",
+      "NCT00093041"
+    ],
+    "PHASE1/PHASE2|INDUSTRY|wd=False|max_age=True": [
+      "NCT00399308",
+      "NCT00419445"
+    ],
+    "PHASE1/PHASE2|INDUSTRY|wd=True|max_age=False": [
+      "NCT00002663",
+      "NCT00045942"
+    ],
+    "PHASE1/PHASE2|INDUSTRY|wd=True|max_age=True": [
+      "NCT00102531",
+      "NCT00106353"
+    ],
+    "PHASE2/PHASE3|ACADEMIC_OTHER|wd=False|max_age=False": [
+      "NCT00000142",
+      "NCT00078286"
+    ],
+    "PHASE2/PHASE3|ACADEMIC_OTHER|wd=False|max_age=True": [
+      "NCT00003816",
+      "NCT00096460"
+    ],
+    "PHASE2/PHASE3|ACADEMIC_OTHER|wd=True|max_age=False": [
+      "NCT00000135",
+      "NCT00064662"
+    ],
+    "PHASE2/PHASE3|ACADEMIC_OTHER|wd=True|max_age=True": [
+      "NCT00040742",
+      "NCT00053846"
+    ],
+    "PHASE2/PHASE3|INDUSTRY|wd=False|max_age=False": [
+      "NCT00255970",
+      "NCT00328653"
+    ],
+    "PHASE2/PHASE3|INDUSTRY|wd=False|max_age=True": [
+      "NCT00137969",
+      "NCT00538434"
+    ],
+    "PHASE2/PHASE3|INDUSTRY|wd=True|max_age=False": [
+      "NCT00098306",
+      "NCT00098722"
+    ],
+    "PHASE2/PHASE3|INDUSTRY|wd=True|max_age=True": [
+      "NCT00069641",
+      "NCT00087529"
+    ],
+    "PHASE2|ACADEMIC_OTHER|wd=False|max_age=False": [
+      "NCT00002975",
+      "NCT00003820"
+    ],
+    "PHASE2|ACADEMIC_OTHER|wd=False|max_age=True": [
+      "NCT00002601",
+      "NCT00003042"
+    ],
+    "PHASE2|ACADEMIC_OTHER|wd=True|max_age=False": [
+      "NCT00003298",
+      "NCT00003896"
+    ],
+    "PHASE2|ACADEMIC_OTHER|wd=True|max_age=True": [
+      "NCT00002842",
+      "NCT00002931"
+    ],
+    "PHASE2|INDUSTRY|wd=False|max_age=False": [
+      "NCT00044512",
+      "NCT00053482"
+    ],
+    "PHASE2|INDUSTRY|wd=False|max_age=True": [
+      "NCT00040443",
+      "NCT00044005"
+    ],
+    "PHASE2|INDUSTRY|wd=True|max_age=False": [
+      "NCT00022698",
+      "NCT00035555"
+    ],
+    "PHASE2|INDUSTRY|wd=True|max_age=True": [
+      "NCT00040664",
+      "NCT00041756"
+    ],
+    "PHASE3|ACADEMIC_OTHER|wd=False|max_age=False": [
+      "NCT00000134",
+      "NCT00000136"
+    ],
+    "PHASE3|ACADEMIC_OTHER|wd=False|max_age=True": [
+      "NCT00000125",
+      "NCT00000371"
+    ],
+    "PHASE3|ACADEMIC_OTHER|wd=True|max_age=False": [
+      "NCT00002525",
+      "NCT00002597"
+    ],
+    "PHASE3|ACADEMIC_OTHER|wd=True|max_age=True": [
+      "NCT00002766",
+      "NCT00002850"
+    ],
+    "PHASE3|INDUSTRY|wd=False|max_age=False": [
+      "NCT00046228",
+      "NCT00051168"
+    ],
+    "PHASE3|INDUSTRY|wd=False|max_age=True": [
+      "NCT00004500",
+      "NCT00041717"
+    ],
+    "PHASE3|INDUSTRY|wd=True|max_age=False": [
+      "NCT00005947",
+      "NCT00007020"
+    ],
+    "PHASE3|INDUSTRY|wd=True|max_age=True": [
+      "NCT00009737",
+      "NCT00021255"
+    ]
+  },
+  "n_ncts": 64,
+  "nct_ids": [
+    "NCT00000125",
+    "NCT00000134",
+    "NCT00000135",
+    "NCT00000136",
+    "NCT00000142",
+    "NCT00000371",
+    "NCT00002525",
+    "NCT00002558",
+    "NCT00002597",
+    "NCT00002601",
+    "NCT00002663",
+    "NCT00002766",
+    "NCT00002842",
+    "NCT00002850",
+    "NCT00002931",
+    "NCT00002975",
+    "NCT00003042",
+    "NCT00003102",
+    "NCT00003298",
+    "NCT00003726",
+    "NCT00003816",
+    "NCT00003820",
+    "NCT00003896",
+    "NCT00004500",
+    "NCT00005803",
+    "NCT00005947",
+    "NCT00007020",
+    "NCT00009737",
+    "NCT00014495",
+    "NCT00021255",
+    "NCT00022698",
+    "NCT00035555",
+    "NCT00040443",
+    "NCT00040664",
+    "NCT00040742",
+    "NCT00041717",
+    "NCT00041756",
+    "NCT00044005",
+    "NCT00044512",
+    "NCT00045942",
+    "NCT00046228",
+    "NCT00050986",
+    "NCT00051168",
+    "NCT00052442",
+    "NCT00053482",
+    "NCT00053846",
+    "NCT00058825",
+    "NCT00064662",
+    "NCT00068718",
+    "NCT00069641",
+    "NCT00078286",
+    "NCT00087529",
+    "NCT00093041",
+    "NCT00096460",
+    "NCT00098306",
+    "NCT00098722",
+    "NCT00102531",
+    "NCT00106353",
+    "NCT00137969",
+    "NCT00255970",
+    "NCT00328653",
+    "NCT00399308",
+    "NCT00419445",
+    "NCT00538434"
+  ],
+  "provenance": {
+    "phi": "NONE \u2014 trial-level/aggregate columns only, no participant data",
+    "purpose": "ingestion clean-transform oracle (raw -> ref_*) ONLY",
+    "snapshot_date": "2026-06-05",
+    "source": "ClinicalTrials.gov / AACT (CTTI) \u2014 REAL PUBLIC trial-level data",
+    "synthetic": false
+  },
+  "selection_rule": {
+    "cell_key": "phase x sponsor_class x has_withdrawal x has_max_age",
+    "n_cells": 32,
+    "order": "nct_id ascending; every cell required (fail-loud if under-filled)",
+    "per_cell": 2,
+    "phases": [
+      "PHASE1/PHASE2",
+      "PHASE2",
+      "PHASE2/PHASE3",
+      "PHASE3"
+    ],
+    "sponsor_classes": [
+      "ACADEMIC_OTHER",
+      "INDUSTRY"
+    ]
+  }
+}

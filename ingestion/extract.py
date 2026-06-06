@@ -8,8 +8,8 @@ the snapshot date, AACT version, source URL, exact SQL + filter predicates, and 
 row counts.
 
 If a live AACT Postgres is unreachable in this environment, the rest of the pipeline runs
-off the committed sample fixture (see ``ingestion/fixtures/aact_sample``). This module is
-parameterized so a real extraction is a drop-in.
+off the committed GOLDEN SET (``tests/golden/raw/``), a frozen slice of REAL public AACT
+data. This module is parameterized so a real extraction is a drop-in.
 
 The ``--live`` extraction path (:func:`extract_to_raw`) has been exercised against a real
 hosted AACT Postgres (snapshot captured 2026-06-05; connection and per-table queries

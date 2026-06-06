@@ -1,0 +1,214 @@
+{"intervention_type": "DRUG", "name": "Topical ocular hypotensive eye drops.", "nct_id": "NCT00000125"}
+{"intervention_type": "DRUG", "name": "Foscarnet", "nct_id": "NCT00000134"}
+{"intervention_type": "DRUG", "name": "Ganciclovir", "nct_id": "NCT00000134"}
+{"intervention_type": "DRUG", "name": "MSL-109", "nct_id": "NCT00000135"}
+{"intervention_type": "OTHER", "name": "Placebo", "nct_id": "NCT00000135"}
+{"intervention_type": "DRUG", "name": "Foscarnet", "nct_id": "NCT00000136"}
+{"intervention_type": "DRUG", "name": "Ganciclovir", "nct_id": "NCT00000136"}
+{"intervention_type": "DRUG", "name": "Cidofovir", "nct_id": "NCT00000142"}
+{"intervention_type": "DRUG", "name": "D-cycloserine", "nct_id": "NCT00000371"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00000371"}
+{"intervention_type": "DRUG", "name": "fluorouracil", "nct_id": "NCT00002525"}
+{"intervention_type": "DRUG", "name": "leucovorin calcium", "nct_id": "NCT00002525"}
+{"intervention_type": "DRUG", "name": "carboplatin", "nct_id": "NCT00002558"}
+{"intervention_type": "DRUG", "name": "etoposide", "nct_id": "NCT00002558"}
+{"intervention_type": "BIOLOGICAL", "name": "filgrastim", "nct_id": "NCT00002558"}
+{"intervention_type": "DRUG", "name": "ifosfamide", "nct_id": "NCT00002558"}
+{"intervention_type": "DRUG", "name": "paclitaxel", "nct_id": "NCT00002558"}
+{"intervention_type": "PROCEDURE", "name": "peripheral blood stem cell transplantation", "nct_id": "NCT00002558"}
+{"intervention_type": "DRUG", "name": "flutamide", "nct_id": "NCT00002597"}
+{"intervention_type": "DRUG", "name": "Lupron", "nct_id": "NCT00002597"}
+{"intervention_type": "RADIATION", "name": "radiation therapy", "nct_id": "NCT00002597"}
+{"intervention_type": "DRUG", "name": "Zoladex", "nct_id": "NCT00002597"}
+{"intervention_type": "DRUG", "name": "cisplatin", "nct_id": "NCT00002601"}
+{"intervention_type": "DRUG", "name": "doxorubicin hydrochloride", "nct_id": "NCT00002601"}
+{"intervention_type": "BIOLOGICAL", "name": "filgrastim", "nct_id": "NCT00002601"}
+{"intervention_type": "DRUG", "name": "ifosfamide", "nct_id": "NCT00002601"}
+{"intervention_type": "DRUG", "name": "melphalan", "nct_id": "NCT00002601"}
+{"intervention_type": "PROCEDURE", "name": "peripheral blood stem cell transplantation", "nct_id": "NCT00002601"}
+{"intervention_type": "BIOLOGICAL", "name": "Epstein-Barr virus-specific cytotoxic T lymphocytes (EBV-CTLs)", "nct_id": "NCT00002663"}
+{"intervention_type": "DRUG", "name": "carmustine", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "cyclophosphamide", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "cytarabine", "nct_id": "NCT00002766"}
+{"intervention_type": "BIOLOGICAL", "name": "dactinomycin", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "daunorubicin hydrochloride", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "doxorubicin hydrochloride", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "etoposide", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "mercaptopurine", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "methotrexate", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "mitoxantrone hydrochloride", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "pegaspargase", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "prednisone", "nct_id": "NCT00002766"}
+{"intervention_type": "RADIATION", "name": "radiation therapy", "nct_id": "NCT00002766"}
+{"intervention_type": "BIOLOGICAL", "name": "sargramostim", "nct_id": "NCT00002766"}
+{"intervention_type": "DRUG", "name": "vincristine sulfate", "nct_id": "NCT00002766"}
+{"intervention_type": "PROCEDURE", "name": "adjuvant therapy", "nct_id": "NCT00002842"}
+{"intervention_type": "PROCEDURE", "name": "conventional surgery", "nct_id": "NCT00002842"}
+{"intervention_type": "DRUG", "name": "floxuridine", "nct_id": "NCT00002842"}
+{"intervention_type": "DRUG", "name": "fluorouracil", "nct_id": "NCT00002842"}
+{"intervention_type": "DRUG", "name": "leucovorin calcium", "nct_id": "NCT00002842"}
+{"intervention_type": "DRUG", "name": "160 mg trimethoprim and 800 mg sulfamethoxazole", "nct_id": "NCT00002850"}
+{"intervention_type": "DRUG", "name": "ciprofloxacin", "nct_id": "NCT00002850"}
+{"intervention_type": "DRUG", "name": "ofloxacin", "nct_id": "NCT00002850"}
+{"intervention_type": "PROCEDURE", "name": "autologous bone marrow transplantation", "nct_id": "NCT00002931"}
+{"intervention_type": "PROCEDURE", "name": "bone marrow ablation with stem cell support", "nct_id": "NCT00002931"}
+{"intervention_type": "DRUG", "name": "carboplatin", "nct_id": "NCT00002931"}
+{"intervention_type": "DRUG", "name": "etoposide", "nct_id": "NCT00002931"}
+{"intervention_type": "BIOLOGICAL", "name": "filgrastim", "nct_id": "NCT00002931"}
+{"intervention_type": "DRUG", "name": "ifosfamide", "nct_id": "NCT00002931"}
+{"intervention_type": "DRUG", "name": "paclitaxel", "nct_id": "NCT00002931"}
+{"intervention_type": "DRUG", "name": "aminolevulinic acid", "nct_id": "NCT00002975"}
+{"intervention_type": "PROCEDURE", "name": "bone marrow ablation with stem cell support", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "cisplatin", "nct_id": "NCT00003042"}
+{"intervention_type": "PROCEDURE", "name": "conventional surgery", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "cyclophosphamide", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "doxorubicin hydrochloride", "nct_id": "NCT00003042"}
+{"intervention_type": "BIOLOGICAL", "name": "filgrastim", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "melphalan", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "mesna", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "paclitaxel", "nct_id": "NCT00003042"}
+{"intervention_type": "PROCEDURE", "name": "peripheral blood stem cell transplantation", "nct_id": "NCT00003042"}
+{"intervention_type": "DRUG", "name": "tamoxifen citrate", "nct_id": "NCT00003042"}
+{"intervention_type": "BIOLOGICAL", "name": "Iodine-131 radiolabeled chimeric monoclonal antibody G250 (131I-cG250)", "nct_id": "NCT00003102"}
+{"intervention_type": "DRUG", "name": "cisplatin", "nct_id": "NCT00003298"}
+{"intervention_type": "DRUG", "name": "fluorouracil", "nct_id": "NCT00003298"}
+{"intervention_type": "DRUG", "name": "leucovorin calcium", "nct_id": "NCT00003298"}
+{"intervention_type": "DRUG", "name": "paclitaxel", "nct_id": "NCT00003298"}
+{"intervention_type": "RADIATION", "name": "radiation therapy", "nct_id": "NCT00003298"}
+{"intervention_type": "PROCEDURE", "name": "surgery", "nct_id": "NCT00003298"}
+{"intervention_type": "BIOLOGICAL", "name": "lepirudin", "nct_id": "NCT00003726"}
+{"intervention_type": "BIOLOGICAL", "name": "anti-thymocyte globulin", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "busulfan", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "carboplatin", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "cyclophosphamide", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "etoposide", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "fludarabine phosphate", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "melphalan", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "thiotepa", "nct_id": "NCT00003816"}
+{"intervention_type": "RADIATION", "name": "total-body irradiation", "nct_id": "NCT00003816"}
+{"intervention_type": "DRUG", "name": "Rituximab", "nct_id": "NCT00003820"}
+{"intervention_type": "DRUG", "name": "cisplatin", "nct_id": "NCT00003896"}
+{"intervention_type": "DRUG", "name": "liposomal doxorubicin", "nct_id": "NCT00003896"}
+{"intervention_type": "DRUG", "name": "paclitaxel", "nct_id": "NCT00003896"}
+{"intervention_type": "DRUG", "name": "Lucinactant", "nct_id": "NCT00004500"}
+{"intervention_type": "OTHER", "name": "Standard Care", "nct_id": "NCT00004500"}
+{"intervention_type": "PROCEDURE", "name": "Autologous-Allogeneic Tandem Hematopoietic Stem Cell Transplantation", "nct_id": "NCT00005803"}
+{"intervention_type": "PROCEDURE", "name": "Autologous Hematopoietic Stem Cell Transplantation", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Carmustine", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Cyclophosphamide", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Cyclosporine", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Cytarabine", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Etoposide", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Fludarabine Phosphate", "nct_id": "NCT00005803"}
+{"intervention_type": "OTHER", "name": "Laboratory Biomarker Analysis", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Melphalan", "nct_id": "NCT00005803"}
+{"intervention_type": "DRUG", "name": "Mycophenolate Mofetil", "nct_id": "NCT00005803"}
+{"intervention_type": "PROCEDURE", "name": "Nonmyeloablative Allogeneic Hematopoietic Stem Cell Transplantation", "nct_id": "NCT00005803"}
+{"intervention_type": "PROCEDURE", "name": "Peripheral Blood Stem Cell Transplantation", "nct_id": "NCT00005803"}
+{"intervention_type": "BIOLOGICAL", "name": "Therapeutic Autologous Lymphocytes", "nct_id": "NCT00005803"}
+{"intervention_type": "RADIATION", "name": "Total-Body Irradiation", "nct_id": "NCT00005803"}
+{"intervention_type": "BIOLOGICAL", "name": "Placebo", "nct_id": "NCT00005947"}
+{"intervention_type": "BIOLOGICAL", "name": "sipuleucel-T", "nct_id": "NCT00005947"}
+{"intervention_type": "DRUG", "name": "Cholic Acids", "nct_id": "NCT00007020"}
+{"intervention_type": "DRUG", "name": "5-Fluorouracil", "nct_id": "NCT00009737"}
+{"intervention_type": "DRUG", "name": "Capecitabine [Xeloda]", "nct_id": "NCT00009737"}
+{"intervention_type": "DRUG", "name": "Leucovorin", "nct_id": "NCT00009737"}
+{"intervention_type": "RADIATION", "name": "bismuth Bi213 monoclonal antibody M195", "nct_id": "NCT00014495"}
+{"intervention_type": "DRUG", "name": "cytarabine", "nct_id": "NCT00014495"}
+{"intervention_type": "BIOLOGICAL", "name": "filgrastim", "nct_id": "NCT00014495"}
+{"intervention_type": "DRUG", "name": "Carboplatin", "nct_id": "NCT00021255"}
+{"intervention_type": "DRUG", "name": "Cyclophosphamide", "nct_id": "NCT00021255"}
+{"intervention_type": "DRUG", "name": "Docetaxel", "nct_id": "NCT00021255"}
+{"intervention_type": "DRUG", "name": "Doxorubicin", "nct_id": "NCT00021255"}
+{"intervention_type": "DRUG", "name": "Herceptin", "nct_id": "NCT00021255"}
+{"intervention_type": "DRUG", "name": "Capecitabine", "nct_id": "NCT00022698"}
+{"intervention_type": "DRUG", "name": "Irinotecan", "nct_id": "NCT00022698"}
+{"intervention_type": "DRUG", "name": "Belatacept", "nct_id": "NCT00035555"}
+{"intervention_type": "DRUG", "name": "Corticosteroids", "nct_id": "NCT00035555"}
+{"intervention_type": "DRUG", "name": "Cyclosporine", "nct_id": "NCT00035555"}
+{"intervention_type": "DRUG", "name": "Mycophenolate mofetil (MMF)", "nct_id": "NCT00035555"}
+{"intervention_type": "DRUG", "name": "CX516", "nct_id": "NCT00040443"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00040443"}
+{"intervention_type": "DRUG", "name": "fosamprenavir", "nct_id": "NCT00040664"}
+{"intervention_type": "DRUG", "name": "ritonavir", "nct_id": "NCT00040664"}
+{"intervention_type": "DIETARY_SUPPLEMENT", "name": "ginger", "nct_id": "NCT00040742"}
+{"intervention_type": "OTHER", "name": "placebo", "nct_id": "NCT00040742"}
+{"intervention_type": "DRUG", "name": "Fampridine-SR", "nct_id": "NCT00041717"}
+{"intervention_type": "OTHER", "name": "Placebo", "nct_id": "NCT00041717"}
+{"intervention_type": "DRUG", "name": "100 mg PG-530742", "nct_id": "NCT00041756"}
+{"intervention_type": "DRUG", "name": "200 mg PG-530742", "nct_id": "NCT00041756"}
+{"intervention_type": "DRUG", "name": "50 mg PG-530742", "nct_id": "NCT00041756"}
+{"intervention_type": "DRUG", "name": "PG-530742", "nct_id": "NCT00041756"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00041756"}
+{"intervention_type": "DRUG", "name": "Lurasidone 20 mg", "nct_id": "NCT00044005"}
+{"intervention_type": "DRUG", "name": "Lurasidone 40 mg", "nct_id": "NCT00044005"}
+{"intervention_type": "DRUG", "name": "Lurasidone 80mg", "nct_id": "NCT00044005"}
+{"intervention_type": "DRUG", "name": "Sorafenib (Nexavar, BAY43-9006)", "nct_id": "NCT00044512"}
+{"intervention_type": "DRUG", "name": "Itraconazole", "nct_id": "NCT00045942"}
+{"intervention_type": "DRUG", "name": "PKC412", "nct_id": "NCT00045942"}
+{"intervention_type": "DRUG", "name": "abciximab placebo; reteplase placebo, abciximab, abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "abciximab placebo; reteplase placebo, abciximab, abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "Abciximab; reteplase; abciximab placebo; abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "Abciximab; reteplase; abciximab placebo; abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "abciximab; reteplase placebo; abciximab placebo; abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "abciximab; reteplase placebo; abciximab placebo; abciximab", "nct_id": "NCT00046228"}
+{"intervention_type": "DRUG", "name": "R115777", "nct_id": "NCT00050986"}
+{"intervention_type": "DRUG", "name": "Temozolomide", "nct_id": "NCT00050986"}
+{"intervention_type": "DRUG", "name": "Travatan", "nct_id": "NCT00051168"}
+{"intervention_type": "DRUG", "name": "pralatrexate", "nct_id": "NCT00052442"}
+{"intervention_type": "BIOLOGICAL", "name": "ACAM2000 Smallpox Vaccine", "nct_id": "NCT00053482"}
+{"intervention_type": "BIOLOGICAL", "name": "Vaccinia virus (calf lymph) smallpox vaccine: Dryvax\u00ae", "nct_id": "NCT00053482"}
+{"intervention_type": "DRUG", "name": "buspirone hydrochloride", "nct_id": "NCT00053846"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00053846"}
+{"intervention_type": "BIOLOGICAL", "name": "Campath 1H", "nct_id": "NCT00058825"}
+{"intervention_type": "DRUG", "name": "FK506 (Tacrolimus) or Cyclosporine", "nct_id": "NCT00058825"}
+{"intervention_type": "DRUG", "name": "Fludarabine", "nct_id": "NCT00058825"}
+{"intervention_type": "PROCEDURE", "name": "Stem Cell Transplant", "nct_id": "NCT00058825"}
+{"intervention_type": "RADIATION", "name": "Total Body Irradiation (TBI)", "nct_id": "NCT00058825"}
+{"intervention_type": "PROCEDURE", "name": "Autologous Fascia Sling", "nct_id": "NCT00064662"}
+{"intervention_type": "PROCEDURE", "name": "Burch Modified Tanagho", "nct_id": "NCT00064662"}
+{"intervention_type": "BIOLOGICAL", "name": "Therapeutic Allogeneic Lymphocytes", "nct_id": "NCT00068718"}
+{"intervention_type": "BIOLOGICAL", "name": "iduronate-2-sulfatase enzyme replacement therapy", "nct_id": "NCT00069641"}
+{"intervention_type": "BIOLOGICAL", "name": "Iduronate-2-sulfatase enzyme replacement therapy", "nct_id": "NCT00069641"}
+{"intervention_type": "BIOLOGICAL", "name": "Placebo", "nct_id": "NCT00069641"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00078286"}
+{"intervention_type": "DRUG", "name": "Sertraline", "nct_id": "NCT00078286"}
+{"intervention_type": "DRUG", "name": "placebo", "nct_id": "NCT00087529"}
+{"intervention_type": "DRUG", "name": "rituximab", "nct_id": "NCT00087529"}
+{"intervention_type": "DRUG", "name": "Zalutumumab", "nct_id": "NCT00093041"}
+{"intervention_type": "PROCEDURE", "name": "Allogeneic transplant", "nct_id": "NCT00096460"}
+{"intervention_type": "PROCEDURE", "name": "Autologous transplant", "nct_id": "NCT00096460"}
+{"intervention_type": "RADIATION", "name": "Chemotherapy or Radiation therapy", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "Cyclophosphamide and Rituximab", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "Filgrastim", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "GVHD Prophylaxis", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "Non-myeloablative Conditioning regimen", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "Rituximab maintenance therapy", "nct_id": "NCT00096460"}
+{"intervention_type": "DRUG", "name": "Maraviroc (UK-427,857)", "nct_id": "NCT00098306"}
+{"intervention_type": "DRUG", "name": "Optimized Background Therapy", "nct_id": "NCT00098306"}
+{"intervention_type": "DRUG", "name": "Optimized Background Therapy", "nct_id": "NCT00098306"}
+{"intervention_type": "DRUG", "name": "Optimized Background Therapy", "nct_id": "NCT00098306"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00098306"}
+{"intervention_type": "DRUG", "name": "Maraviroc (UK-427,857)", "nct_id": "NCT00098722"}
+{"intervention_type": "DRUG", "name": "Maraviroc (UK-427,857)", "nct_id": "NCT00098722"}
+{"intervention_type": "DRUG", "name": "optimized background therapy", "nct_id": "NCT00098722"}
+{"intervention_type": "DRUG", "name": "optimized background therapy", "nct_id": "NCT00098722"}
+{"intervention_type": "DRUG", "name": "optimized background therapy", "nct_id": "NCT00098722"}
+{"intervention_type": "DRUG", "name": "Cisplatin liposomal", "nct_id": "NCT00102531"}
+{"intervention_type": "DRUG", "name": "Torisel", "nct_id": "NCT00106353"}
+{"intervention_type": "DRUG", "name": "Acetaminophen", "nct_id": "NCT00137969"}
+{"intervention_type": "DRUG", "name": "Diphenhydramine", "nct_id": "NCT00137969"}
+{"intervention_type": "DRUG", "name": "Placebo", "nct_id": "NCT00137969"}
+{"intervention_type": "DRUG", "name": "Prednisone", "nct_id": "NCT00137969"}
+{"intervention_type": "DRUG", "name": "Rituximab", "nct_id": "NCT00137969"}
+{"intervention_type": "OTHER", "name": "DFDBA", "nct_id": "NCT00255970"}
+{"intervention_type": "DEVICE", "name": "Regenafil", "nct_id": "NCT00255970"}
+{"intervention_type": "DRUG", "name": "Cyclosporine NOVA22007 0.05%", "nct_id": "NCT00328653"}
+{"intervention_type": "DRUG", "name": "Cyclosporine NOVA22007 0.1%", "nct_id": "NCT00328653"}
+{"intervention_type": "DRUG", "name": "Vehicle", "nct_id": "NCT00328653"}
+{"intervention_type": "DEVICE", "name": "Celaderm (Frozen Cultured Epidermal Allograft)", "nct_id": "NCT00399308"}
+{"intervention_type": "DEVICE", "name": "Celaderm (Frozen Cultured Epidermal Allograft)", "nct_id": "NCT00399308"}
+{"intervention_type": "DEVICE", "name": "Control (compression bandaging)", "nct_id": "NCT00399308"}
+{"intervention_type": "DRUG", "name": "GTS21/Placebo", "nct_id": "NCT00419445"}
+{"intervention_type": "BIOLOGICAL", "name": "Reslizumab", "nct_id": "NCT00538434"}
+{"intervention_type": "OTHER", "name": "Saline", "nct_id": "NCT00538434"}

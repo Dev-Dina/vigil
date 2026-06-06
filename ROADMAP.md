@@ -37,7 +37,15 @@ Legend: [x] done · [~] in progress / pending review · [ ] not started
 Baselines (logistic + GBT) on real registry · sequence model (synthetic cohort) · survival ·
 calibration + SHAP · temporal-only eval (PR-AUC, recall@precision, lead-time gain) · scores → Postgres.
 **Done when:** reproducible training from Phase 1 REAL data; metrics logged; scores behind RLS.
-> Blocked on Phase 1 real data + EDA.
+> Phase 1 REAL data + EDA are DONE — Phase 3 is no longer blocked on them. Now blocked on two
+> pre-conditions: (1) the **feature-contract spec** is not yet ratified into `specs/data.md`
+> (scoped modelling cohort {PHASE1/PHASE2, PHASE2, PHASE2/PHASE3, PHASE3}; sponsor_class is a
+> feature / identity is NOT; max_age_years missingness as boolean, not imputed) — per the
+> per-phase ritual, spec on `main` first; (2) two open scoring decisions: (a) scoring-target
+> mismatch — how `risk_score` reaches operational/demo participants with no engagement series;
+> (b) baseline label definition (binary dropout-rate cut vs continuous vs overall_status/
+> why_stopped — the latter not in the cleaned schema). Held-out split (group-disjoint by
+> `nct_id`) is the Phase-3 test artifact (golden = transforms only).
 
 ## Phase 4 — Console, API & model routing  [~]
 FastAPI per api spec · four screens (v0) via scoped layer · routing (regime, champion/challenger, drift-fallback, audited promotion).
@@ -70,12 +78,13 @@ Docker Compose dev · deploy/k8s (Deployments/Services/Ingress/Config/Secrets/Jo
 ## Open TODO register
 Synced from `TODO(...)` comments in the tree + decisions. (file:line · note)
 - [x] extract.py:153 — RESOLVED 2026-06-05: `--live` run against hosted AACT, snapshot pinned (TODO removed)
-- [ ] clean.py:76 — never let sample fixtures be mistaken for real AACT
+- [x] clean.py:76 — RESOLVED: fabricated sample fixture retired; the only non-live substrate is now the REAL-AACT golden set (`tests/golden/`), so a sample can no longer be mistaken for real (TODO removed)
 - [ ] targets.py:250 — revisit early_fraction once a real per-event timing source exists (still a labelled ASSUMPTION)
 - [x] **EDA-before-cohort**: real extract → EDA → targets → synth (Phase 1 reorder) — COMPLETE; synthetic calibrated 40/40 PASS
 - [x] **SPEC FIX (main):** CTGOV2 enum format ratified in `specs/data.md` (commit `857d505`); `ctgov_enums.py` normalization kept; `ECT` added as a `primary_purpose`. Code reconciliation committed (`980162d`).
 - [x] **Withdrawal-reason vocab**: SET expanded (commit `2b4d554`) — added `STUDY_TERMINATED` (12.2%) + `ADMINISTRATIVE` (8.2%); censoring/ongoing now excluded from the mix (183,815 vol / 2,490 rows recorded separately, never counted as dropout). `OTHER` 50.7% → **17.54%** (honest floor; arm-level dropout unchanged, trial-mean 0.2018). `vocab.py`/`clean.py`/`report.py` reconciliation committed (`980162d`).
-- [x] Sample fixture: gitignored (`ingestion/fixtures/aact_sample/`); conftest builds a temp sample (`tmp_path_factory`) so tests/CI don't need the file
+- [x] **Golden set replaces the fabricated fixture**: the deterministically-generated SAMPLE fixture (`ingestion/fixtures/`, `build_sample.py`) is **retired**. The ingestion clean-transform oracle is now `tests/golden/` — a frozen slice of REAL public AACT (snapshot 2026-06-05, 64 NCTs across every phase×sponsor_class×has_withdrawal×has_max_age stratum) with committed `raw/` + `expected/` CSVs + `selection.json` + `build_golden.py` + README. NO PHI, NO synthetic. `clean_snapshot(raw)` reproduces `expected/` via `assert_frame_equal` (`tests/test_golden_oracle.py`). The fast suite + the non-live pipeline run off it (`make golden`).
+- [x] **Report-clobber guard (Gate 2 fix)**: a non-live run can no longer overwrite `data/reports` (defaults to `data/reports_fixture`, fails loud on an explicit `REPORT_ROOT` override — same pattern that protects `data/clean`). `data/reports/data_quality_report.json` regenerated from the REAL snapshot: ref_trial 73,073 / ref_arm 182,240 / 760 fail-loud drops / 2,490 censoring rows (183,815 vol).
 
 ### Frontend wiring register (Phase 4/5) — endpoint → screen/boundary
 Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `frontend/lib/types.ts`). Each `// TODO(phase4/5)` below is unwired.

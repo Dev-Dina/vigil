@@ -21,7 +21,8 @@ from ingestion.config import (
     AACT_SOURCE_URL,
     CLEAN_FIXTURE_ROOT,
     CLEAN_ROOT,
-    FIXTURE_ROOT,
+    GOLDEN_RAW_ROOT,
+    REPORT_FIXTURE_ROOT,
     REPORT_ROOT,
     SYNTHETIC_ROOT,
     AactConnection,
@@ -65,16 +66,18 @@ def run(
     fail_loud: bool = True,
     out_clean: Path | None = None,
     out_synth: Path = SYNTHETIC_ROOT,
-    out_reports: Path = REPORT_ROOT,
+    out_reports: Path | None = None,
 ) -> PipelineResult:
     # --- raw -------------------------------------------------------------------------
     if live:
         conn = AactConnection.from_env()
         snapshot_dir = extract_to_raw(conn)
     else:
-        snapshot_dir = FIXTURE_ROOT  # committed SAMPLE fixture
+        # The committed GOLDEN SET (REAL public AACT slice) is the non-live substrate, so the
+        # pipeline runs end-to-end without a live AACT Postgres.
+        snapshot_dir = GOLDEN_RAW_ROOT
 
-    # A live run produces the REAL ref_* snapshot in CLEAN_ROOT. A fixture run cleans into a
+    # A live run produces the REAL ref_* snapshot in CLEAN_ROOT. A non-live run cleans into a
     # separate dir so it never clobbers a real snapshot already on disk (which is the preferred
     # synthetic-generation source and the EDA input).
     if out_clean is None:
@@ -88,6 +91,10 @@ def run(
             f"run (live=False); a non-live run must target CLEAN_FIXTURE_ROOT "
             f"({CLEAN_FIXTURE_ROOT})."
         )
+
+    # Same guard for the reports: a non-live run must never overwrite the REAL reports (the
+    # quality/calibration artifacts describing the real cohort — EDA + audit inputs).
+    out_reports = _resolve_report_root(live=live, out_reports=out_reports)
 
     # The preferred synthetic-generation source: the REAL cleaned ref_* tables in CLEAN_ROOT, so
     # the cohort's stratum mix mirrors the real AACT population and reproduces the EDA marginal
@@ -182,6 +189,24 @@ def run(
         n_participants=len(cohort.participants),
         n_feature_samples=len(fm.X),
     )
+
+
+def _resolve_report_root(*, live: bool, out_reports: Path | None) -> Path:
+    """Pick the reports dir, refusing to clobber the REAL reports on a non-live run.
+
+    The real ``data/reports`` artifacts describe the real cohort (EDA + audit inputs). A
+    non-live run defaults to ``REPORT_FIXTURE_ROOT`` and fails loud if explicitly pointed at
+    ``REPORT_ROOT`` — the same fail-loud pattern that protects the real clean snapshot.
+    """
+    if out_reports is None:
+        return REPORT_ROOT if live else REPORT_FIXTURE_ROOT
+    if not live and out_reports.resolve() == REPORT_ROOT.resolve():
+        raise ClobberGuardError(
+            f"refusing to overwrite the REAL reports at {REPORT_ROOT} on a non-live run "
+            f"(live=False); a non-live run must target REPORT_FIXTURE_ROOT "
+            f"({REPORT_FIXTURE_ROOT})."
+        )
+    return out_reports
 
 
 def _load_real_reference(clean_root: Path):

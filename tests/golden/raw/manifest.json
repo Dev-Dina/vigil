@@ -1,0 +1,27 @@
+{
+  "aact_version": "2026-06-05 04:18:25.683902",
+  "build_time_only": true,
+  "disclaimer": "REAL PUBLIC ClinicalTrials.gov/AACT trial-level data, sliced for the ingestion clean-transform oracle. NO PHI, NO synthetic rows.",
+  "golden_subset": true,
+  "n_ncts": 64,
+  "population_filter": null,
+  "row_counts": {
+    "browse_conditions": 971,
+    "calculated_values": 64,
+    "conditions": 132,
+    "countries": 177,
+    "designs": 64,
+    "drop_withdrawals": 873,
+    "eligibilities": 64,
+    "facilities": 1524,
+    "interventions": 214,
+    "milestones": 825,
+    "result_groups": 180,
+    "sponsors": 159,
+    "studies": 64
+  },
+  "snapshot_date": "2026-06-05",
+  "source": "hosted AACT (CTTI Aggregate Analysis of ClinicalTrials.gov)",
+  "source_kind": "GOLDEN SLICE of the REAL AACT snapshot (NOT synthetic, NO PHI)",
+  "source_url": "https://aact.ctti-clinicaltrials.org/"
+}

@@ -18,19 +18,22 @@ them; run anything via `uv run ...` (e.g. `uv run python scripts/check_specs.py`
 - `.claude/commands/check-specs.md` — `/check-specs` slash command.
 - `scripts/check_specs.py` — the conformance check. `make check-specs`.
 
-## Data fixture (generated, never committed)
-The clean -> synthetic -> features pipeline runs offline against a SAMPLE AACT fixture that
-is **deterministically generated, never committed, and is not a real AACT extract**. It lives
-at `ingestion/fixtures/aact_sample/` (git-ignored) and is built by:
+## Ingestion golden set (real, committed)
+The clean -> synthetic -> features pipeline runs offline against the **golden set**: a frozen
+slice of **REAL PUBLIC ClinicalTrials.gov/AACT** trial-level data (snapshot `2026-06-05`)
+committed alongside its expected cleaned `ref_*` output. It is the ingestion clean-transform
+oracle (`assert_frame_equal` of `clean_snapshot(raw)` against `expected/`) and the non-live
+pipeline substrate. **NO PHI, NO synthetic rows.** It lives at `tests/golden/` and is rebuilt
+from the real snapshot on disk by:
 
 ```
-make data-fixture   # uv run python -m ingestion.fixtures.build_sample
+make golden   # uv run python -m tests.golden.build_golden
 ```
 
-Real provenance comes from `ingestion.extract` against a live AACT snapshot (build-time only).
-Tests and CI never depend on a committed fixture: `tests/conftest.py` regenerates the sample
-into a pytest tmp dir at test time (same seed -> identical bytes), so the fast suite passes
-even when `ingestion/fixtures/aact_sample/` does not exist on disk.
+The committed `tests/golden/raw/` + `expected/` + `selection.json` are what the fast suite and
+CI use — no network, no committed `data/`, no fabricated fixture. Per `specs/data.md`
+"Evaluation contract" the golden set is **solely** the ingestion transform oracle (golden =
+transforms; models use held-out splits; RAG uses eval sets).
 
 ## Phase 0 loop
 1. Co-author the specs (fill the `TODO:` markers); `isolation.md` and `data.md` first.

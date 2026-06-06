@@ -1,13 +1,12 @@
-"""Shared fixtures: clean the SAMPLE AACT fixture into ``ref_*`` frames once per session.
+"""Shared fixtures: clean the committed GOLDEN SET into ``ref_*`` frames once per session.
 
-The SAMPLE fixture is GENERATED into a session tmp dir at test time (deterministic seed),
-never read from a committed copy — so the suite and CI pass even when
-``ingestion/fixtures/aact_sample/`` does not exist on disk.
+The golden set (``tests/golden/``) is a frozen slice of REAL PUBLIC AACT trial-level data
+committed alongside its expected cleaned output — the ingestion clean-transform oracle. The
+fast suite cleans it directly (no network, no fabricated fixture, no committed ``data/``).
 
-The default ``clean_frames`` is a SMALL deterministic subset of trials so the suite runs
-fast. The full cohort (every trial in the sample fixture) is exposed via
-``full_clean_frames`` and exercised only by ``@pytest.mark.slow`` tests, which regenerate
-the full synthetic cohort and are excluded by default and from CI.
+``clean_frames`` is the full golden cohort (~64 trials) — small enough for the fast suite, and
+spanning every (phase x sponsor_class x has_withdrawal x has_max_age) stratum so the clean
+transform, synthetic generation, and calibration are all meaningfully exercised.
 """
 
 from __future__ import annotations
@@ -18,55 +17,45 @@ import pandas as pd
 import pytest
 
 from ingestion.clean import clean_snapshot
-from ingestion.config import CLEAN_ROOT
-from ingestion.fixtures.build_sample import build as build_sample_fixture
+from ingestion.config import CLEAN_ROOT, GOLDEN_RAW_ROOT
 from ingestion.report import QualityReport
 from ingestion.synthetic import subsample_trials
 
-# Number of trials kept in the default (fast) fixture. Small enough that synthetic
-# generation + feature build is quick, large enough to span multiple strata so calibration
-# remains meaningful and deterministic.
-DEFAULT_TRIAL_LIMIT = 20
 
-
-def _subset_frames(
-    frames: dict[str, pd.DataFrame], n_trials: int
-) -> dict[str, pd.DataFrame]:
-    """Keep the first ``n_trials`` NCTs (sorted) across all three ref tables."""
-    kept = sorted(frames["ref_trial"]["nct_id"].unique())[:n_trials]
-    keep = set(kept)
-    return {
-        name: df[df["nct_id"].isin(keep)].reset_index(drop=True)
-        for name, df in frames.items()
-    }
+@pytest.fixture(scope="session")
+def golden_raw_root() -> Path:
+    """The committed golden raw snapshot (REAL public AACT slice, no PHI)."""
+    if not GOLDEN_RAW_ROOT.exists():
+        raise FileNotFoundError(
+            f"golden raw snapshot missing at {GOLDEN_RAW_ROOT}; "
+            f"run `uv run python -m tests.golden.build_golden`."
+        )
+    return GOLDEN_RAW_ROOT
 
 
 @pytest.fixture(scope="session")
-def sample_fixture_root(tmp_path_factory) -> Path:
-    """Deterministically build the SAMPLE AACT fixture into a session tmp dir.
-
-    Independent of any committed fixture: ``make data-fixture`` writes the same bytes to
-    ``ingestion/fixtures/aact_sample/`` for local pipeline runs, but tests never require it.
-    """
-    return build_sample_fixture(out_dir=tmp_path_factory.mktemp("aact_sample"))
-
-
-@pytest.fixture(scope="session")
-def full_clean_frames(
-    tmp_path_factory, sample_fixture_root: Path
-) -> dict[str, pd.DataFrame]:
-    """Every trial in the SAMPLE fixture (the full ~18k-participant cohort source)."""
-    out = tmp_path_factory.mktemp("clean_full")
+def _golden_cleaned(
+    golden_raw_root: Path, tmp_path_factory
+) -> tuple[dict[str, pd.DataFrame], QualityReport]:
+    """Clean the golden slice once; return both the frames and the quality report."""
+    out = tmp_path_factory.mktemp("golden_clean")
     report = QualityReport()
-    return clean_snapshot(
-        sample_fixture_root, report=report, fail_loud=True, out_root=out
+    frames = clean_snapshot(
+        golden_raw_root, report=report, out_root=out, live=False, fail_loud=True
     )
+    return frames, report
 
 
 @pytest.fixture(scope="session")
-def clean_frames(full_clean_frames) -> dict[str, pd.DataFrame]:
-    """Small deterministic subset for the fast default suite."""
-    return _subset_frames(full_clean_frames, DEFAULT_TRIAL_LIMIT)
+def clean_frames(_golden_cleaned) -> dict[str, pd.DataFrame]:
+    """The cleaned ``ref_*`` frames from the golden set (the fast default cohort)."""
+    return _golden_cleaned[0]
+
+
+@pytest.fixture(scope="session")
+def golden_report(_golden_cleaned) -> QualityReport:
+    """The quality report captured while cleaning the golden set."""
+    return _golden_cleaned[1]
 
 
 @pytest.fixture(scope="session")
@@ -76,7 +65,7 @@ def real_calibration_frames(clean_frames) -> dict[str, pd.DataFrame]:
     Calibration is only meaningful against a cohort whose stratum mix mirrors the real
     population, so this draws from ``data/clean/ref_*.parquet`` (the AACT snapshot) using the same
     default ``subsample_trials`` size the pipeline uses. When that snapshot is absent (CI /
-    fixture-only), it falls back to the SAMPLE-fixture frames; the slow calibration test skips.
+    golden-only), it falls back to the golden frames; the slow calibration test skips.
     """
     paths = {
         name: CLEAN_ROOT / f"{name}.parquet"

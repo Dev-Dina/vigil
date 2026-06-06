@@ -1,0 +1,971 @@
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00000125"}
+{"mesh_term": "Glaucoma", "nct_id": "NCT00000125"}
+{"mesh_term": "Ocular Hypertension", "nct_id": "NCT00000125"}
+{"mesh_term": "Acquired Immunodeficiency Syndrome", "nct_id": "NCT00000134"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Cytomegalovirus Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Cytomegalovirus Retinitis", "nct_id": "NCT00000134"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Eye Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Eye Infections, Viral", "nct_id": "NCT00000134"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00000134"}
+{"mesh_term": "Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Retinal Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Retinitis", "nct_id": "NCT00000134"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00000134"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00000134"}
+{"mesh_term": "Slow Virus Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00000134"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Cytomegalovirus Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Cytomegalovirus Retinitis", "nct_id": "NCT00000135"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Eye Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Eye Infections, Viral", "nct_id": "NCT00000135"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00000135"}
+{"mesh_term": "Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Retinal Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Retinitis", "nct_id": "NCT00000135"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00000135"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00000135"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00000135"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Cytomegalovirus Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Cytomegalovirus Retinitis", "nct_id": "NCT00000136"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Eye Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Eye Infections, Viral", "nct_id": "NCT00000136"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00000136"}
+{"mesh_term": "Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Retinal Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Retinitis", "nct_id": "NCT00000136"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00000136"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00000136"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00000136"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Cytomegalovirus Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Cytomegalovirus Retinitis", "nct_id": "NCT00000142"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Eye Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Eye Infections, Viral", "nct_id": "NCT00000142"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00000142"}
+{"mesh_term": "Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Retinal Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Retinitis", "nct_id": "NCT00000142"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00000142"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00000142"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00000142"}
+{"mesh_term": "Mental Disorders", "nct_id": "NCT00000371"}
+{"mesh_term": "Schizophrenia", "nct_id": "NCT00000371"}
+{"mesh_term": "Schizophrenia Spectrum and Other Psychotic Disorders", "nct_id": "NCT00000371"}
+{"mesh_term": "Colonic Diseases", "nct_id": "NCT00002525"}
+{"mesh_term": "Colonic Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Colorectal Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00002525"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00002525"}
+{"mesh_term": "Gastrointestinal Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Intestinal Diseases", "nct_id": "NCT00002525"}
+{"mesh_term": "Intestinal Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002525"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00002525"}
+{"mesh_term": "Rectal Diseases", "nct_id": "NCT00002525"}
+{"mesh_term": "Adnexal Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Endocrine Gland Neoplasms", "nct_id": "NCT00002558"}
+{"mesh_term": "Endocrine System Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Diseases, Female", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Diseases, Male", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Neoplasms, Female", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Neoplasms, Male", "nct_id": "NCT00002558"}
+{"mesh_term": "Gonadal Disorders", "nct_id": "NCT00002558"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002558"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00002558"}
+{"mesh_term": "Ovarian Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Ovarian Neoplasms", "nct_id": "NCT00002558"}
+{"mesh_term": "Testicular Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Testicular Germ Cell Tumor", "nct_id": "NCT00002558"}
+{"mesh_term": "Testicular Neoplasms", "nct_id": "NCT00002558"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00002558"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00002558"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00002597"}
+{"mesh_term": "Genital Diseases, Male", "nct_id": "NCT00002597"}
+{"mesh_term": "Genital Neoplasms, Male", "nct_id": "NCT00002597"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00002597"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002597"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00002597"}
+{"mesh_term": "Prostatic Diseases", "nct_id": "NCT00002597"}
+{"mesh_term": "Prostatic Neoplasms", "nct_id": "NCT00002597"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00002597"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00002597"}
+{"mesh_term": "Myosarcoma", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Bone Tissue", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Connective and Soft Tissue", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Connective Tissue", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Germ Cell and Embryonal", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Muscle Tissue", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Nerve Tissue", "nct_id": "NCT00002601"}
+{"mesh_term": "Neoplasms, Neuroepithelial", "nct_id": "NCT00002601"}
+{"mesh_term": "Neuroectodermal Tumors", "nct_id": "NCT00002601"}
+{"mesh_term": "Neuroectodermal Tumors, Primitive", "nct_id": "NCT00002601"}
+{"mesh_term": "Neuroectodermal Tumors, Primitive, Peripheral", "nct_id": "NCT00002601"}
+{"mesh_term": "Osteosarcoma", "nct_id": "NCT00002601"}
+{"mesh_term": "Rhabdomyosarcoma", "nct_id": "NCT00002601"}
+{"mesh_term": "Sarcoma", "nct_id": "NCT00002601"}
+{"mesh_term": "Burkitt Lymphoma", "nct_id": "NCT00002663"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00002663"}
+{"mesh_term": "Dendritic Cell Sarcoma, Interdigitating", "nct_id": "NCT00002663"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00002663"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00002663"}
+{"mesh_term": "Epstein-Barr Virus Infections", "nct_id": "NCT00002663"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00002663"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00002663"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00002663"}
+{"mesh_term": "Histiocytic Disorders, Malignant", "nct_id": "NCT00002663"}
+{"mesh_term": "Histiocytosis", "nct_id": "NCT00002663"}
+{"mesh_term": "Hodgkin Disease", "nct_id": "NCT00002663"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00002663"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00002663"}
+{"mesh_term": "Infections", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia, B-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia, Large Granular Lymphocytic", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia, Lymphocytic, Chronic, B-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00002663"}
+{"mesh_term": "Leukemia, T-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, B-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, B-Cell, Marginal Zone", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, Follicular", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, Large B-Cell, Diffuse", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, Large-Cell, Immunoblastic", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, Mantle-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, T-Cell", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoma, T-Cell, Cutaneous", "nct_id": "NCT00002663"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00002663"}
+{"mesh_term": "Mycosis Fungoides", "nct_id": "NCT00002663"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002663"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002663"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00002663"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00002663"}
+{"mesh_term": "Precursor Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00002663"}
+{"mesh_term": "Precursor T-Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00002663"}
+{"mesh_term": "Recurrence", "nct_id": "NCT00002663"}
+{"mesh_term": "Sezary Syndrome", "nct_id": "NCT00002663"}
+{"mesh_term": "Tumor Virus Infections", "nct_id": "NCT00002663"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00002663"}
+{"mesh_term": "Blast Crisis", "nct_id": "NCT00002766"}
+{"mesh_term": "Bone Marrow Diseases", "nct_id": "NCT00002766"}
+{"mesh_term": "Carcinogenesis", "nct_id": "NCT00002766"}
+{"mesh_term": "Cell Transformation, Neoplastic", "nct_id": "NCT00002766"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00002766"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00002766"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00002766"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00002766"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00002766"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00002766"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00002766"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00002766"}
+{"mesh_term": "Leukemia, Myelogenous, Chronic, BCR-ABL Positive", "nct_id": "NCT00002766"}
+{"mesh_term": "Leukemia, Myeloid", "nct_id": "NCT00002766"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00002766"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00002766"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00002766"}
+{"mesh_term": "Myeloproliferative Disorders", "nct_id": "NCT00002766"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002766"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002766"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00002766"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00002766"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00002766"}
+{"mesh_term": "Precursor Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00002766"}
+{"mesh_term": "Colonic Diseases", "nct_id": "NCT00002842"}
+{"mesh_term": "Colonic Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Colorectal Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00002842"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00002842"}
+{"mesh_term": "Gastrointestinal Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Intestinal Diseases", "nct_id": "NCT00002842"}
+{"mesh_term": "Intestinal Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Neoplasm Metastasis", "nct_id": "NCT00002842"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00002842"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00002842"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00002842"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00002842"}
+{"mesh_term": "Rectal Diseases", "nct_id": "NCT00002842"}
+{"mesh_term": "Rectal Neoplasms", "nct_id": "NCT00002842"}
+{"mesh_term": "Blood Protein Disorders", "nct_id": "NCT00002850"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00002850"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00002850"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00002850"}
+{"mesh_term": "Hemorrhagic Disorders", "nct_id": "NCT00002850"}
+{"mesh_term": "Hemostatic Disorders", "nct_id": "NCT00002850"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00002850"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00002850"}
+{"mesh_term": "Infections", "nct_id": "NCT00002850"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00002850"}
+{"mesh_term": "Multiple Myeloma", "nct_id": "NCT00002850"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002850"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002850"}
+{"mesh_term": "Neoplasms, Plasma Cell", "nct_id": "NCT00002850"}
+{"mesh_term": "Paraproteinemias", "nct_id": "NCT00002850"}
+{"mesh_term": "Vascular Diseases", "nct_id": "NCT00002850"}
+{"mesh_term": "Adnexal Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Carcinoma, Embryonal", "nct_id": "NCT00002931"}
+{"mesh_term": "Central Nervous System Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Endocrine Gland Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Endocrine System Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Endodermal Sinus Tumor", "nct_id": "NCT00002931"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00002931"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Genital Diseases, Female", "nct_id": "NCT00002931"}
+{"mesh_term": "Genital Diseases, Male", "nct_id": "NCT00002931"}
+{"mesh_term": "Genital Neoplasms, Female", "nct_id": "NCT00002931"}
+{"mesh_term": "Genital Neoplasms, Male", "nct_id": "NCT00002931"}
+{"mesh_term": "Germinoma", "nct_id": "NCT00002931"}
+{"mesh_term": "Gonadal Disorders", "nct_id": "NCT00002931"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Mesonephroma", "nct_id": "NCT00002931"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002931"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00002931"}
+{"mesh_term": "Neoplasms, Germ Cell and Embryonal", "nct_id": "NCT00002931"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Nervous System Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Ovarian Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Ovarian Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Seminoma", "nct_id": "NCT00002931"}
+{"mesh_term": "Teratoma", "nct_id": "NCT00002931"}
+{"mesh_term": "Testicular Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Testicular Germ Cell Tumor", "nct_id": "NCT00002931"}
+{"mesh_term": "Testicular Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00002931"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00002931"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00002975"}
+{"mesh_term": "Carcinoma, Basal Cell", "nct_id": "NCT00002975"}
+{"mesh_term": "Keratosis", "nct_id": "NCT00002975"}
+{"mesh_term": "Keratosis, Actinic", "nct_id": "NCT00002975"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00002975"}
+{"mesh_term": "Neoplasms, Basal Cell", "nct_id": "NCT00002975"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00002975"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00002975"}
+{"mesh_term": "Precancerous Conditions", "nct_id": "NCT00002975"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00002975"}
+{"mesh_term": "Skin Diseases", "nct_id": "NCT00002975"}
+{"mesh_term": "Breast Diseases", "nct_id": "NCT00003042"}
+{"mesh_term": "Breast Neoplasms", "nct_id": "NCT00003042"}
+{"mesh_term": "Inflammatory Breast Neoplasms", "nct_id": "NCT00003042"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003042"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003042"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00003042"}
+{"mesh_term": "Skin Diseases", "nct_id": "NCT00003042"}
+{"mesh_term": "Adenocarcinoma", "nct_id": "NCT00003102"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00003102"}
+{"mesh_term": "Carcinoma, Renal Cell", "nct_id": "NCT00003102"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00003102"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00003102"}
+{"mesh_term": "Kidney Diseases", "nct_id": "NCT00003102"}
+{"mesh_term": "Kidney Neoplasms", "nct_id": "NCT00003102"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00003102"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003102"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00003102"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003102"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00003102"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00003102"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00003102"}
+{"mesh_term": "Urologic Diseases", "nct_id": "NCT00003102"}
+{"mesh_term": "Urologic Neoplasms", "nct_id": "NCT00003102"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00003298"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00003298"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00003298"}
+{"mesh_term": "Gastrointestinal Neoplasms", "nct_id": "NCT00003298"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003298"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003298"}
+{"mesh_term": "Stomach Diseases", "nct_id": "NCT00003298"}
+{"mesh_term": "Stomach Neoplasms", "nct_id": "NCT00003298"}
+{"mesh_term": "Bronchial Neoplasms", "nct_id": "NCT00003726"}
+{"mesh_term": "Carcinoma, Bronchogenic", "nct_id": "NCT00003726"}
+{"mesh_term": "Lung Diseases", "nct_id": "NCT00003726"}
+{"mesh_term": "Lung Neoplasms", "nct_id": "NCT00003726"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003726"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003726"}
+{"mesh_term": "Respiratory Tract Diseases", "nct_id": "NCT00003726"}
+{"mesh_term": "Respiratory Tract Neoplasms", "nct_id": "NCT00003726"}
+{"mesh_term": "Small Cell Lung Carcinoma", "nct_id": "NCT00003726"}
+{"mesh_term": "Thoracic Neoplasms", "nct_id": "NCT00003726"}
+{"mesh_term": "Anemia", "nct_id": "NCT00003816"}
+{"mesh_term": "Anemia, Aplastic", "nct_id": "NCT00003816"}
+{"mesh_term": "Anemia, Refractory", "nct_id": "NCT00003816"}
+{"mesh_term": "Anemia, Refractory, with Excess of Blasts", "nct_id": "NCT00003816"}
+{"mesh_term": "Blast Crisis", "nct_id": "NCT00003816"}
+{"mesh_term": "Blood Coagulation Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Blood Platelet Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Blood Protein Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Bone Marrow Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Bone Marrow Failure Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Bone Marrow Neoplasms", "nct_id": "NCT00003816"}
+{"mesh_term": "Burkitt Lymphoma", "nct_id": "NCT00003816"}
+{"mesh_term": "Carcinogenesis", "nct_id": "NCT00003816"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Cell Transformation, Neoplastic", "nct_id": "NCT00003816"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00003816"}
+{"mesh_term": "Congenital Abnormalities", "nct_id": "NCT00003816"}
+{"mesh_term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities", "nct_id": "NCT00003816"}
+{"mesh_term": "Dendritic Cell Sarcoma, Interdigitating", "nct_id": "NCT00003816"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00003816"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00003816"}
+{"mesh_term": "Epstein-Barr Virus Infections", "nct_id": "NCT00003816"}
+{"mesh_term": "Eye Neoplasms", "nct_id": "NCT00003816"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Hematologic Neoplasms", "nct_id": "NCT00003816"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Hemorrhagic Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Hemostatic Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00003816"}
+{"mesh_term": "Histiocytic Disorders, Malignant", "nct_id": "NCT00003816"}
+{"mesh_term": "Histiocytosis", "nct_id": "NCT00003816"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Immunoblastic Lymphadenopathy", "nct_id": "NCT00003816"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Infections", "nct_id": "NCT00003816"}
+{"mesh_term": "Intraocular Lymphoma", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, B-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Biphenotypic, Acute", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Large Granular Lymphocytic", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Lymphocytic, Chronic, B-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myelogenous, Chronic, BCR-ABL Positive", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myeloid", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myeloid, Accelerated Phase", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myeloid, Acute", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myeloid, Chronic, Atypical, BCR-ABL Negative", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myeloid, Chronic-Phase", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Myelomonocytic, Chronic", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, Prolymphocytic", "nct_id": "NCT00003816"}
+{"mesh_term": "Leukemia, T-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphadenopathy", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, B-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, B-Cell, Marginal Zone", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Follicular", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Large B-Cell, Diffuse", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Large-Cell, Anaplastic", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Large-Cell, Immunoblastic", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Mantle-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, T-Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoma, T-Cell, Cutaneous", "nct_id": "NCT00003816"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Mycosis Fungoides", "nct_id": "NCT00003816"}
+{"mesh_term": "Myelodysplastic-Myeloproliferative Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Myelodysplastic Syndromes", "nct_id": "NCT00003816"}
+{"mesh_term": "Myeloproliferative Disorders", "nct_id": "NCT00003816"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003816"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00003816"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003816"}
+{"mesh_term": "Neoplasms, Plasma Cell", "nct_id": "NCT00003816"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00003816"}
+{"mesh_term": "Paraproteinemias", "nct_id": "NCT00003816"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00003816"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00003816"}
+{"mesh_term": "Polycythemia Vera", "nct_id": "NCT00003816"}
+{"mesh_term": "Precursor Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00003816"}
+{"mesh_term": "Precursor T-Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00003816"}
+{"mesh_term": "Primary Myelofibrosis", "nct_id": "NCT00003816"}
+{"mesh_term": "Sezary Syndrome", "nct_id": "NCT00003816"}
+{"mesh_term": "Thrombocythemia, Essential", "nct_id": "NCT00003816"}
+{"mesh_term": "Thrombocytosis", "nct_id": "NCT00003816"}
+{"mesh_term": "Tumor Virus Infections", "nct_id": "NCT00003816"}
+{"mesh_term": "Vascular Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00003816"}
+{"mesh_term": "Waldenstrom Macroglobulinemia", "nct_id": "NCT00003816"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00003820"}
+{"mesh_term": "Hodgkin Disease", "nct_id": "NCT00003820"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00003820"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00003820"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00003820"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00003820"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00003820"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003820"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00003820"}
+{"mesh_term": "Adnexal Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00003896"}
+{"mesh_term": "Carcinoma, Ovarian Epithelial", "nct_id": "NCT00003896"}
+{"mesh_term": "Endocrine Gland Neoplasms", "nct_id": "NCT00003896"}
+{"mesh_term": "Endocrine System Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Fallopian Tube Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Fallopian Tube Neoplasms", "nct_id": "NCT00003896"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00003896"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Genital Diseases, Female", "nct_id": "NCT00003896"}
+{"mesh_term": "Genital Neoplasms, Female", "nct_id": "NCT00003896"}
+{"mesh_term": "Gonadal Disorders", "nct_id": "NCT00003896"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00003896"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00003896"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00003896"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00003896"}
+{"mesh_term": "Ovarian Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Ovarian Neoplasms", "nct_id": "NCT00003896"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00003896"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00003896"}
+{"mesh_term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities", "nct_id": "NCT00004500"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00004500"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00004500"}
+{"mesh_term": "Fetal Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Infant, Newborn, Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Lung Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Lung Injury", "nct_id": "NCT00004500"}
+{"mesh_term": "Meconium Aspiration Syndrome", "nct_id": "NCT00004500"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00004500"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00004500"}
+{"mesh_term": "Pregnancy Complications", "nct_id": "NCT00004500"}
+{"mesh_term": "Rare Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Respiration Disorders", "nct_id": "NCT00004500"}
+{"mesh_term": "Respiratory Tract Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00004500"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00005803"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00005803"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00005803"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00005803"}
+{"mesh_term": "Hodgkin Disease", "nct_id": "NCT00005803"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00005803"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, B-Cell", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, Lymphocytic, Chronic, B-Cell", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, Prolymphocytic", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, Prolymphocytic, T-Cell", "nct_id": "NCT00005803"}
+{"mesh_term": "Leukemia, T-Cell", "nct_id": "NCT00005803"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00005803"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00005803"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00005803"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00005803"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00005803"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00005803"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00005803"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00005803"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00005947"}
+{"mesh_term": "Genital Diseases, Male", "nct_id": "NCT00005947"}
+{"mesh_term": "Genital Neoplasms, Male", "nct_id": "NCT00005947"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00005947"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00005947"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00005947"}
+{"mesh_term": "Prostatic Diseases", "nct_id": "NCT00005947"}
+{"mesh_term": "Prostatic Neoplasms", "nct_id": "NCT00005947"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00005947"}
+{"mesh_term": "Urogenital Neoplasms", "nct_id": "NCT00005947"}
+{"mesh_term": "Abnormalities, Multiple", "nct_id": "NCT00007020"}
+{"mesh_term": "Adrenal Gland Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Adrenal Insufficiency", "nct_id": "NCT00007020"}
+{"mesh_term": "Adrenoleukodystrophy", "nct_id": "NCT00007020"}
+{"mesh_term": "Bile Duct Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Biliary Tract Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Brain Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Brain Diseases, Metabolic", "nct_id": "NCT00007020"}
+{"mesh_term": "Brain Diseases, Metabolic, Inborn", "nct_id": "NCT00007020"}
+{"mesh_term": "Central Nervous System Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Cholestasis", "nct_id": "NCT00007020"}
+{"mesh_term": "Congenital Abnormalities", "nct_id": "NCT00007020"}
+{"mesh_term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities", "nct_id": "NCT00007020"}
+{"mesh_term": "Demyelinating Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Endocrine System Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00007020"}
+{"mesh_term": "Genetic Diseases, Inborn", "nct_id": "NCT00007020"}
+{"mesh_term": "Genetic Diseases, X-Linked", "nct_id": "NCT00007020"}
+{"mesh_term": "Hereditary Central Nervous System Demyelinating Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Heredodegenerative Disorders, Nervous System", "nct_id": "NCT00007020"}
+{"mesh_term": "Intellectual Disability", "nct_id": "NCT00007020"}
+{"mesh_term": "Kidney Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Leukoencephalopathies", "nct_id": "NCT00007020"}
+{"mesh_term": "Liver Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Metabolic Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Metabolism, Inborn Errors", "nct_id": "NCT00007020"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Neurobehavioral Manifestations", "nct_id": "NCT00007020"}
+{"mesh_term": "Neurologic Manifestations", "nct_id": "NCT00007020"}
+{"mesh_term": "Nutritional and Metabolic Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Peroxisomal Disorders", "nct_id": "NCT00007020"}
+{"mesh_term": "Refsum Disease, Infantile", "nct_id": "NCT00007020"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "Urologic Diseases", "nct_id": "NCT00007020"}
+{"mesh_term": "X-Linked Intellectual Disability", "nct_id": "NCT00007020"}
+{"mesh_term": "Zellweger Syndrome", "nct_id": "NCT00007020"}
+{"mesh_term": "Colonic Diseases", "nct_id": "NCT00009737"}
+{"mesh_term": "Colorectal Neoplasms", "nct_id": "NCT00009737"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00009737"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00009737"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00009737"}
+{"mesh_term": "Gastrointestinal Neoplasms", "nct_id": "NCT00009737"}
+{"mesh_term": "Intestinal Diseases", "nct_id": "NCT00009737"}
+{"mesh_term": "Intestinal Neoplasms", "nct_id": "NCT00009737"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00009737"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00009737"}
+{"mesh_term": "Rectal Diseases", "nct_id": "NCT00009737"}
+{"mesh_term": "Anemia", "nct_id": "NCT00014495"}
+{"mesh_term": "Anemia, Refractory", "nct_id": "NCT00014495"}
+{"mesh_term": "Anemia, Refractory, with Excess of Blasts", "nct_id": "NCT00014495"}
+{"mesh_term": "Blast Crisis", "nct_id": "NCT00014495"}
+{"mesh_term": "Bone Marrow Diseases", "nct_id": "NCT00014495"}
+{"mesh_term": "Carcinogenesis", "nct_id": "NCT00014495"}
+{"mesh_term": "Cell Transformation, Neoplastic", "nct_id": "NCT00014495"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00014495"}
+{"mesh_term": "Congenital Abnormalities", "nct_id": "NCT00014495"}
+{"mesh_term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities", "nct_id": "NCT00014495"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00014495"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00014495"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myelogenous, Chronic, BCR-ABL Positive", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myeloid", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myeloid, Accelerated Phase", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myeloid, Acute", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myeloid, Chronic, Atypical, BCR-ABL Negative", "nct_id": "NCT00014495"}
+{"mesh_term": "Leukemia, Myelomonocytic, Chronic", "nct_id": "NCT00014495"}
+{"mesh_term": "Myelodysplastic-Myeloproliferative Diseases", "nct_id": "NCT00014495"}
+{"mesh_term": "Myelodysplastic Syndromes", "nct_id": "NCT00014495"}
+{"mesh_term": "Myeloproliferative Disorders", "nct_id": "NCT00014495"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00014495"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00014495"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00014495"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00014495"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00014495"}
+{"mesh_term": "Breast Diseases", "nct_id": "NCT00021255"}
+{"mesh_term": "Breast Neoplasms", "nct_id": "NCT00021255"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00021255"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00021255"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00021255"}
+{"mesh_term": "Skin Diseases", "nct_id": "NCT00021255"}
+{"mesh_term": "Colonic Diseases", "nct_id": "NCT00022698"}
+{"mesh_term": "Colonic Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Colorectal Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00022698"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00022698"}
+{"mesh_term": "Gastrointestinal Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Intestinal Diseases", "nct_id": "NCT00022698"}
+{"mesh_term": "Intestinal Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00022698"}
+{"mesh_term": "Rectal Diseases", "nct_id": "NCT00022698"}
+{"mesh_term": "Rectal Neoplasms", "nct_id": "NCT00022698"}
+{"mesh_term": "Behavior", "nct_id": "NCT00035555"}
+{"mesh_term": "Rejection, Psychology", "nct_id": "NCT00035555"}
+{"mesh_term": "Social Behavior", "nct_id": "NCT00035555"}
+{"mesh_term": "Alzheimer Disease", "nct_id": "NCT00040443"}
+{"mesh_term": "Brain Diseases", "nct_id": "NCT00040443"}
+{"mesh_term": "Central Nervous System Diseases", "nct_id": "NCT00040443"}
+{"mesh_term": "Cognition Disorders", "nct_id": "NCT00040443"}
+{"mesh_term": "Cognitive Dysfunction", "nct_id": "NCT00040443"}
+{"mesh_term": "Dementia", "nct_id": "NCT00040443"}
+{"mesh_term": "Memory Disorders", "nct_id": "NCT00040443"}
+{"mesh_term": "Mental Disorders", "nct_id": "NCT00040443"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00040443"}
+{"mesh_term": "Neurobehavioral Manifestations", "nct_id": "NCT00040443"}
+{"mesh_term": "Neurocognitive Disorders", "nct_id": "NCT00040443"}
+{"mesh_term": "Neurodegenerative Diseases", "nct_id": "NCT00040443"}
+{"mesh_term": "Neurologic Manifestations", "nct_id": "NCT00040443"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00040443"}
+{"mesh_term": "Signs and Symptoms", "nct_id": "NCT00040443"}
+{"mesh_term": "Tauopathies", "nct_id": "NCT00040443"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00040664"}
+{"mesh_term": "Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00040664"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00040664"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00040664"}
+{"mesh_term": "Nausea", "nct_id": "NCT00040742"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00040742"}
+{"mesh_term": "Signs and Symptoms", "nct_id": "NCT00040742"}
+{"mesh_term": "Signs and Symptoms, Digestive", "nct_id": "NCT00040742"}
+{"mesh_term": "Vomiting", "nct_id": "NCT00040742"}
+{"mesh_term": "Central Nervous System Diseases", "nct_id": "NCT00041717"}
+{"mesh_term": "Muscle Hypertonia", "nct_id": "NCT00041717"}
+{"mesh_term": "Muscle Spasticity", "nct_id": "NCT00041717"}
+{"mesh_term": "Muscular Diseases", "nct_id": "NCT00041717"}
+{"mesh_term": "Musculoskeletal Diseases", "nct_id": "NCT00041717"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00041717"}
+{"mesh_term": "Neurologic Manifestations", "nct_id": "NCT00041717"}
+{"mesh_term": "Neuromuscular Manifestations", "nct_id": "NCT00041717"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00041717"}
+{"mesh_term": "Signs and Symptoms", "nct_id": "NCT00041717"}
+{"mesh_term": "Spinal Cord Diseases", "nct_id": "NCT00041717"}
+{"mesh_term": "Spinal Cord Injuries", "nct_id": "NCT00041717"}
+{"mesh_term": "Trauma, Nervous System", "nct_id": "NCT00041717"}
+{"mesh_term": "Wounds and Injuries", "nct_id": "NCT00041717"}
+{"mesh_term": "Arthritis", "nct_id": "NCT00041756"}
+{"mesh_term": "Joint Diseases", "nct_id": "NCT00041756"}
+{"mesh_term": "Musculoskeletal Diseases", "nct_id": "NCT00041756"}
+{"mesh_term": "Osteoarthritis", "nct_id": "NCT00041756"}
+{"mesh_term": "Osteoarthritis, Knee", "nct_id": "NCT00041756"}
+{"mesh_term": "Rheumatic Diseases", "nct_id": "NCT00041756"}
+{"mesh_term": "Mental Disorders", "nct_id": "NCT00044005"}
+{"mesh_term": "Schizophrenia", "nct_id": "NCT00044005"}
+{"mesh_term": "Schizophrenia Spectrum and Other Psychotic Disorders", "nct_id": "NCT00044005"}
+{"mesh_term": "Adenocarcinoma", "nct_id": "NCT00044512"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00044512"}
+{"mesh_term": "Carcinoma, Hepatocellular", "nct_id": "NCT00044512"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00044512"}
+{"mesh_term": "Digestive System Neoplasms", "nct_id": "NCT00044512"}
+{"mesh_term": "Liver Diseases", "nct_id": "NCT00044512"}
+{"mesh_term": "Liver Neoplasms", "nct_id": "NCT00044512"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00044512"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00044512"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00044512"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00044512"}
+{"mesh_term": "Bone Marrow Diseases", "nct_id": "NCT00045942"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00045942"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00045942"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00045942"}
+{"mesh_term": "Leukemia, Myeloid", "nct_id": "NCT00045942"}
+{"mesh_term": "Leukemia, Myeloid, Acute", "nct_id": "NCT00045942"}
+{"mesh_term": "Myelodysplastic Syndromes", "nct_id": "NCT00045942"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00045942"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00045942"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00046228"}
+{"mesh_term": "Heart Diseases", "nct_id": "NCT00046228"}
+{"mesh_term": "Infarction", "nct_id": "NCT00046228"}
+{"mesh_term": "Ischemia", "nct_id": "NCT00046228"}
+{"mesh_term": "Myocardial Infarction", "nct_id": "NCT00046228"}
+{"mesh_term": "Myocardial Ischemia", "nct_id": "NCT00046228"}
+{"mesh_term": "Necrosis", "nct_id": "NCT00046228"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00046228"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00046228"}
+{"mesh_term": "Vascular Diseases", "nct_id": "NCT00046228"}
+{"mesh_term": "Astrocytoma", "nct_id": "NCT00050986"}
+{"mesh_term": "Brain Diseases", "nct_id": "NCT00050986"}
+{"mesh_term": "Brain Neoplasms", "nct_id": "NCT00050986"}
+{"mesh_term": "Central Nervous System Diseases", "nct_id": "NCT00050986"}
+{"mesh_term": "Central Nervous System Neoplasms", "nct_id": "NCT00050986"}
+{"mesh_term": "Glioblastoma", "nct_id": "NCT00050986"}
+{"mesh_term": "Glioma", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms, Germ Cell and Embryonal", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms, Nerve Tissue", "nct_id": "NCT00050986"}
+{"mesh_term": "Neoplasms, Neuroepithelial", "nct_id": "NCT00050986"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00050986"}
+{"mesh_term": "Nervous System Neoplasms", "nct_id": "NCT00050986"}
+{"mesh_term": "Neuroectodermal Tumors", "nct_id": "NCT00050986"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00051168"}
+{"mesh_term": "Glaucoma", "nct_id": "NCT00051168"}
+{"mesh_term": "Glaucoma, Open-Angle", "nct_id": "NCT00051168"}
+{"mesh_term": "Ocular Hypertension", "nct_id": "NCT00051168"}
+{"mesh_term": "Burkitt Lymphoma", "nct_id": "NCT00052442"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00052442"}
+{"mesh_term": "Epstein-Barr Virus Infections", "nct_id": "NCT00052442"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00052442"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00052442"}
+{"mesh_term": "Herpesviridae Infections", "nct_id": "NCT00052442"}
+{"mesh_term": "Hodgkin Disease", "nct_id": "NCT00052442"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00052442"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00052442"}
+{"mesh_term": "Infections", "nct_id": "NCT00052442"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00052442"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, B-Cell", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, Follicular", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, Large B-Cell, Diffuse", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, Large-Cell, Immunoblastic", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, Mantle-Cell", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00052442"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00052442"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00052442"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00052442"}
+{"mesh_term": "Precursor Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00052442"}
+{"mesh_term": "Tumor Virus Infections", "nct_id": "NCT00052442"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00052442"}
+{"mesh_term": "DNA Virus Infections", "nct_id": "NCT00053482"}
+{"mesh_term": "Infections", "nct_id": "NCT00053482"}
+{"mesh_term": "Poxviridae Infections", "nct_id": "NCT00053482"}
+{"mesh_term": "Smallpox", "nct_id": "NCT00053482"}
+{"mesh_term": "Vaccinia", "nct_id": "NCT00053482"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00053482"}
+{"mesh_term": "Dyspnea", "nct_id": "NCT00053846"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00053846"}
+{"mesh_term": "Respiration Disorders", "nct_id": "NCT00053846"}
+{"mesh_term": "Respiratory Tract Diseases", "nct_id": "NCT00053846"}
+{"mesh_term": "Signs and Symptoms", "nct_id": "NCT00053846"}
+{"mesh_term": "Signs and Symptoms, Respiratory", "nct_id": "NCT00053846"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00058825"}
+{"mesh_term": "Hematologic Neoplasms", "nct_id": "NCT00058825"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00058825"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00058825"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00058825"}
+{"mesh_term": "Female Urogenital Diseases", "nct_id": "NCT00064662"}
+{"mesh_term": "Female Urogenital Diseases and Pregnancy Complications", "nct_id": "NCT00064662"}
+{"mesh_term": "Lower Urinary Tract Symptoms", "nct_id": "NCT00064662"}
+{"mesh_term": "Male Urogenital Diseases", "nct_id": "NCT00064662"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00064662"}
+{"mesh_term": "Signs and Symptoms", "nct_id": "NCT00064662"}
+{"mesh_term": "Urinary Incontinence", "nct_id": "NCT00064662"}
+{"mesh_term": "Urinary Incontinence, Stress", "nct_id": "NCT00064662"}
+{"mesh_term": "Urination Disorders", "nct_id": "NCT00064662"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00064662"}
+{"mesh_term": "Urological Manifestations", "nct_id": "NCT00064662"}
+{"mesh_term": "Urologic Diseases", "nct_id": "NCT00064662"}
+{"mesh_term": "Blast Crisis", "nct_id": "NCT00068718"}
+{"mesh_term": "Blood Protein Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Bone Marrow Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Carcinogenesis", "nct_id": "NCT00068718"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Cell Transformation, Neoplastic", "nct_id": "NCT00068718"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00068718"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00068718"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Hemorrhagic Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Hemostatic Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Hodgkin Disease", "nct_id": "NCT00068718"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Leukemia", "nct_id": "NCT00068718"}
+{"mesh_term": "Leukemia, Lymphoid", "nct_id": "NCT00068718"}
+{"mesh_term": "Leukemia, Myelogenous, Chronic, BCR-ABL Positive", "nct_id": "NCT00068718"}
+{"mesh_term": "Leukemia, Myeloid", "nct_id": "NCT00068718"}
+{"mesh_term": "Leukemia, Myeloid, Acute", "nct_id": "NCT00068718"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00068718"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00068718"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Multiple Myeloma", "nct_id": "NCT00068718"}
+{"mesh_term": "Myeloproliferative Disorders", "nct_id": "NCT00068718"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00068718"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00068718"}
+{"mesh_term": "Neoplasms, Plasma Cell", "nct_id": "NCT00068718"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00068718"}
+{"mesh_term": "Paraproteinemias", "nct_id": "NCT00068718"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00068718"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00068718"}
+{"mesh_term": "Precursor Cell Lymphoblastic Leukemia-Lymphoma", "nct_id": "NCT00068718"}
+{"mesh_term": "Vascular Diseases", "nct_id": "NCT00068718"}
+{"mesh_term": "Carbohydrate Metabolism, Inborn Errors", "nct_id": "NCT00069641"}
+{"mesh_term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities", "nct_id": "NCT00069641"}
+{"mesh_term": "Connective Tissue Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Death", "nct_id": "NCT00069641"}
+{"mesh_term": "Death, Sudden", "nct_id": "NCT00069641"}
+{"mesh_term": "Genetic Diseases, Inborn", "nct_id": "NCT00069641"}
+{"mesh_term": "Genetic Diseases, X-Linked", "nct_id": "NCT00069641"}
+{"mesh_term": "Heredodegenerative Disorders, Nervous System", "nct_id": "NCT00069641"}
+{"mesh_term": "Infant Death", "nct_id": "NCT00069641"}
+{"mesh_term": "Intellectual Disability", "nct_id": "NCT00069641"}
+{"mesh_term": "Lysosomal Storage Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Metabolic Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Metabolism, Inborn Errors", "nct_id": "NCT00069641"}
+{"mesh_term": "Mucinoses", "nct_id": "NCT00069641"}
+{"mesh_term": "Mucopolysaccharidoses", "nct_id": "NCT00069641"}
+{"mesh_term": "Mucopolysaccharidosis II", "nct_id": "NCT00069641"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Neurobehavioral Manifestations", "nct_id": "NCT00069641"}
+{"mesh_term": "Neurologic Manifestations", "nct_id": "NCT00069641"}
+{"mesh_term": "Nutritional and Metabolic Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00069641"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00069641"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00069641"}
+{"mesh_term": "Sudden Infant Death", "nct_id": "NCT00069641"}
+{"mesh_term": "X-Linked Intellectual Disability", "nct_id": "NCT00069641"}
+{"mesh_term": "Behavior", "nct_id": "NCT00078286"}
+{"mesh_term": "Behavioral Symptoms", "nct_id": "NCT00078286"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00078286"}
+{"mesh_term": "Depression", "nct_id": "NCT00078286"}
+{"mesh_term": "Heart Diseases", "nct_id": "NCT00078286"}
+{"mesh_term": "Heart Failure", "nct_id": "NCT00078286"}
+{"mesh_term": "Autoimmune Diseases", "nct_id": "NCT00087529"}
+{"mesh_term": "Autoimmune Diseases of the Nervous System", "nct_id": "NCT00087529"}
+{"mesh_term": "Chronic Disease", "nct_id": "NCT00087529"}
+{"mesh_term": "Demyelinating Autoimmune Diseases, CNS", "nct_id": "NCT00087529"}
+{"mesh_term": "Demyelinating Diseases", "nct_id": "NCT00087529"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00087529"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00087529"}
+{"mesh_term": "Multiple Sclerosis", "nct_id": "NCT00087529"}
+{"mesh_term": "Multiple Sclerosis, Chronic Progressive", "nct_id": "NCT00087529"}
+{"mesh_term": "Nervous System Diseases", "nct_id": "NCT00087529"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00087529"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00087529"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00093041"}
+{"mesh_term": "Carcinoma, Squamous Cell", "nct_id": "NCT00093041"}
+{"mesh_term": "Head and Neck Neoplasms", "nct_id": "NCT00093041"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00093041"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00093041"}
+{"mesh_term": "Neoplasms by Site", "nct_id": "NCT00093041"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00093041"}
+{"mesh_term": "Squamous Cell Carcinoma of Head and Neck", "nct_id": "NCT00093041"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00096460"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00096460"}
+{"mesh_term": "Immunoproliferative Disorders", "nct_id": "NCT00096460"}
+{"mesh_term": "Lymphatic Diseases", "nct_id": "NCT00096460"}
+{"mesh_term": "Lymphoma", "nct_id": "NCT00096460"}
+{"mesh_term": "Lymphoma, Follicular", "nct_id": "NCT00096460"}
+{"mesh_term": "Lymphoma, Non-Hodgkin", "nct_id": "NCT00096460"}
+{"mesh_term": "Lymphoproliferative Disorders", "nct_id": "NCT00096460"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00096460"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00096460"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00098306"}
+{"mesh_term": "Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00098306"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00098306"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00098306"}
+{"mesh_term": "Blood-Borne Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "Communicable Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "Genital Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "HIV Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "Immunologic Deficiency Syndromes", "nct_id": "NCT00098722"}
+{"mesh_term": "Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "Lentivirus Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "Retroviridae Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "RNA Virus Infections", "nct_id": "NCT00098722"}
+{"mesh_term": "Sexually Transmitted Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "Sexually Transmitted Diseases, Viral", "nct_id": "NCT00098722"}
+{"mesh_term": "Urogenital Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "Virus Diseases", "nct_id": "NCT00098722"}
+{"mesh_term": "Disease Attributes", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasm Metastasis", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasms, Bone Tissue", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasms, Connective and Soft Tissue", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplasms, Connective Tissue", "nct_id": "NCT00102531"}
+{"mesh_term": "Neoplastic Processes", "nct_id": "NCT00102531"}
+{"mesh_term": "Osteosarcoma", "nct_id": "NCT00102531"}
+{"mesh_term": "Pathological Conditions, Signs and Symptoms", "nct_id": "NCT00102531"}
+{"mesh_term": "Pathologic Processes", "nct_id": "NCT00102531"}
+{"mesh_term": "Recurrence", "nct_id": "NCT00102531"}
+{"mesh_term": "Sarcoma", "nct_id": "NCT00102531"}
+{"mesh_term": "Adenocarcinoma", "nct_id": "NCT00106353"}
+{"mesh_term": "Carcinoma", "nct_id": "NCT00106353"}
+{"mesh_term": "Neoplasms", "nct_id": "NCT00106353"}
+{"mesh_term": "Neoplasms by Histologic Type", "nct_id": "NCT00106353"}
+{"mesh_term": "Neoplasms, Glandular and Epithelial", "nct_id": "NCT00106353"}
+{"mesh_term": "Autoimmune Diseases", "nct_id": "NCT00137969"}
+{"mesh_term": "Connective Tissue Diseases", "nct_id": "NCT00137969"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00137969"}
+{"mesh_term": "Lupus Erythematosus, Systemic", "nct_id": "NCT00137969"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00137969"}
+{"mesh_term": "Mouth Diseases", "nct_id": "NCT00255970"}
+{"mesh_term": "Periodontal Diseases", "nct_id": "NCT00255970"}
+{"mesh_term": "Stomatognathic Diseases", "nct_id": "NCT00255970"}
+{"mesh_term": "Conjunctival Diseases", "nct_id": "NCT00328653"}
+{"mesh_term": "Conjunctivitis", "nct_id": "NCT00328653"}
+{"mesh_term": "Conjunctivitis, Allergic", "nct_id": "NCT00328653"}
+{"mesh_term": "Eye Diseases", "nct_id": "NCT00328653"}
+{"mesh_term": "Hypersensitivity", "nct_id": "NCT00328653"}
+{"mesh_term": "Hypersensitivity, Immediate", "nct_id": "NCT00328653"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00328653"}
+{"mesh_term": "Bronchial Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Bronchiolitis", "nct_id": "NCT00399308"}
+{"mesh_term": "Bronchiolitis Obliterans", "nct_id": "NCT00399308"}
+{"mesh_term": "Bronchiolitis Obliterans Syndrome", "nct_id": "NCT00399308"}
+{"mesh_term": "Bronchitis", "nct_id": "NCT00399308"}
+{"mesh_term": "Cardiovascular Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Graft vs Host Disease", "nct_id": "NCT00399308"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Leg Ulcer", "nct_id": "NCT00399308"}
+{"mesh_term": "Lung Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Lung Diseases, Obstructive", "nct_id": "NCT00399308"}
+{"mesh_term": "Organizing Pneumonia", "nct_id": "NCT00399308"}
+{"mesh_term": "Respiratory Tract Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Skin and Connective Tissue Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Skin Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Skin Ulcer", "nct_id": "NCT00399308"}
+{"mesh_term": "Varicose Ulcer", "nct_id": "NCT00399308"}
+{"mesh_term": "Varicose Veins", "nct_id": "NCT00399308"}
+{"mesh_term": "Vascular Diseases", "nct_id": "NCT00399308"}
+{"mesh_term": "Wounds and Injuries", "nct_id": "NCT00399308"}
+{"mesh_term": "Attention Deficit and Disruptive Behavior Disorders", "nct_id": "NCT00419445"}
+{"mesh_term": "Attention Deficit Disorder with Hyperactivity", "nct_id": "NCT00419445"}
+{"mesh_term": "Mental Disorders", "nct_id": "NCT00419445"}
+{"mesh_term": "Neurodevelopmental Disorders", "nct_id": "NCT00419445"}
+{"mesh_term": "Deglutition Disorders", "nct_id": "NCT00538434"}
+{"mesh_term": "Digestive System Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Eosinophilia", "nct_id": "NCT00538434"}
+{"mesh_term": "Eosinophilic Esophagitis", "nct_id": "NCT00538434"}
+{"mesh_term": "Esophageal Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Esophageal Motility Disorders", "nct_id": "NCT00538434"}
+{"mesh_term": "Esophagitis", "nct_id": "NCT00538434"}
+{"mesh_term": "Gastroenteritis", "nct_id": "NCT00538434"}
+{"mesh_term": "Gastroesophageal Reflux", "nct_id": "NCT00538434"}
+{"mesh_term": "Gastrointestinal Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Hematologic Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Hemic and Lymphatic Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Hypersensitivity", "nct_id": "NCT00538434"}
+{"mesh_term": "Hypersensitivity, Immediate", "nct_id": "NCT00538434"}
+{"mesh_term": "Immune System Diseases", "nct_id": "NCT00538434"}
+{"mesh_term": "Leukocyte Disorders", "nct_id": "NCT00538434"}

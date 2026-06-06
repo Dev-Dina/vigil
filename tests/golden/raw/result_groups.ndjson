@@ -1,0 +1,180 @@
+{"ctgov_group_code": "FG000", "id": 741589883, "nct_id": "NCT00000125", "result_type": "Participant Flow", "title": "Observation"}
+{"ctgov_group_code": "FG001", "id": 741589884, "nct_id": "NCT00000125", "result_type": "Participant Flow", "title": "Treatment"}
+{"ctgov_group_code": "FG000", "id": 742643569, "nct_id": "NCT00000134", "result_type": "Participant Flow", "title": "Intravenous Foscarnet"}
+{"ctgov_group_code": "FG001", "id": 742643570, "nct_id": "NCT00000134", "result_type": "Participant Flow", "title": "Intravenous Ganciclovir"}
+{"ctgov_group_code": "FG002", "id": 742643571, "nct_id": "NCT00000134", "result_type": "Participant Flow", "title": "Combination Therapy"}
+{"ctgov_group_code": "FG000", "id": 742007883, "nct_id": "NCT00000135", "result_type": "Participant Flow", "title": "MSL-109"}
+{"ctgov_group_code": "FG001", "id": 742007884, "nct_id": "NCT00000135", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 742138767, "nct_id": "NCT00000136", "result_type": "Participant Flow", "title": "Foscarnet"}
+{"ctgov_group_code": "FG001", "id": 742138768, "nct_id": "NCT00000136", "result_type": "Participant Flow", "title": "Ganciclovir"}
+{"ctgov_group_code": "FG000", "id": 742522276, "nct_id": "NCT00000142", "result_type": "Participant Flow", "title": "Treatment Deferral"}
+{"ctgov_group_code": "FG001", "id": 742522277, "nct_id": "NCT00000142", "result_type": "Participant Flow", "title": "Cidofovir (Low Dose)"}
+{"ctgov_group_code": "FG002", "id": 742522278, "nct_id": "NCT00000142", "result_type": "Participant Flow", "title": "Cidofovir (High Dose)"}
+{"ctgov_group_code": "FG000", "id": 740868292, "nct_id": "NCT00000371", "result_type": "Participant Flow", "title": "D-Cycloserine"}
+{"ctgov_group_code": "FG001", "id": 740868293, "nct_id": "NCT00000371", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 742420507, "nct_id": "NCT00002525", "result_type": "Participant Flow", "title": "Perioperative 5-FU"}
+{"ctgov_group_code": "FG001", "id": 742420508, "nct_id": "NCT00002525", "result_type": "Participant Flow", "title": "No Perioperative 5-FU"}
+{"ctgov_group_code": "FG000", "id": 741076884, "nct_id": "NCT00002558", "result_type": "Participant Flow", "title": "Group A"}
+{"ctgov_group_code": "FG001", "id": 741076885, "nct_id": "NCT00002558", "result_type": "Participant Flow", "title": "Group B"}
+{"ctgov_group_code": "FG000", "id": 741447614, "nct_id": "NCT00002597", "result_type": "Participant Flow", "title": "Hormone Therapy + Radiation Therapy"}
+{"ctgov_group_code": "FG001", "id": 741447615, "nct_id": "NCT00002597", "result_type": "Participant Flow", "title": "Radiation Therapy Alone"}
+{"ctgov_group_code": "FG000", "id": 742103069, "nct_id": "NCT00002601", "result_type": "Participant Flow", "title": "Doxorubicin/Ifosfamide + Melphalan/CDDP + PSCT"}
+{"ctgov_group_code": "FG000", "id": 741781548, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ PTLD-HCT R/R Rituximab (Tab-cel Only)"}
+{"ctgov_group_code": "FG001", "id": 741781549, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ PTLD-SOT R/R Rituximab + Chemo (Tab-cel Only)"}
+{"ctgov_group_code": "FG002", "id": 741781550, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ AID-LPD (Tab-cel Only)"}
+{"ctgov_group_code": "FG003", "id": 741781551, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ LMS (Tab-cel Only)"}
+{"ctgov_group_code": "FG004", "id": 741781552, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ NPC (Tab-cel Only)"}
+{"ctgov_group_code": "FG005", "id": 741781553, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ PTLD-HCT R/R Rituximab (EBV-CTLs Only)"}
+{"ctgov_group_code": "FG006", "id": 741781554, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ PTLD-SOT R/R Rituximab + Chemo (EBV-CTLs Only)"}
+{"ctgov_group_code": "FG007", "id": 741781555, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ Viremia (EBV-CTLs Only)"}
+{"ctgov_group_code": "FG008", "id": 741781556, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+PID-LPD (Tab-cel or EBV-CTLs Only)"}
+{"ctgov_group_code": "FG009", "id": 741781557, "nct_id": "NCT00002663", "result_type": "Participant Flow", "title": "EBV+ Lymphoma (Tab-cel or EBV-CTLs Only)"}
+{"ctgov_group_code": "FG000", "id": 742624832, "nct_id": "NCT00002766", "result_type": "Participant Flow", "title": "All-2"}
+{"ctgov_group_code": "FG001", "id": 742624833, "nct_id": "NCT00002766", "result_type": "Participant Flow", "title": "L-20"}
+{"ctgov_group_code": "FG000", "id": 741204115, "nct_id": "NCT00002842", "result_type": "Participant Flow", "title": "Hepatic Resection/Portal Vein FUdr/Systemic 5-FU & Leucovorin"}
+{"ctgov_group_code": "FG000", "id": 741731667, "nct_id": "NCT00002850", "result_type": "Participant Flow", "title": "Ciprofloxacin or Ofloxacin"}
+{"ctgov_group_code": "FG001", "id": 741731668, "nct_id": "NCT00002850", "result_type": "Participant Flow", "title": "TMP-SMX"}
+{"ctgov_group_code": "FG002", "id": 741731669, "nct_id": "NCT00002850", "result_type": "Participant Flow", "title": "Observation"}
+{"ctgov_group_code": "FG000", "id": 740766085, "nct_id": "NCT00002931", "result_type": "Participant Flow", "title": "HD Chemo and Auto Stem Cells"}
+{"ctgov_group_code": "FG000", "id": 740801092, "nct_id": "NCT00002975", "result_type": "Participant Flow", "title": "Photodynamic Therapy Using 20% Topical ALA"}
+{"ctgov_group_code": "FG000", "id": 741447548, "nct_id": "NCT00003042", "result_type": "Participant Flow", "title": "Neoadjuvant Chemo Followed by Surgery & High-dose Chemo With PSC Rescue"}
+{"ctgov_group_code": "FG001", "id": 741447549, "nct_id": "NCT00003042", "result_type": "Participant Flow", "title": "High-dose Chemo With Rescue"}
+{"ctgov_group_code": "FG000", "id": 742026321, "nct_id": "NCT00003102", "result_type": "Participant Flow", "title": "Cohort 1 50cGy Radiation"}
+{"ctgov_group_code": "FG001", "id": 742026322, "nct_id": "NCT00003102", "result_type": "Participant Flow", "title": "Cohort 2 75cGy Radiation"}
+{"ctgov_group_code": "FG002", "id": 742026323, "nct_id": "NCT00003102", "result_type": "Participant Flow", "title": "Cohort 3 100cGy Radiation"}
+{"ctgov_group_code": "FG000", "id": 741042674, "nct_id": "NCT00003298", "result_type": "Participant Flow", "title": "Experimental Arm"}
+{"ctgov_group_code": "FG000", "id": 741970346, "nct_id": "NCT00003726", "result_type": "Participant Flow", "title": "Lepirudin"}
+{"ctgov_group_code": "FG000", "id": 742617198, "nct_id": "NCT00003816", "result_type": "Participant Flow", "title": "BuCy"}
+{"ctgov_group_code": "FG001", "id": 742617199, "nct_id": "NCT00003816", "result_type": "Participant Flow", "title": "CyTBI"}
+{"ctgov_group_code": "FG002", "id": 742617200, "nct_id": "NCT00003816", "result_type": "Participant Flow", "title": "FluMel"}
+{"ctgov_group_code": "FG003", "id": 742617201, "nct_id": "NCT00003816", "result_type": "Participant Flow", "title": "VpCyTBI"}
+{"ctgov_group_code": "FG004", "id": 742617202, "nct_id": "NCT00003816", "result_type": "Participant Flow", "title": "Other"}
+{"ctgov_group_code": "FG000", "id": 741746099, "nct_id": "NCT00003820", "result_type": "Participant Flow", "title": "Rituximab 375 mg/m2 Per Week Inital Group"}
+{"ctgov_group_code": "FG001", "id": 741746100, "nct_id": "NCT00003820", "result_type": "Participant Flow", "title": "Rituximab 375 mg/m2 Per Week Secondary Group"}
+{"ctgov_group_code": "FG000", "id": 742451675, "nct_id": "NCT00003896", "result_type": "Participant Flow", "title": "Paclitaxel/CDDP/Lipo Doxorubicin"}
+{"ctgov_group_code": "FG000", "id": 742420455, "nct_id": "NCT00004500", "result_type": "Participant Flow", "title": "Lucinactant"}
+{"ctgov_group_code": "FG001", "id": 742420456, "nct_id": "NCT00004500", "result_type": "Participant Flow", "title": "Standard Care"}
+{"ctgov_group_code": "FG000", "id": 741973751, "nct_id": "NCT00005803", "result_type": "Participant Flow", "title": "Treatment (Tandem Transplantation)"}
+{"ctgov_group_code": "FG000", "id": 742670083, "nct_id": "NCT00005947", "result_type": "Participant Flow", "title": "Sipuleucel-T"}
+{"ctgov_group_code": "FG001", "id": 742670084, "nct_id": "NCT00005947", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 742755620, "nct_id": "NCT00007020", "result_type": "Participant Flow", "title": "Cholic Acid"}
+{"ctgov_group_code": "FG000", "id": 741012391, "nct_id": "NCT00009737", "result_type": "Participant Flow", "title": "Capecitabine"}
+{"ctgov_group_code": "FG001", "id": 741012392, "nct_id": "NCT00009737", "result_type": "Participant Flow", "title": "5-Fluorouracil + Leucovorin"}
+{"ctgov_group_code": "FG000", "id": 742332918, "nct_id": "NCT00014495", "result_type": "Participant Flow", "title": "Bismuth-labeled HuM195 (0.5 mCi/kg)"}
+{"ctgov_group_code": "FG001", "id": 742332919, "nct_id": "NCT00014495", "result_type": "Participant Flow", "title": "Bismuth-labeled HuM195 (0.75 mCi/kg)"}
+{"ctgov_group_code": "FG002", "id": 742332920, "nct_id": "NCT00014495", "result_type": "Participant Flow", "title": "Bismuth-labeled HuM195 (1 mCi/kg)"}
+{"ctgov_group_code": "FG003", "id": 742332921, "nct_id": "NCT00014495", "result_type": "Participant Flow", "title": "Bismuth-labeled HuM195 (1.25 mCi/kg)"}
+{"ctgov_group_code": "FG000", "id": 742538322, "nct_id": "NCT00021255", "result_type": "Participant Flow", "title": "Doxorubicin+Cyclophosphamide (AC) Followed by Docetaxel (AC\u2192T)"}
+{"ctgov_group_code": "FG001", "id": 742538323, "nct_id": "NCT00021255", "result_type": "Participant Flow", "title": "AC Followed by Docetaxel + Herceptin (AC\u2192TH)"}
+{"ctgov_group_code": "FG002", "id": 742538324, "nct_id": "NCT00021255", "result_type": "Participant Flow", "title": "Docetaxel + Carboplatin + Herceptin (TCH)"}
+{"ctgov_group_code": "FG000", "id": 742371217, "nct_id": "NCT00022698", "result_type": "Participant Flow", "title": "Cohort 1, Initial Regimen: (Capecitabine + Irinotecan)"}
+{"ctgov_group_code": "FG001", "id": 742371218, "nct_id": "NCT00022698", "result_type": "Participant Flow", "title": "Cohort 2, Amended Regimen: (Capecitabine + Irinotecan)"}
+{"ctgov_group_code": "FG000", "id": 742162772, "nct_id": "NCT00035555", "result_type": "Participant Flow", "title": "Belatacept: More Intensive (MI) Regimen"}
+{"ctgov_group_code": "FG001", "id": 742162773, "nct_id": "NCT00035555", "result_type": "Participant Flow", "title": "Belatacept: Less Intensive (LI) Regimen"}
+{"ctgov_group_code": "FG002", "id": 742162774, "nct_id": "NCT00035555", "result_type": "Participant Flow", "title": "Cyclosporine Regimen"}
+{"ctgov_group_code": "FG000", "id": 742802889, "nct_id": "NCT00040443", "result_type": "Participant Flow", "title": "CX516"}
+{"ctgov_group_code": "FG001", "id": 742802890, "nct_id": "NCT00040443", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 740878750, "nct_id": "NCT00040664", "result_type": "Participant Flow", "title": "Overall Fosamprenavir (FPV)/Ritonavir(RTV)"}
+{"ctgov_group_code": "FG001", "id": 740878751, "nct_id": "NCT00040664", "result_type": "Participant Flow", "title": "2-5 Years FPV/RTV"}
+{"ctgov_group_code": "FG002", "id": 740878752, "nct_id": "NCT00040664", "result_type": "Participant Flow", "title": "6-11 Years FPV/RTV"}
+{"ctgov_group_code": "FG003", "id": 740878753, "nct_id": "NCT00040664", "result_type": "Participant Flow", "title": "12-18 Years FPV/RTV"}
+{"ctgov_group_code": "FG000", "id": 742655100, "nct_id": "NCT00040742", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG001", "id": 742655101, "nct_id": "NCT00040742", "result_type": "Participant Flow", "title": "0.5g Ginger"}
+{"ctgov_group_code": "FG002", "id": 742655102, "nct_id": "NCT00040742", "result_type": "Participant Flow", "title": "1.0g Ginger"}
+{"ctgov_group_code": "FG003", "id": 742655103, "nct_id": "NCT00040742", "result_type": "Participant Flow", "title": "1.5g Ginger"}
+{"ctgov_group_code": "FG000", "id": 741808194, "nct_id": "NCT00041717", "result_type": "Participant Flow", "title": "Fampridine-SR 50mg/Day"}
+{"ctgov_group_code": "FG001", "id": 741808195, "nct_id": "NCT00041717", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 741106231, "nct_id": "NCT00041756", "result_type": "Participant Flow", "title": "Placebo Tablet"}
+{"ctgov_group_code": "FG001", "id": 741106232, "nct_id": "NCT00041756", "result_type": "Participant Flow", "title": "25 mg PG-530742"}
+{"ctgov_group_code": "FG002", "id": 741106233, "nct_id": "NCT00041756", "result_type": "Participant Flow", "title": "50 mg PG-530742"}
+{"ctgov_group_code": "FG003", "id": 741106234, "nct_id": "NCT00041756", "result_type": "Participant Flow", "title": "100 mg PG-530742"}
+{"ctgov_group_code": "FG004", "id": 741106235, "nct_id": "NCT00041756", "result_type": "Participant Flow", "title": "200 mg PG-530742"}
+{"ctgov_group_code": "FG000", "id": 741982549, "nct_id": "NCT00044005", "result_type": "Participant Flow", "title": "Lurasidone 20 mg"}
+{"ctgov_group_code": "FG001", "id": 741982550, "nct_id": "NCT00044005", "result_type": "Participant Flow", "title": "Lurasidone 40 mg"}
+{"ctgov_group_code": "FG002", "id": 741982551, "nct_id": "NCT00044005", "result_type": "Participant Flow", "title": "Lurasidone 80mg"}
+{"ctgov_group_code": "FG000", "id": 741670479, "nct_id": "NCT00044512", "result_type": "Participant Flow", "title": "Sorafenib 400 mg b.i.d."}
+{"ctgov_group_code": "FG000", "id": 740768159, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "PKC412 in FLT3 Mutated Participants (Core)"}
+{"ctgov_group_code": "FG001", "id": 740768160, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Mutated PKC412 100 mg/Day (E1)"}
+{"ctgov_group_code": "FG002", "id": 740768161, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Mutated PKC412 200 mg/Day (E1)"}
+{"ctgov_group_code": "FG003", "id": 740768162, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Wild Type PKC412 100 mg/Day (E1)"}
+{"ctgov_group_code": "FG004", "id": 740768163, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Wild Type PKC412 200 mg/Day (E1)"}
+{"ctgov_group_code": "FG005", "id": 740768164, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Mutated PKC412 Dose Escalation (E2)"}
+{"ctgov_group_code": "FG006", "id": 740768165, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Mutated PKC+Itraconazole (E2)"}
+{"ctgov_group_code": "FG007", "id": 740768166, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Wild Type PKC412 Dose Escalation (E2)"}
+{"ctgov_group_code": "FG008", "id": 740768167, "nct_id": "NCT00045942", "result_type": "Participant Flow", "title": "FLT3 Wild Type PKC+Itraconazole (E2)"}
+{"ctgov_group_code": "FG000", "id": 741715021, "nct_id": "NCT00046228", "result_type": "Participant Flow", "title": "Primary PCI Group"}
+{"ctgov_group_code": "FG001", "id": 741715022, "nct_id": "NCT00046228", "result_type": "Participant Flow", "title": "Abciximab Facilitated PCI Group"}
+{"ctgov_group_code": "FG002", "id": 741715023, "nct_id": "NCT00046228", "result_type": "Participant Flow", "title": "Reteplase/Abciximab Facilitated PCI Group"}
+{"ctgov_group_code": "FG000", "id": 741800159, "nct_id": "NCT00050986", "result_type": "Participant Flow", "title": "Temozolomide and R115777"}
+{"ctgov_group_code": "FG000", "id": 741121054, "nct_id": "NCT00051168", "result_type": "Participant Flow", "title": "Travatan"}
+{"ctgov_group_code": "FG000", "id": 740774862, "nct_id": "NCT00052442", "result_type": "Participant Flow", "title": "135 mg/m^2 Pralatrexate 1/2 Weeks"}
+{"ctgov_group_code": "FG001", "id": 740774863, "nct_id": "NCT00052442", "result_type": "Participant Flow", "title": "30 mg/m^2 Pralatrexate 3/4 Weeks"}
+{"ctgov_group_code": "FG002", "id": 740774864, "nct_id": "NCT00052442", "result_type": "Participant Flow", "title": "30 mg/m^2 Pralatrexate 6/7 Weeks"}
+{"ctgov_group_code": "FG003", "id": 740774865, "nct_id": "NCT00052442", "result_type": "Participant Flow", "title": "45 mg/m^2 Pralatrexate 6/7 Weeks"}
+{"ctgov_group_code": "FG004", "id": 740774866, "nct_id": "NCT00052442", "result_type": "Participant Flow", "title": "270 mg/m^2 Pralatrexate 2/4 Weeks"}
+{"ctgov_group_code": "FG000", "id": 741921722, "nct_id": "NCT00053482", "result_type": "Participant Flow", "title": "ACAM2000 Dose 1"}
+{"ctgov_group_code": "FG001", "id": 741921723, "nct_id": "NCT00053482", "result_type": "Participant Flow", "title": "ACAM2000 Dose 2"}
+{"ctgov_group_code": "FG002", "id": 741921724, "nct_id": "NCT00053482", "result_type": "Participant Flow", "title": "ACAM2000 Dose 3"}
+{"ctgov_group_code": "FG003", "id": 741921725, "nct_id": "NCT00053482", "result_type": "Participant Flow", "title": "ACAM2000 Dose 4"}
+{"ctgov_group_code": "FG004", "id": 741921726, "nct_id": "NCT00053482", "result_type": "Participant Flow", "title": "Dryvax\u00ae Vaccine"}
+{"ctgov_group_code": "FG000", "id": 741781636, "nct_id": "NCT00053846", "result_type": "Participant Flow", "title": "Buspirone Hydrochloride"}
+{"ctgov_group_code": "FG001", "id": 741781637, "nct_id": "NCT00053846", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 740976136, "nct_id": "NCT00058825", "result_type": "Participant Flow", "title": "Stem Cell Transplant"}
+{"ctgov_group_code": "FG000", "id": 741787019, "nct_id": "NCT00064662", "result_type": "Participant Flow", "title": "Burch"}
+{"ctgov_group_code": "FG001", "id": 741787020, "nct_id": "NCT00064662", "result_type": "Participant Flow", "title": "Sling"}
+{"ctgov_group_code": "FG000", "id": 741453646, "nct_id": "NCT00068718", "result_type": "Participant Flow", "title": "Treatment (DLI)"}
+{"ctgov_group_code": "FG000", "id": 742602431, "nct_id": "NCT00069641", "result_type": "Participant Flow", "title": "Idursulfase Weekly (0.5 mg/kg)"}
+{"ctgov_group_code": "FG001", "id": 742602432, "nct_id": "NCT00069641", "result_type": "Participant Flow", "title": "Idursulfase Every Other Week (EOW) (0.5 mg/kg)"}
+{"ctgov_group_code": "FG002", "id": 742602433, "nct_id": "NCT00069641", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 742484514, "nct_id": "NCT00078286", "result_type": "Participant Flow", "title": "Sertraline"}
+{"ctgov_group_code": "FG001", "id": 742484515, "nct_id": "NCT00078286", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG000", "id": 742148643, "nct_id": "NCT00087529", "result_type": "Participant Flow", "title": "Placebo"}
+{"ctgov_group_code": "FG001", "id": 742148644, "nct_id": "NCT00087529", "result_type": "Participant Flow", "title": "Rituximab"}
+{"ctgov_group_code": "FG000", "id": 742874091, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 0.15 mg/kg"}
+{"ctgov_group_code": "FG001", "id": 742874092, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 0.5 mg/kg"}
+{"ctgov_group_code": "FG002", "id": 742874093, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 1 mg/kg"}
+{"ctgov_group_code": "FG003", "id": 742874094, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 2 mg/kg"}
+{"ctgov_group_code": "FG004", "id": 742874095, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 4 mg/kg"}
+{"ctgov_group_code": "FG005", "id": 742874096, "nct_id": "NCT00093041", "result_type": "Participant Flow", "title": "Zalutumumab 8 mg/kg"}
+{"ctgov_group_code": "FG000", "id": 742161601, "nct_id": "NCT00096460", "result_type": "Participant Flow", "title": "Autologous Hematopoietic Stem Cell Transplant (HSCT)"}
+{"ctgov_group_code": "FG001", "id": 742161602, "nct_id": "NCT00096460", "result_type": "Participant Flow", "title": "Allogeneic Hematopoietic Stem Cell Transplant (HSCT)"}
+{"ctgov_group_code": "FG000", "id": 742771236, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "Maraviroc QD, Double Blind"}
+{"ctgov_group_code": "FG001", "id": 742771237, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "Maraviroc BID, Double Blind"}
+{"ctgov_group_code": "FG002", "id": 742771238, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "Placebo, Double Blind"}
+{"ctgov_group_code": "FG003", "id": 742771239, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "Maraviroc BID, Open Label"}
+{"ctgov_group_code": "FG004", "id": 742771240, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "In Study-off Drug (ISOD), Open Label"}
+{"ctgov_group_code": "FG005", "id": 742771241, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "Maraviroc BID, Observation Phase"}
+{"ctgov_group_code": "FG006", "id": 742771242, "nct_id": "NCT00098306", "result_type": "Participant Flow", "title": "In Study-off Drug (ISOD), Observation Phase"}
+{"ctgov_group_code": "FG000", "id": 742741746, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "Maraviroc QD, Double Blind"}
+{"ctgov_group_code": "FG001", "id": 742741747, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "Maraviroc BID, Double Blind"}
+{"ctgov_group_code": "FG002", "id": 742741748, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "Placebo, Double Blind"}
+{"ctgov_group_code": "FG003", "id": 742741749, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "Maraviroc BID, Open Label"}
+{"ctgov_group_code": "FG004", "id": 742741750, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "In Study-off Drug (ISOD), Open Label"}
+{"ctgov_group_code": "FG005", "id": 742741751, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "Maraviroc BID, Observation Phase"}
+{"ctgov_group_code": "FG006", "id": 742741752, "nct_id": "NCT00098722", "result_type": "Participant Flow", "title": "In Study-off Drug (ISOD), Observation Phase"}
+{"ctgov_group_code": "FG000", "id": 742390795, "nct_id": "NCT00102531", "result_type": "Participant Flow", "title": "Cisplatin Liposomal 24 mg/m2"}
+{"ctgov_group_code": "FG001", "id": 742390796, "nct_id": "NCT00102531", "result_type": "Participant Flow", "title": "Cisplatin Liposomal 36 mg/m2"}
+{"ctgov_group_code": "FG000", "id": 742792595, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Temsirolimus 10 mg/m^2: Part 1"}
+{"ctgov_group_code": "FG001", "id": 742792596, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Temsirolimus 25 mg/m^2: Part 1"}
+{"ctgov_group_code": "FG002", "id": 742792597, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Temsirolimus 75 mg/m^2: Part 1"}
+{"ctgov_group_code": "FG003", "id": 742792598, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Temsirolimus 150 mg/m^2: Part 1"}
+{"ctgov_group_code": "FG004", "id": 742792599, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "High-grade Glioma: Part 2"}
+{"ctgov_group_code": "FG005", "id": 742792600, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Neuroblastoma: Part 2"}
+{"ctgov_group_code": "FG006", "id": 742792601, "nct_id": "NCT00106353", "result_type": "Participant Flow", "title": "Rhabdomyosarcoma: Part 2"}
+{"ctgov_group_code": "FG000", "id": 741499838, "nct_id": "NCT00137969", "result_type": "Participant Flow", "title": "Rituximab 1000 mg + Prednisone"}
+{"ctgov_group_code": "FG001", "id": 741499839, "nct_id": "NCT00137969", "result_type": "Participant Flow", "title": "Placebo + Prednisone"}
+{"ctgov_group_code": "FG000", "id": 741639547, "nct_id": "NCT00255970", "result_type": "Participant Flow", "title": "Regenafil"}
+{"ctgov_group_code": "FG001", "id": 741639548, "nct_id": "NCT00255970", "result_type": "Participant Flow", "title": "Demineralized Freeze Dried Bone Allograft"}
+{"ctgov_group_code": "FG000", "id": 742741777, "nct_id": "NCT00328653", "result_type": "Participant Flow", "title": "Vehicle"}
+{"ctgov_group_code": "FG001", "id": 742741778, "nct_id": "NCT00328653", "result_type": "Participant Flow", "title": "NOVA22007 0.05%"}
+{"ctgov_group_code": "FG002", "id": 742741779, "nct_id": "NCT00328653", "result_type": "Participant Flow", "title": "NOVA22007 0.1%"}
+{"ctgov_group_code": "FG000", "id": 742831953, "nct_id": "NCT00399308", "result_type": "Participant Flow", "title": "Group I - Weekly Celaderm"}
+{"ctgov_group_code": "FG001", "id": 742831954, "nct_id": "NCT00399308", "result_type": "Participant Flow", "title": "Group II - Bi-weekly Celaderm"}
+{"ctgov_group_code": "FG002", "id": 742831955, "nct_id": "NCT00399308", "result_type": "Participant Flow", "title": "Group III - Control"}
+{"ctgov_group_code": "FG000", "id": 740744629, "nct_id": "NCT00419445", "result_type": "Participant Flow", "title": "25 mg Tid"}
+{"ctgov_group_code": "FG001", "id": 740744630, "nct_id": "NCT00419445", "result_type": "Participant Flow", "title": "75 mg Tid"}
+{"ctgov_group_code": "FG002", "id": 740744631, "nct_id": "NCT00419445", "result_type": "Participant Flow", "title": "150 mg Tid"}
+{"ctgov_group_code": "FG000", "id": 741934281, "nct_id": "NCT00538434", "result_type": "Participant Flow", "title": "Reslizumab 1 mg/kg"}
+{"ctgov_group_code": "FG001", "id": 741934282, "nct_id": "NCT00538434", "result_type": "Participant Flow", "title": "Reslizumab 2 mg/kg"}
+{"ctgov_group_code": "FG002", "id": 741934283, "nct_id": "NCT00538434", "result_type": "Participant Flow", "title": "Reslizumab 3 mg/kg"}
+{"ctgov_group_code": "FG003", "id": 741934284, "nct_id": "NCT00538434", "result_type": "Participant Flow", "title": "Placebo"}

@@ -16,10 +16,16 @@ CLEAN_ROOT = DATA_ROOT / "clean"
 CLEAN_FIXTURE_ROOT = DATA_ROOT / "clean_fixture"
 SYNTHETIC_ROOT = DATA_ROOT / "synthetic"
 REPORT_ROOT = DATA_ROOT / "reports"
+# A non-live run writes its reports here so it never clobbers the REAL reports
+# (the quality/calibration artifacts describing the real cohort — EDA + audit inputs).
+REPORT_FIXTURE_ROOT = DATA_ROOT / "reports_fixture"
 
-# Committed sample fixture (clearly marked SAMPLE) so clean->synthetic is runnable
-# end-to-end without a live AACT Postgres.
-FIXTURE_ROOT = REPO_ROOT / "ingestion" / "fixtures" / "aact_sample"
+# The committed ingestion GOLDEN SET: a frozen slice of REAL PUBLIC AACT trial-level data
+# (raw NDJSON) committed alongside its expected cleaned ``ref_*`` output. It is the
+# clean-transform oracle (raw -> ref_*) AND the substrate for a non-live pipeline run, so the
+# pipeline is runnable end-to-end without a live AACT Postgres. NO PHI, NO synthetic.
+GOLDEN_ROOT = REPO_ROOT / "tests" / "golden"
+GOLDEN_RAW_ROOT = GOLDEN_ROOT / "raw"
 
 AACT_SOURCE_URL = "https://aact.ctti-clinicaltrials.org/"
 

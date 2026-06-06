@@ -72,9 +72,12 @@ def _first(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def load_raw_tables(snapshot_dir: Path) -> dict[str, list[dict[str, Any]]]:
-    """Read every expected NDJSON table from a snapshot directory."""
-    # TODO: never let sample fixtures be mistaken for real AACT
-    # (``ingestion/fixtures/aact_sample`` is SAMPLE/synthetic — see its manifest flags).
+    """Read every expected NDJSON table from a snapshot directory.
+
+    A snapshot dir is either a live extract (``data/raw/aact/<date>/``) or the committed
+    golden slice (``tests/golden/raw/``) — both are REAL public AACT data. There is no
+    longer any fabricated sample fixture that could be mistaken for a real extract.
+    """
     tables = [
         "studies",
         "calculated_values",

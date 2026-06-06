@@ -6,7 +6,6 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 
-# Generated SAMPLE AACT fixture — deterministically built via `make data-fixture`,
-# never committed, NOT a real AACT extract.
-ingestion/fixtures/aact_sample/
+# Golden-set clean scratch (the committed oracle is tests/golden/{raw,expected}).
+tests/golden/_clean_tmp/
 .vscode/

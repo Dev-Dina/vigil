@@ -6,9 +6,9 @@ check-specs:  ## Verify the repo conforms to /specs
 data:  ## Run the Phase 1 data pipeline (raw->clean->synthetic + quality/calibration reports)
 	uv run python -m ingestion.pipeline
 
-.PHONY: data-fixture
-data-fixture:  ## Regenerate the committed SAMPLE AACT fixture (deterministic)
-	uv run python -m ingestion.fixtures.build_sample
+.PHONY: golden
+golden:  ## Rebuild the committed ingestion golden set (real-AACT clean-transform oracle)
+	uv run python -m tests.golden.build_golden
 
 .PHONY: eda-report
 eda-report:  ## Generate EDA figures + summary into data/eda/ from the cleaned ref_* tables
