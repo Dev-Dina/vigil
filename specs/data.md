@@ -16,6 +16,24 @@ stated once: **golden = transforms, eval set = RAG, held-out split = models.**
 | **Models** (Phase 3) | **Held-out split** | A **temporal, group-disjoint-by-`nct_id`** held-out evaluation — one trial's participants never span splits, evaluation is on later time / unseen trials. | Fixed metrics: **PR-AUC (primary)**, recall@fixed-precision, calibration/Brier, lead-time gain — **reported per `sponsor_class`**. **No golden set. No rebalancing.** Scalers/encoders **fit on train only**. |
 | **RAG** (app assistant + demo receptionist, Phase 5 / demo) | **Eval set** | A set of **question → expected-grounding** pairs scored for **faithfulness** + **citation accuracy**. | **No golden set.** App-RAG and demo-RAG get **separate** eval sets, specced in `rag.md` at that phase. |
 
+## Modelling cohort
+The **modelling cohort** is the slice the predictive layer (Phase 3) trains and is evaluated
+on. It is a single, canonically-defined set of `nct_id`s, **defined once here and shared by the
+baselines, the synthetic generator, and the train/val/test split**, so the three never drift.
+
+- **Phase scope** — a trial is in the modelling cohort iff its `ref_trial.phase` ∈
+  **{`PHASE1/PHASE2`, `PHASE2`, `PHASE2/PHASE3`, `PHASE3`}** (the phases with enough
+  participant-flow volume and comparable dropout dynamics to model). All other phases
+  (`EARLY_PHASE1`, `PHASE1`, `PHASE4`, `NA`) are **reference-only**: they stay in the cleaned
+  `ref_*` tables (and feed EDA and the public corpus) but are **excluded from training, from
+  validation/test, and from every calibration target**.
+- **One definition** —
+  `modelling_cohort_nct_ids = { nct_id ∈ ref_trial : phase ∈ the four phases above }`.
+  The synthetic generator samples participants only for these trials; the calibration targets
+  below (overall, per-stratum, reason-mix, timing, covariate-sign, marginals) are computed over
+  this set only; the group split partitions exactly this set. A trial outside the cohort never
+  contributes a training row, a synthetic participant, or a calibration statistic.
+
 ## Raw ingestion
 AACT (CTTI's "Aggregate Analysis of ClinicalTrials.gov") is a published Postgres mirror of
 ClinicalTrials.gov. We pin a **monthly static snapshot** (its date is the provenance key) and
@@ -135,6 +153,9 @@ AACT gives **aggregates only** (per-arm counts), but the deep-learning layer nee
 longitudinal sequences. So we generate a synthetic per-participant cohort, clearly labelled, whose
 aggregates reproduce the real AACT statistics. It proves the METHOD; it is never a clinical claim.
 
+Generation and every calibration target below are restricted to the **modelling cohort** (see
+that section) — reference-only phases are never sampled and never scored.
+
 **Generation rules**
 - **Deterministic**: a single fixed seed (`SYNTHETIC_SEED`, recorded in the manifest); all RNG
   derives from one `numpy.random.Generator(seed)`. Regeneration is bit-identical.
@@ -181,6 +202,21 @@ diary_completion_rate; days_since_last_entry (at *t*); reminder_response_latency
 app_opens (count); missed_visits (recent + cumulative); symptom_log_frequency. The signal is the
 **trend**, not the level — a declining 7d-vs-28d ratio is the prototype dropout precursor.
 
+**Feature contract (modelling inputs)**
+- **`sponsor_class` IS a feature** (`INDUSTRY` / `NIH` / `OTHER_GOV` / `ACADEMIC_OTHER`) — a
+  trial-context predictor known at enrollment. **Sponsor identity is NOT a feature**: the
+  individual sponsor is used for grouping/analysis only, is **not currently pulled** into
+  `ref_*`, and so sponsor-level leakage across the split is an **accepted limitation** — the
+  split is by `nct_id`, not by sponsor, so one sponsor's trials may fall on both sides.
+- **`max_age_years` missingness** is encoded as an explicit boolean indicator
+  **`max_age_years_missing`**; the underlying value is **never imputed** (a missing eligibility
+  ceiling is itself signal, not a value to guess). `min_age_years` follows the same rule.
+- **`OTHER_GOV` is folded/regularized** — it is the sparse `sponsor_class`, so for the feature
+  encoding it is grouped with `ACADEMIC_OTHER` (or otherwise shrunk toward the pooled rate) when
+  its support is too thin to estimate reliably; the fold is recorded, never silent.
+- **Metrics are reported per `sponsor_class`** (the same breakdown the Evaluation contract's
+  held-out-split row requires) so performance is never hidden behind a pooled average.
+
 **Leakage rules (non-negotiable)**
 - **No future data**: every feature uses only observations with timestamp `< t`; no window may
   overlap the label horizon `[t, t+H)`.
@@ -189,8 +225,9 @@ app_opens (count); missed_visits (recent + cumulative); symptom_log_frequency. T
   last-ever entry — are excluded. Features stop at the last observation before *t*.
 - **No target-derived leakage**: cohort dropout rates, calibration targets, or any statistic
   computed from outcomes are never per-participant features.
-- **Group split by trial**: train/val/test split on `nct_id` so one trial's participants never
-  span splits. Scalers/encoders are fit on **train only**.
+- **Group split by trial**: train/val/test split on `nct_id` (partitioning the **modelling
+  cohort**) so one trial's participants never span splits. Scalers/encoders are fit on **train
+  only**.
 - **`synthetic` is metadata, never a feature.**
 - **Censoring**: participants still active at data cutoff are right-censored and excluded from
   labels they cannot have — never silently labelled "no dropout".
