@@ -189,6 +189,7 @@ def _build_trial(
             raw["conditions"].get(nct_id, []),
             report,
         ),
+        "start_date": start,
         "enrollment": studies.get("enrollment"),
         "n_arms": studies.get("number_of_arms"),
         "n_sites": n_sites,

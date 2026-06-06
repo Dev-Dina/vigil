@@ -14,6 +14,7 @@ def _valid_trial_fields() -> dict:
         "study_type": "INTERVENTIONAL",
         "phase": "PHASE3",
         "therapeutic_area": "ONCOLOGY",
+        "start_date": "2015-06-01",
         "enrollment": 200,
         "n_arms": 2,
         "n_sites": 10,

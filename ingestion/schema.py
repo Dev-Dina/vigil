@@ -10,6 +10,7 @@ record goes to the quality report; it is never silently coerced or dropped.
 
 from __future__ import annotations
 
+from datetime import date
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
@@ -106,6 +107,7 @@ class RefTrial(BaseModel):
     study_type: StudyType
     phase: Phase
     therapeutic_area: TherapeuticArea
+    start_date: date
     enrollment: int = Field(gt=0)
     n_arms: int = Field(ge=1)
     n_sites: int = Field(ge=0)
