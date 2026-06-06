@@ -15,17 +15,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ingestion import SYNTHETIC_SEED
-from ingestion.calibration import evaluate, write_calibration_report
+from ingestion.calibration import evaluate, print_table, write_calibration_report
 from ingestion.clean import clean_snapshot
 from ingestion.config import (
     AACT_SOURCE_URL,
+    CLEAN_FIXTURE_ROOT,
     CLEAN_ROOT,
     FIXTURE_ROOT,
     REPORT_ROOT,
     SYNTHETIC_ROOT,
     AactConnection,
 )
-from ingestion.errors import LeakageError
+from ingestion.errors import CalibrationError, ClobberGuardError, LeakageError
 from ingestion.extract import extract_to_raw
 from ingestion.features import (
     assert_no_leakage,
@@ -34,13 +35,20 @@ from ingestion.features import (
     group_split_by_trial,
 )
 from ingestion.report import QualityReport
-from ingestion.synthetic import COVARIATE_ASSUMPTIONS, generate, write_synthetic
+from ingestion.synthetic import (
+    COVARIATE_ASSUMPTIONS,
+    PARTICIPANTS_PER_TRIAL,
+    generate,
+    subsample_trials,
+    write_synthetic,
+)
 from ingestion.targets import compute_targets
 
 
 @dataclass
 class PipelineResult:
     snapshot_dir: Path
+    clean_dir: Path
     quality_report: Path
     calibration_report: Path
     synthetic_manifest: Path
@@ -55,7 +63,7 @@ def run(
     *,
     live: bool = False,
     fail_loud: bool = True,
-    out_clean: Path = CLEAN_ROOT,
+    out_clean: Path | None = None,
     out_synth: Path = SYNTHETIC_ROOT,
     out_reports: Path = REPORT_ROOT,
 ) -> PipelineResult:
@@ -66,12 +74,36 @@ def run(
     else:
         snapshot_dir = FIXTURE_ROOT  # committed SAMPLE fixture
 
+    # A live run produces the REAL ref_* snapshot in CLEAN_ROOT. A fixture run cleans into a
+    # separate dir so it never clobbers a real snapshot already on disk (which is the preferred
+    # synthetic-generation source and the EDA input).
+    if out_clean is None:
+        out_clean = CLEAN_ROOT if live else CLEAN_FIXTURE_ROOT
+
+    # Fail loud on an explicit/erroneous override too: a non-live run must never target the
+    # REAL clean snapshot (the synthetic-generation source and EDA input).
+    if not live and out_clean.resolve() == CLEAN_ROOT.resolve():
+        raise ClobberGuardError(
+            f"refusing to overwrite the REAL clean snapshot at {CLEAN_ROOT} on a non-live "
+            f"run (live=False); a non-live run must target CLEAN_FIXTURE_ROOT "
+            f"({CLEAN_FIXTURE_ROOT})."
+        )
+
+    # The preferred synthetic-generation source: the REAL cleaned ref_* tables in CLEAN_ROOT, so
+    # the cohort's stratum mix mirrors the real AACT population and reproduces the EDA marginal
+    # targets. Captured here (a fixture run writes elsewhere, leaving these intact).
+    real_source = _load_real_reference(CLEAN_ROOT)
+
     # --- clean -----------------------------------------------------------------------
     report = QualityReport()
     report.notes.append(f"source_url={AACT_SOURCE_URL}")
     report.notes.append(f"snapshot_dir={snapshot_dir.name}")
     frames = clean_snapshot(
-        snapshot_dir, report=report, fail_loud=fail_loud, out_root=out_clean
+        snapshot_dir,
+        report=report,
+        out_root=out_clean,
+        live=live,
+        fail_loud=fail_loud,
     )
     quality_path = report.write(out_reports / "data_quality_report.json")
 
@@ -82,17 +114,47 @@ def run(
     )
 
     # --- synthetic -------------------------------------------------------------------
-    targets = compute_targets(trials, arms, withdrawals)
-    cohort = generate(trials, arms, targets, seed=SYNTHETIC_SEED)
+    # Targets are the REAL captured-EDA aggregates (compute_targets reads data/eda). The cohort
+    # is generated from the REAL clean ref_* tables when present (stratified subsample so the
+    # stratum mix mirrors the real population and the marginal targets are reproduced) — the
+    # cleaned snapshot above is only the fallback substrate (e.g. fixture-only environments).
+    gen_trials, gen_arms, gen_withdrawals = _generation_source(
+        real_source, trials, arms, withdrawals
+    )
+    # Scaffold (composite-stratum enrollment/arm means) is built from the GENERATION frames so
+    # target 6 grades the cohort against its own trials' real marginals; the real overall /
+    # marginal / reason / sign targets come from the captured EDA regardless.
+    targets = compute_targets(gen_trials, gen_arms, gen_withdrawals)
+    cohort = generate(
+        gen_trials,
+        gen_arms,
+        targets,
+        seed=SYNTHETIC_SEED,
+        participants_per_trial=PARTICIPANTS_PER_TRIAL,
+    )
     write_synthetic(cohort, out_root=out_synth)
+    report.notes.append(
+        f"synthetic_generation_trials={len(gen_trials)} "
+        f"participants_per_trial={PARTICIPANTS_PER_TRIAL}"
+    )
 
-    synth_manifest = _write_synthetic_manifest(out_synth, targets, cohort.seed)
+    synth_manifest = _write_synthetic_manifest(
+        out_synth, targets, cohort.seed, n_gen_trials=len(gen_trials)
+    )
 
-    results = evaluate(cohort, targets, fail_loud=fail_loud)
+    # Always compute every target, print the table, and write the report BEFORE failing loud,
+    # so the operator sees the full PASS/FAIL breakdown even on a miss.
+    results = evaluate(cohort, targets, fail_loud=False)
+    print_table(results, targets)
     calib_path = write_calibration_report(
         results, out_reports / "calibration_report.json"
     )
     all_passed = all(r.passed for r in results)
+    failed = [r.target for r in results if not r.passed]
+    if failed and fail_loud:
+        raise CalibrationError(
+            "Synthetic cohort failed calibration on: " + ", ".join(failed)
+        )
 
     # --- features + leakage check ----------------------------------------------------
     fm = build_features(cohort.participants, cohort.engagement)
@@ -100,24 +162,69 @@ def run(
     fit_scaler_on_train(splits, fm.feature_columns)  # scalers fit on train only
     assert_no_leakage(fm, splits)
 
+    # The ref_* tables the cohort was actually generated from live in CLEAN_ROOT when a real
+    # snapshot was used, else in the fixture clean dir.
+    ref_dir = CLEAN_ROOT if real_source is not None else out_clean
+
     return PipelineResult(
         snapshot_dir=snapshot_dir,
+        clean_dir=ref_dir,
         quality_report=quality_path,
         calibration_report=calib_path,
         synthetic_manifest=synth_manifest,
         all_calibrations_passed=all_passed,
-        n_trials=len(trials),
-        n_arms=len(arms),
+        n_trials=len(gen_trials),
+        n_arms=len(gen_arms),
         n_participants=len(cohort.participants),
         n_feature_samples=len(fm.X),
     )
 
 
-def _write_synthetic_manifest(out_synth: Path, targets, seed: int) -> Path:
+def _load_real_reference(clean_root: Path):
+    """Read the REAL cleaned ``ref_*`` parquet tables if present, else ``None``."""
+    import pandas as pd
+
+    paths = {
+        name: clean_root / f"{name}.parquet"
+        for name in ("ref_trial", "ref_arm", "ref_withdrawal_reason")
+    }
+    if not all(p.exists() for p in paths.values()):
+        return None
+    return (
+        pd.read_parquet(paths["ref_trial"]),
+        pd.read_parquet(paths["ref_arm"]),
+        pd.read_parquet(paths["ref_withdrawal_reason"]),
+    )
+
+
+def _generation_source(real_source, trials, arms, withdrawals):
+    """Pick the trial set the synthetic cohort is generated from.
+
+    Prefer the REAL ``ref_*`` snapshot captured before the clean stage (so the cohort's stratum
+    mix mirrors the real population and reproduces the EDA marginal targets); subsample it
+    (stratified, deterministic) to stay tractable. Use it only if materially larger than this
+    run's cleaned frames (i.e. a real snapshot, not the same small fixture). Otherwise fall back
+    to the frames just cleaned in this run.
+    """
+    if real_source is not None:
+        rt, ra, rw = real_source
+        if len(rt) > len(trials):
+            return subsample_trials(rt, ra, rw, seed=SYNTHETIC_SEED)
+    return trials, arms, withdrawals
+
+
+def _write_synthetic_manifest(
+    out_synth: Path, targets, seed: int, *, n_gen_trials: int
+) -> Path:
     out_synth.mkdir(parents=True, exist_ok=True)
     manifest = {
         "synthetic_seed": seed,
         "deterministic": "single numpy.random.Generator(seed); bit-identical regen",
+        "participants_per_trial": PARTICIPANTS_PER_TRIAL,
+        "generation_trials": n_gen_trials,
+        "generation_note": "Each real trial contributes an equal number of participants whose "
+        "dropper fraction equals that trial's real participant-weighted rate, so the cohort "
+        "reproduces the real TRIAL-MEAN marginal targets.",
         "disclaimer": "SYNTHETIC — calibrated to aggregate AACT statistics, NOT real "
         "participants, method-validity only, no PHI.",
         "labelled_assumptions": COVARIATE_ASSUMPTIONS,
@@ -136,12 +243,9 @@ def validate_done(result: PipelineResult) -> list[str]:
         problems.append("data-quality report not emitted")
     if not result.calibration_report.exists():
         problems.append("calibration report not emitted")
-    if not (CLEAN_ROOT / "ref_trial.parquet").exists():
-        problems.append("ref_trial.parquet missing")
-    if not (CLEAN_ROOT / "ref_arm.parquet").exists():
-        problems.append("ref_arm.parquet missing")
-    if not (CLEAN_ROOT / "ref_withdrawal_reason.parquet").exists():
-        problems.append("ref_withdrawal_reason.parquet missing")
+    for tbl in ("ref_trial", "ref_arm", "ref_withdrawal_reason"):
+        if not (result.clean_dir / f"{tbl}.parquet").exists():
+            problems.append(f"{tbl}.parquet missing")
     if not (SYNTHETIC_ROOT / "README.md").exists():
         problems.append("synthetic README disclaimer missing")
     if not result.all_calibrations_passed:
@@ -170,6 +274,9 @@ def main(argv: list[str] | None = None) -> int:
     except LeakageError as exc:
         print(f"PIPELINE FAIL (leakage): {exc}", file=sys.stderr)
         return 2
+    except CalibrationError as exc:
+        print(f"PIPELINE FAIL (calibration): {exc}", file=sys.stderr)
+        return 3
 
     problems = validate_done(result)
     print("=== Vigil data pipeline ===")

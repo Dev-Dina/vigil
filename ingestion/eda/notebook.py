@@ -11,19 +11,18 @@ If ``data/eda/`` / ``data/clean/`` are empty, generate them first with ``make ed
 
 import marimo
 
-__generated_with = "0.9.0"
+__generated_with = "0.23.9"
 app = marimo.App(width="medium")
 
 
 @app.cell
 def _imports():
-    import json
     from pathlib import Path
 
     import marimo as mo
     import pandas as pd
 
-    return Path, json, mo, pd
+    return Path, mo, pd
 
 
 @app.cell
@@ -40,16 +39,14 @@ def _paths(Path):
 
 @app.cell
 def _title(mo):
-    mo.md(
-        """
-        # Vigil — Real AACT Reference Cohort EDA
+    mo.md("""
+    # Vigil — Real AACT Reference Cohort EDA
 
-        Build-time snapshot only (ClinicalTrials.gov / AACT, pinned). This is **public
-        reference data, no PHI**; it calibrates the synthetic cohort and proves method
-        validity — never a clinical claim. Numbers below are read live from
-        `data/clean/ref_*.parquet` and `data/eda/`.
-        """
-    )
+    Build-time snapshot only (ClinicalTrials.gov / AACT, pinned). This is **public
+    reference data, no PHI**; it calibrates the synthetic cohort and proves method
+    validity — never a clinical claim. Numbers below are read live from
+    `data/clean/ref_*.parquet` and `data/eda/`.
+    """)
     return
 
 
@@ -154,21 +151,19 @@ def _figures(figures_dir, mo):
 
 @app.cell
 def _leakage_note(mo):
-    mo.md(
-        """
-        ## Modelling decisions carried from this EDA
+    mo.md("""
+    ## Modelling decisions carried from this EDA
 
-        - **Covariate signs (real):** ↑ dropout with more sites, more countries, longer
-          planned duration; blinded < open-label. These signs must survive in the synthetic
-          cohort.
-        - **Strata:** phase × therapeutic_area × sponsor_class (+ blinded, single/multi-site)
-          drive calibration targets.
-        - **Censoring is not dropout:** right-censored / still-ongoing participants are
-          excluded from labels they cannot have — never labelled "no dropout".
-        - **Group split by trial** (`nct_id`) so one trial never spans train/val/test; scalers
-          fit on train only. `synthetic` is metadata, never a feature.
-        """
-    )
+    - **Covariate signs (real):** ↑ dropout with more sites, more countries, longer
+      planned duration; blinded < open-label. These signs must survive in the synthetic
+      cohort.
+    - **Strata:** phase × therapeutic_area × sponsor_class (+ blinded, single/multi-site)
+      drive calibration targets.
+    - **Censoring is not dropout:** right-censored / still-ongoing participants are
+      excluded from labels they cannot have — never labelled "no dropout".
+    - **Group split by trial** (`nct_id`) so one trial never spans train/val/test; scalers
+      fit on train only. `synthetic` is metadata, never a feature.
+    """)
     return
 
 

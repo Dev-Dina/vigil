@@ -34,3 +34,12 @@ class CalibrationError(Exception):
 
 class LeakageError(Exception):
     """Raised when a feature-pipeline leakage invariant is violated."""
+
+
+class ClobberGuardError(Exception):
+    """Raised when a non-live clean stage would overwrite the REAL clean snapshot.
+
+    The real ``data/clean`` snapshot is the preferred synthetic-generation source and the
+    EDA input; a fixture/non-live run must never clobber it. A non-live run must target
+    ``CLEAN_FIXTURE_ROOT`` instead.
+    """

@@ -18,8 +18,8 @@ import pandas as pd
 from pydantic import ValidationError
 
 from ingestion import ctgov_enums
-from ingestion.config import CLEAN_ROOT
-from ingestion.errors import DataValidationError
+from ingestion.config import CLEAN_FIXTURE_ROOT, CLEAN_ROOT
+from ingestion.errors import ClobberGuardError, DataValidationError
 from ingestion.extract import read_ndjson
 from ingestion.report import QualityReport
 from ingestion.schema import RefArm, RefTrial, RefWithdrawalReason
@@ -432,14 +432,19 @@ def clean_snapshot(
     snapshot_dir: Path,
     *,
     report: QualityReport,
+    out_root: Path,
+    live: bool = False,
     fail_loud: bool = True,
-    out_root: Path = CLEAN_ROOT,
 ) -> dict[str, pd.DataFrame]:
     """Validate a raw snapshot into the three ``ref_*`` tables and write Parquet.
 
     With ``fail_loud=True`` (spec default) the first violation aborts. With ``False`` the
     offending NCT is recorded in the report and skipped so the report can enumerate every
     issue in one pass.
+
+    ``out_root`` is required (no default) so no caller can accidentally write the REAL
+    ``CLEAN_ROOT`` snapshot. The writer additionally refuses to clobber ``CLEAN_ROOT`` on a
+    non-live run (``live=False``).
     """
     raw_lists = load_raw_tables(snapshot_dir)
     raw = {name: _index_by_nct(rows) for name, rows in raw_lists.items()}
@@ -476,7 +481,7 @@ def clean_snapshot(
         "ref_withdrawal_reason": pd.DataFrame(withdrawals),
     }
     _record_stats(frames, report)
-    _write_parquet(frames, out_root)
+    _write_parquet(frames, out_root, live=live)
     return frames
 
 
@@ -488,7 +493,21 @@ def _record_stats(frames: dict[str, pd.DataFrame], report: QualityReport) -> Non
         report.set_table_stats(name, rows=len(df), null_rates=null_rates)
 
 
-def _write_parquet(frames: dict[str, pd.DataFrame], out_root: Path) -> None:
+def _write_parquet(
+    frames: dict[str, pd.DataFrame], out_root: Path, *, live: bool
+) -> None:
+    """Write the ``ref_*`` Parquet tables, refusing to clobber the REAL snapshot.
+
+    The single clean writer. A non-live run (``live=False``) targeting ``CLEAN_ROOT`` is a
+    bug — the real snapshot is the synthetic-generation source and EDA input — so it fails
+    loud instead of overwriting. Non-live runs must target ``CLEAN_FIXTURE_ROOT``.
+    """
+    if not live and out_root.resolve() == CLEAN_ROOT.resolve():
+        raise ClobberGuardError(
+            f"refusing to overwrite the REAL clean snapshot at {CLEAN_ROOT} on a non-live "
+            f"run (live=False); a non-live run must target CLEAN_FIXTURE_ROOT "
+            f"({CLEAN_FIXTURE_ROOT})."
+        )
     out_root.mkdir(parents=True, exist_ok=True)
     for name, df in frames.items():
         df.to_parquet(out_root / f"{name}.parquet", index=False)
