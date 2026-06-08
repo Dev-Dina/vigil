@@ -64,13 +64,17 @@ def _t2d_nct_ids(raw_root: Path) -> frozenset[str]:
     return t2d & drug
 
 
-def t2d_cohort_trials(ref_trial: pd.DataFrame, raw_root: Path = RAW_ROOT) -> pd.DataFrame:
+def t2d_cohort_trials(
+    ref_trial: pd.DataFrame, raw_root: Path = RAW_ROOT
+) -> pd.DataFrame:
     """Reproduce the 755 T2D modelling-cohort INDUSTRY trials; fail loud on drift."""
     cohort = modelling_cohort(ref_trial)
     industry = cohort[cohort["sponsor_class"] == "INDUSTRY"]
     nct = _t2d_nct_ids(raw_root)
-    trials = industry[industry["nct_id"].isin(nct)].drop_duplicates("nct_id").reset_index(
-        drop=True
+    trials = (
+        industry[industry["nct_id"].isin(nct)]
+        .drop_duplicates("nct_id")
+        .reset_index(drop=True)
     )
     n = trials["nct_id"].nunique()
     if n != EXPECTED_T2D_TRIALS:
@@ -85,7 +89,9 @@ def usable_t2d_arms(ref_arm: pd.DataFrame, trials: pd.DataFrame) -> pd.DataFrame
     """Usable real arms (started>0, completed not null) within the T2D trials; assert 2,402."""
     nct = frozenset(trials["nct_id"])
     arms = ref_arm[ref_arm["nct_id"].isin(nct)]
-    usable = arms[(arms["started"] > 0) & (arms["completed"].notna())].reset_index(drop=True)
+    usable = arms[(arms["started"] > 0) & (arms["completed"].notna())].reset_index(
+        drop=True
+    )
     n = len(usable)
     if n != EXPECTED_T2D_USABLE_ARMS:
         raise ValueError(
@@ -97,10 +103,14 @@ def usable_t2d_arms(ref_arm: pd.DataFrame, trials: pd.DataFrame) -> pd.DataFrame
 
 def apply_training_guard(arms: pd.DataFrame) -> pd.DataFrame:
     """Drop degenerate arms (started < 20 OR dropout_rate == 1.0) from the training marginal."""
-    keep = (arms["started"] >= MIN_STARTED) & (arms["dropout_rate"] < DEGENERATE_DROPOUT_RATE)
+    keep = (arms["started"] >= MIN_STARTED) & (
+        arms["dropout_rate"] < DEGENERATE_DROPOUT_RATE
+    )
     guarded = arms[keep].reset_index(drop=True)
     if guarded.empty:
-        raise ValueError("training guard removed every arm — refusing to train on an empty set")
+        raise ValueError(
+            "training guard removed every arm — refusing to train on an empty set"
+        )
     return guarded
 
 

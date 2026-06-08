@@ -55,7 +55,9 @@ def _strata(
 
     ``arm_type`` lives on the arm; ``phase`` lives on the trial — join via ``nct_id``.
     """
-    lut = arms.merge(trials[["nct_id", "phase"]], on="nct_id", how="left").set_index("arm_id")
+    lut = arms.merge(trials[["nct_id", "phase"]], on="nct_id", how="left").set_index(
+        "arm_id"
+    )
     arm_type = lut.reindex(arm_ids)["arm_type"].to_numpy()
     phase = lut.reindex(arm_ids)["phase"].to_numpy()
     return {"arm_type": arm_type, "phase": phase}
@@ -96,7 +98,10 @@ def train_real_baseline(
         proba = logit.predict_proba(fm.X.fillna(0.0).to_numpy(dtype=float))[:, 1]
         strata = _strata(cohort.arms, cohort.trials, fm.arm_id)
         return {
-            "gbt": {**regression_metrics(y_true, gbt_pred), **classifier_panel(y_bin, gbt_prob)},
+            "gbt": {
+                **regression_metrics(y_true, gbt_pred),
+                **classifier_panel(y_bin, gbt_prob),
+            },
             "logit": classifier_panel(y_bin, proba),
             "per_stratum_gbt": per_stratum(strata, y_bin, gbt_prob),
             "per_stratum_logit": per_stratum(strata, y_bin, proba),
@@ -112,10 +117,14 @@ def train_real_baseline(
 
     plot_paths: dict[str, str] = {}
     plot_paths["pr_curve_real_gbt"] = str(
-        plot_pr_curve(test_eval["_y_bin"], test_eval["_gbt_prob"], out_root / "pr_real_gbt.png")
+        plot_pr_curve(
+            test_eval["_y_bin"], test_eval["_gbt_prob"], out_root / "pr_real_gbt.png"
+        )
     )
     plot_paths["pr_curve_real_logit"] = str(
-        plot_pr_curve(test_eval["_y_bin"], test_eval["_proba"], out_root / "pr_real_logit.png")
+        plot_pr_curve(
+            test_eval["_y_bin"], test_eval["_proba"], out_root / "pr_real_logit.png"
+        )
     )
     plot_paths["calibration_real_gbt"] = str(
         plot_calibration_curve(
@@ -123,7 +132,11 @@ def train_real_baseline(
         )
     )
     plot_paths["residuals_real_gbt"] = str(
-        plot_residuals(test_eval["_y_true"], test_eval["_gbt_pred"], out_root / "resid_real_gbt.png")
+        plot_residuals(
+            test_eval["_y_true"],
+            test_eval["_gbt_pred"],
+            out_root / "resid_real_gbt.png",
+        )
     )
 
     metrics: dict[str, Any] = {
@@ -134,9 +147,14 @@ def train_real_baseline(
         "n_arms_guarded": int(len(cohort.arms)),
         "threshold_train_median_dropout_rate": threshold,
         "fold_sizes": cohort.split.fold_sizes,
-        "n_arms_per_fold": {f: int(len(matrices[f].X)) for f in ("train", "val", "test")},
+        "n_arms_per_fold": {
+            f: int(len(matrices[f].X)) for f in ("train", "val", "test")
+        },
         "date_ranges": {
-            "train": [str(cohort.split.train_dates[0]), str(cohort.split.train_dates[1])],
+            "train": [
+                str(cohort.split.train_dates[0]),
+                str(cohort.split.train_dates[1]),
+            ],
             "val": [str(cohort.split.val_dates[0]), str(cohort.split.val_dates[1])],
             "test": [str(cohort.split.test_dates[0]), str(cohort.split.test_dates[1])],
         },
@@ -149,5 +167,7 @@ def train_real_baseline(
         "val": {"gbt": val_eval["gbt"], "logit": val_eval["logit"]},
         "artifacts": plot_paths,
     }
-    (out_root / "baseline_real.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    (out_root / "baseline_real.json").write_text(
+        json.dumps(metrics, indent=2), encoding="utf-8"
+    )
     return metrics

@@ -44,9 +44,15 @@ def _plot_lead_time(leads: np.ndarray, out: Path) -> Path:
     if leads.size:
         bins = np.arange(0, int(leads.max()) + 2) - 0.5
         ax.hist(leads, bins=bins, color="#2f5f8f", edgecolor="#1f3f5f")
-        ax.axvline(float(np.median(leads)), color="#c0392b", linestyle="--", label="median")
+        ax.axvline(
+            float(np.median(leads)), color="#c0392b", linestyle="--", label="median"
+        )
         ax.legend()
-    ax.set(title="Lead-time distribution (visits before dropout)", xlabel="lead-time (visits)", ylabel="count")
+    ax.set(
+        title="Lead-time distribution (visits before dropout)",
+        xlabel="lead-time (visits)",
+        ylabel="count",
+    )
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, format="png", bbox_inches="tight")
@@ -57,7 +63,9 @@ def _plot_lead_time(leads: np.ndarray, out: Path) -> Path:
 def _plot_per_stratum(
     per_stratum: dict[str, dict[str, dict[str, float]]], metric: str, out: Path
 ) -> Path:
-    fig, axes = plt.subplots(1, len(per_stratum), figsize=(5.0 * len(per_stratum), 4.0), dpi=120)
+    fig, axes = plt.subplots(
+        1, len(per_stratum), figsize=(5.0 * len(per_stratum), 4.0), dpi=120
+    )
     if len(per_stratum) == 1:
         axes = [axes]
     for ax, (sname, levels) in zip(axes, per_stratum.items(), strict=False):
@@ -73,7 +81,9 @@ def _plot_per_stratum(
     return out
 
 
-def _bar_result(seq_pr_auc: float, prereg: dict[str, Any], median_lead: float) -> dict[str, Any]:
+def _bar_result(
+    seq_pr_auc: float, prereg: dict[str, Any], median_lead: float
+) -> dict[str, Any]:
     pr_ok = bool(seq_pr_auc >= prereg["criteria"]["pr_auc"]["must_reach"])
     lead_ok = bool(median_lead >= prereg["criteria"]["lead_time"]["must_reach"])
     return {
@@ -121,21 +131,32 @@ def run_t2d_pipeline(
         plot_pr_curve(seq["test_y"], seq["test_pr"], out_root / "pr_sequence.png")
     )
     seq_plots["calibration_sequence"] = str(
-        plot_calibration_curve(seq["test_y"], seq["test_pr"], out_root / "calib_sequence.png")
+        plot_calibration_curve(
+            seq["test_y"], seq["test_pr"], out_root / "calib_sequence.png"
+        )
     )
-    seq_plots["lead_time"] = str(_plot_lead_time(seq["lead"]["_leads"], out_root / "lead_time.png"))
+    seq_plots["lead_time"] = str(
+        _plot_lead_time(seq["lead"]["_leads"], out_root / "lead_time.png")
+    )
     seq_plots["per_stratum_pr_auc"] = str(
-        _plot_per_stratum(panel["test"]["per_stratum"], "pr_auc", out_root / "per_stratum_pr_auc.png")
+        _plot_per_stratum(
+            panel["test"]["per_stratum"], "pr_auc", out_root / "per_stratum_pr_auc.png"
+        )
     )
 
     # attribution
     test_t = seq["test_tensors"]
-    g_path, g_imp = global_feature_gradients(seq["model"], test_t, out_root / "attr_global.png")
+    g_path, g_imp = global_feature_gradients(
+        seq["model"], test_t, out_root / "attr_global.png"
+    )
     seq_plots["attr_global"] = str(g_path)
     # local: a few high-risk TEST droppers
     dropper_pos = np.where(test_t.dropped)[0]
     final_risk = np.array(
-        [seq["test_probs"][i, max(int(test_t.mask[i].sum()) - 1, 0)] for i in dropper_pos]
+        [
+            seq["test_probs"][i, max(int(test_t.mask[i].sum()) - 1, 0)]
+            for i in dropper_pos
+        ]
     )
     top = dropper_pos[np.argsort(-final_risk)[:3]].tolist() if dropper_pos.size else []
     local_paths = local_occlusion(seq["model"], test_t, top, out_root) if top else []
@@ -231,20 +252,32 @@ def _write_card(
             "1b_synthetic_structural_pr_auc": sb["pr_auc"],
             "1b_synthetic_structural_recall_at_p50": sb["recall_at_p50"],
             "1b_synthetic_structural_brier": sb["brier"],
-            "preregistered_bar_pr_auc_must_reach": prereg["criteria"]["pr_auc"]["must_reach"],
-            "preregistered_bar_median_lead_time": prereg["criteria"]["lead_time"]["must_reach"],
+            "preregistered_bar_pr_auc_must_reach": prereg["criteria"]["pr_auc"][
+                "must_reach"
+            ],
+            "preregistered_bar_median_lead_time": prereg["criteria"]["lead_time"][
+                "must_reach"
+            ],
             "sequence_pr_auc": seq["pr_auc"],
             "sequence_recall_at_p50": seq["recall_at_p50"],
             "sequence_brier": seq["brier"],
-            "sequence_median_lead_time_visits": panel["lead_time"]["median_lead_time_visits"],
+            "sequence_median_lead_time_visits": panel["lead_time"][
+                "median_lead_time_visits"
+            ],
             "bar_pr_auc_PASS": bar["pr_auc_pass"],
             "bar_lead_time_PASS": bar["lead_time_pass"],
             "bar_overall_PASS": bar["overall_pass"],
             "per_sponsor_class": {
                 # the T2D strata are (arm_type, phase); the card template expects a per-class
                 # mapping, so we surface the sequence per-stratum panels here for the table.
-                **{f"arm_type:{k}": v for k, v in panel["test"]["per_stratum"]["arm_type"].items()},
-                **{f"phase:{k}": v for k, v in panel["test"]["per_stratum"]["phase"].items()},
+                **{
+                    f"arm_type:{k}": v
+                    for k, v in panel["test"]["per_stratum"]["arm_type"].items()
+                },
+                **{
+                    f"phase:{k}": v
+                    for k, v in panel["test"]["per_stratum"]["phase"].items()
+                },
             },
         },
         "calibration_note": (

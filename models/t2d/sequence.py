@@ -56,7 +56,9 @@ class SequenceConfig:
     epochs: int = 3
     batch_size: int = 256
     lr: float = 1e-3
-    max_train_participants: int = 20000  # documented subsample of TRAIN only; eval is full
+    max_train_participants: int = (
+        20000  # documented subsample of TRAIN only; eval is full
+    )
     max_visits: int = 40
 
 
@@ -71,7 +73,9 @@ class StaticEncoder:
 
     def fit(self, train: pd.DataFrame) -> StaticEncoder:
         for c in STATIC_CATEGORICAL:
-            self.levels_[c] = sorted(train[c].astype("string").fillna("__NA__").unique().tolist())
+            self.levels_[c] = sorted(
+                train[c].astype("string").fillna("__NA__").unique().tolist()
+            )
         for c in STATIC_NUMERIC:
             vals = pd.to_numeric(train[c], errors="coerce").to_numpy(dtype=float)
             self.means_[c] = float(np.nanmean(vals))
@@ -95,7 +99,11 @@ class StaticEncoder:
         for c in STATIC_NUMERIC:
             raw = pd.to_numeric(rows[c], errors="coerce").to_numpy(dtype=float)
             raw = np.nan_to_num(raw, nan=self.means_[c])
-            blocks.append((((raw - self.means_[c]) / self.stds_[c]).astype(np.float32)).reshape(-1, 1))
+            blocks.append(
+                (((raw - self.means_[c]) / self.stds_[c]).astype(np.float32)).reshape(
+                    -1, 1
+                )
+            )
         return np.hstack(blocks).astype(np.float32)
 
 
@@ -116,7 +124,11 @@ class LSTMClassifier(nn.Module):
 
     def forward(self, seq: torch.Tensor, static: torch.Tensor) -> torch.Tensor:
         # initial hidden state seeded from the static context (per spec option).
-        h0 = torch.tanh(self.static_proj(static)).unsqueeze(0).repeat(self.num_layers, 1, 1)
+        h0 = (
+            torch.tanh(self.static_proj(static))
+            .unsqueeze(0)
+            .repeat(self.num_layers, 1, 1)
+        )
         c0 = torch.zeros_like(h0)
         out, _ = self.lstm(seq, (h0, c0))  # (B, T, H)
         return self.head(out).squeeze(-1)  # (B, T) logits
@@ -126,10 +138,14 @@ class LSTMClassifier(nn.Module):
 class SequenceTensors:
     """Padded per-visit tensors for one fold."""
 
-    seq: np.ndarray  # (N, T, seq_dim) float32 — features at each step (the step's observation)
+    seq: (
+        np.ndarray
+    )  # (N, T, seq_dim) float32 — features at each step (the step's observation)
     static: np.ndarray  # (N, static_dim) float32
     label: np.ndarray  # (N, T) float32 — "drops at a later visit" decision-point label
-    mask: np.ndarray  # (N, T) float32 — 1 where the decision point is valid (uncensored)
+    mask: (
+        np.ndarray
+    )  # (N, T) float32 — 1 where the decision point is valid (uncensored)
     participant_id: np.ndarray
     nct_id: np.ndarray
     dropped: np.ndarray  # (N,) bool
@@ -279,7 +295,8 @@ def _decision_point_eval(
     # repeat each participant's stratum over its valid decision points
     counts = tensors.mask.sum(axis=1).astype(int)
     strata = {
-        name: np.repeat(vals.astype(str), counts) for name, vals in tensors.strata.items()
+        name: np.repeat(vals.astype(str), counts)
+        for name, vals in tensors.strata.items()
     }
     return y, pr, strata
 
@@ -313,8 +330,12 @@ def lead_time_distribution(
         "flag_coverage": float(flagged / droppers) if droppers else float("nan"),
         "median_lead_time_visits": float(np.median(arr)) if arr.size else float("nan"),
         "mean_lead_time_visits": float(np.mean(arr)) if arr.size else float("nan"),
-        "p25_lead_time_visits": float(np.percentile(arr, 25)) if arr.size else float("nan"),
-        "p75_lead_time_visits": float(np.percentile(arr, 75)) if arr.size else float("nan"),
+        "p25_lead_time_visits": float(np.percentile(arr, 25))
+        if arr.size
+        else float("nan"),
+        "p75_lead_time_visits": float(np.percentile(arr, 75))
+        if arr.size
+        else float("nan"),
         "_leads": arr,
     }
 
@@ -339,7 +360,9 @@ def train_sequence_model(
     train_p = synth.participants[synth.participants["nct_id"].isin(split.train_ids)]
     static_enc = StaticEncoder().fit(train_p)
     assert_no_forbidden_features(static_enc.feature_names_)  # static context guard
-    assert_no_forbidden_features(list(SEQ_NUMERIC))  # per-visit feature guard (fail loud)
+    assert_no_forbidden_features(
+        list(SEQ_NUMERIC)
+    )  # per-visit feature guard (fail loud)
 
     seq_means, seq_stds = _fit_seq_scaler(synth, split.train_ids, cfg=cfg)
 
@@ -354,10 +377,20 @@ def train_sequence_model(
         subsample=cfg.max_train_participants,
     )
     test_t = build_tensors(
-        synth, static_enc, split.test_ids, cfg=cfg, seq_means=seq_means, seq_stds=seq_stds
+        synth,
+        static_enc,
+        split.test_ids,
+        cfg=cfg,
+        seq_means=seq_means,
+        seq_stds=seq_stds,
     )
     val_t = build_tensors(
-        synth, static_enc, split.val_ids, cfg=cfg, seq_means=seq_means, seq_stds=seq_stds
+        synth,
+        static_enc,
+        split.val_ids,
+        cfg=cfg,
+        seq_means=seq_means,
+        seq_stds=seq_stds,
     )
 
     seq_dim = train_t.seq.shape[2]
@@ -376,7 +409,9 @@ def train_sequence_model(
     first_batch_loss: float | None = None
     model.train()
     for _epoch in range(cfg.epochs):
-        perm = torch.randperm(n, generator=torch.Generator().manual_seed(MODEL_SEED + _epoch))
+        perm = torch.randperm(
+            n, generator=torch.Generator().manual_seed(MODEL_SEED + _epoch)
+        )
         for bi, s in enumerate(range(0, n, cfg.batch_size)):
             idx = perm[s : s + cfg.batch_size]
             optimizer.zero_grad()

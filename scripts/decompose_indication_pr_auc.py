@@ -132,7 +132,9 @@ def get_pan_indication_pr_auc(
     if BASELINES_METRICS.exists():
         data = json.loads(BASELINES_METRICS.read_text(encoding="utf-8"))
         pr_auc = data["test"]["gbt"]["pr_auc"]
-        print(f"[pan-indication] Loaded existing metrics.json: GBT TEST PR-AUC = {pr_auc:.4f}")
+        print(
+            f"[pan-indication] Loaded existing metrics.json: GBT TEST PR-AUC = {pr_auc:.4f}"
+        )
         return float(pr_auc)
 
     # Metrics don't exist — train now
@@ -179,7 +181,9 @@ def within_indication_pr_auc(
     result_base["n_arms"] = n_arms
 
     if n_trials < 2 or n_arms < 4:
-        print(f"  [{indication}] Skipping: too few trials ({n_trials}) or arms ({n_arms})")
+        print(
+            f"  [{indication}] Skipping: too few trials ({n_trials}) or arms ({n_arms})"
+        )
         result_base["split_type"] = "skipped-too-small"
         return result_base
 
@@ -200,11 +204,15 @@ def within_indication_pr_auc(
 
             split_type = "temporal"
         except Exception as exc:
-            print(f"  [{indication}] Temporal split failed ({exc}), falling back to random 2-fold")
+            print(
+                f"  [{indication}] Temporal split failed ({exc}), falling back to random 2-fold"
+            )
             n_trials = len(sub_trial)  # recount after filter
             return _random_split_pr_auc(indication, sub_trial, sub_arm, result_base)
     else:
-        print(f"  [{indication}] n_trials={n_trials} < 9 -> small-N random 2-fold fallback")
+        print(
+            f"  [{indication}] n_trials={n_trials} < 9 -> small-N random 2-fold fallback"
+        )
         return _random_split_pr_auc(indication, sub_trial, sub_arm, result_base)
 
     # Fit GBT on TRAIN features from build_matrices
@@ -338,7 +346,11 @@ def write_decomposition_note(
     """Write decomposition_note.md with table + interpretation."""
     table_rows = []
     for row in by_indication:
-        pr_auc_str = f"{row['test_pr_auc']:.4f}" if isinstance(row["test_pr_auc"], float) else "N/A"
+        pr_auc_str = (
+            f"{row['test_pr_auc']:.4f}"
+            if isinstance(row["test_pr_auc"], float)
+            else "N/A"
+        )
         table_rows.append(
             f"| {row['indication']:<8} | {row['n_trials']:>8} | {row['n_arms']:>6} "
             f"| {pr_auc_str:>12} | {row['split_type'] or '':>18} "
@@ -456,10 +468,16 @@ def main() -> int:
     print("\n" + "=" * 72)
     print(f"Pan-indication GBT TEST PR-AUC: {pan_pr_auc:.4f}")
     print("-" * 72)
-    print(f"{'Indication':<10} {'n_trials':>10} {'n_arms':>8} {'PR-AUC':>10} {'split':>20}")
+    print(
+        f"{'Indication':<10} {'n_trials':>10} {'n_arms':>8} {'PR-AUC':>10} {'split':>20}"
+    )
     print("-" * 72)
     for row in by_indication:
-        pr_s = f"{row['test_pr_auc']:.4f}" if isinstance(row["test_pr_auc"], float) else "N/A"
+        pr_s = (
+            f"{row['test_pr_auc']:.4f}"
+            if isinstance(row["test_pr_auc"], float)
+            else "N/A"
+        )
         print(
             f"{row['indication']:<10} {row['n_trials']:>10} {row['n_arms']:>8} "
             f"{pr_s:>10} {(row['split_type'] or ''):>20}"

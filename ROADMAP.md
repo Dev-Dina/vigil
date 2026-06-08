@@ -37,6 +37,7 @@ Legend: [x] done · [~] in progress / pending review · [ ] not started
 Baselines (logistic + GBT) on real registry · sequence model (synthetic cohort) · survival ·
 calibration + SHAP · temporal-only eval (PR-AUC, recall@precision, lead-time gain) · scores → Postgres.
 **Done when:** reproducible training from Phase 1 REAL data; metrics logged; scores behind RLS.
+- [x] **Step (c) survival model** — discrete-time hazard on censored T2D synthetic cohort. C-index=0.3998 (concordance_index(tte, -H, event); see note below). `models/t2d/survival.py`; artifacts in `data/models/t2d/`; tests green. Censoring ~0.03% (non-informative admin cutoff, documented — not the clinical value driver).
 > Phase 1 REAL data + EDA are DONE — Phase 3 is no longer blocked on them. Now blocked on two
 > pre-conditions: (1) the **feature-contract spec** is not yet ratified into `specs/data.md`
 > (scoped modelling cohort {PHASE1/PHASE2, PHASE2, PHASE2/PHASE3, PHASE3}; sponsor_class is a

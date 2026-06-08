@@ -85,7 +85,9 @@ def train_synthetic_structural(
     if (fold == "").any():
         # a synthetic nct_id outside the split would be silent drift — fail loud
         orphans = p.loc[fold == "", "nct_id"].unique()[:5]
-        raise ValueError(f"synthetic participants with nct_id outside the split: {orphans}")
+        raise ValueError(
+            f"synthetic participants with nct_id outside the split: {orphans}"
+        )
     framed = p.assign(fold=fold)
     train = framed[framed.fold == "train"]
     val = framed[framed.fold == "val"]
@@ -94,7 +96,10 @@ def train_synthetic_structural(
     # Fit encoder + scaler on TRAIN ONLY.
     encoder = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
     encoder.fit(train[STATIC_CATEGORICAL].astype("string").fillna("__NA__"))
-    means = {c: float(pd.to_numeric(train[c], errors="coerce").mean()) for c in STATIC_NUMERIC}
+    means = {
+        c: float(pd.to_numeric(train[c], errors="coerce").mean())
+        for c in STATIC_NUMERIC
+    }
     stds = {}
     for c in STATIC_NUMERIC:
         s = float(pd.to_numeric(train[c], errors="coerce").std(ddof=0))
@@ -132,11 +137,17 @@ def train_synthetic_structural(
 
     plot_paths = {
         "pr_synth_structural_gbt": str(
-            plot_pr_curve(test_eval["_y"], test_eval["_gbt_prob"], out_root / "pr_synth_struct_gbt.png")
+            plot_pr_curve(
+                test_eval["_y"],
+                test_eval["_gbt_prob"],
+                out_root / "pr_synth_struct_gbt.png",
+            )
         ),
         "calibration_synth_structural_gbt": str(
             plot_calibration_curve(
-                test_eval["_y"], test_eval["_gbt_prob"], out_root / "calib_synth_struct_gbt.png"
+                test_eval["_y"],
+                test_eval["_gbt_prob"],
+                out_root / "calib_synth_struct_gbt.png",
             )
         ),
     }

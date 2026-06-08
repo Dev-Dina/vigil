@@ -68,11 +68,19 @@ EXCLUDED_FROM_FEATURES: frozenset[str] = frozenset(
 
 def assemble_rows(cohort_trials: pd.DataFrame, arms: pd.DataFrame) -> pd.DataFrame:
     """One row per arm: keys + target + grouping + the contracted feature source columns."""
-    needed_trial = set(_KEYS[:1] + ["start_date", _GROUP] + CATEGORICAL_FEATURES + NUMERIC_FEATURES + BOOLEAN_FEATURES)
+    needed_trial = set(
+        _KEYS[:1]
+        + ["start_date", _GROUP]
+        + CATEGORICAL_FEATURES
+        + NUMERIC_FEATURES
+        + BOOLEAN_FEATURES
+    )
     trial_cols = [c for c in cohort_trials.columns if c in needed_trial]
     rows = arms.merge(cohort_trials[trial_cols], on="nct_id", how="inner")
     if rows.empty:
-        raise ValueError("assemble_rows produced no rows (arms did not join to cohort trials)")
+        raise ValueError(
+            "assemble_rows produced no rows (arms did not join to cohort trials)"
+        )
     keep = list(
         dict.fromkeys(
             _KEYS
@@ -122,11 +130,15 @@ class ContractTransformer:
         sub["sponsor_class"] = sub["sponsor_class"].replace(SPONSOR_CLASS_FOLD)
         return sub
 
-    def fit(self, train_rows: pd.DataFrame, *, fold_name: str = "train") -> ContractTransformer:
+    def fit(
+        self, train_rows: pd.DataFrame, *, fold_name: str = "train"
+    ) -> ContractTransformer:
         folded = self._fold_categoricals(train_rows)
         self.encoder_ = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
         self.encoder_.fit(folded)
-        self.cat_names_ = list(self.encoder_.get_feature_names_out(CATEGORICAL_FEATURES))
+        self.cat_names_ = list(
+            self.encoder_.get_feature_names_out(CATEGORICAL_FEATURES)
+        )
         for col in NUMERIC_FEATURES:
             vals = pd.to_numeric(train_rows[col], errors="coerce").to_numpy(dtype=float)
             finite = vals[np.isfinite(vals)]

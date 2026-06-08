@@ -52,9 +52,13 @@ def global_feature_gradients(
     selected.backward()
     grads = seq.grad.detach().abs().numpy()  # (n, T, seq_dim)
     # mean over participants + valid steps
-    valid = (np.arange(tensors.seq.shape[1])[None, :] < tensors.last_obs[:n, None]).astype(float)
+    valid = (
+        np.arange(tensors.seq.shape[1])[None, :] < tensors.last_obs[:n, None]
+    ).astype(float)
     weight = valid[:, :, None]
-    mean_abs = (grads * weight).sum(axis=(0, 1)) / np.clip(weight.sum(axis=(0, 1)), 1.0, None)
+    mean_abs = (grads * weight).sum(axis=(0, 1)) / np.clip(
+        weight.sum(axis=(0, 1)), 1.0, None
+    )
     importance = dict(
         sorted(zip(SEQ_NUMERIC, mean_abs.tolist(), strict=True), key=lambda kv: -kv[1])
     )
@@ -62,7 +66,10 @@ def global_feature_gradients(
     heights = [importance[k] for k in labels]
     fig, ax = plt.subplots(figsize=(7.0, 4.0), dpi=120)
     ax.barh(labels, heights, color="#2f5f8f", edgecolor="#1f3f5f")
-    ax.set(title="LSTM temporal attribution (mean |gradient|)", xlabel="mean |d risk / d feature|")
+    ax.set(
+        title="LSTM temporal attribution (mean |gradient|)",
+        xlabel="mean |d risk / d feature|",
+    )
     fig.tight_layout()
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, format="png", bbox_inches="tight")

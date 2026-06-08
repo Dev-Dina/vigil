@@ -15,7 +15,11 @@ from ingestion.errors import LeakageError
 from models.cohort import cohort_nct_ids, modelling_cohort
 from models.config import MODELLING_PHASES
 from models.features.contract import assemble_rows, build_matrices
-from models.leakage_check import assert_group_disjoint, assert_no_outcome_features, run_smoke
+from models.leakage_check import (
+    assert_group_disjoint,
+    assert_no_outcome_features,
+    run_smoke,
+)
 from models.splits import temporal_group_split
 
 
@@ -84,7 +88,8 @@ def test_no_identity_outcome_or_synthetic_in_matrix(matrices) -> None:
 def test_other_gov_folded_no_standalone_column(matrices) -> None:
     # No one-hot column for the folded sparse class.
     assert not any(
-        "sponsor_class" in n and "OTHER_GOV" in n for n in matrices["train"].feature_names
+        "sponsor_class" in n and "OTHER_GOV" in n
+        for n in matrices["train"].feature_names
     )
 
 

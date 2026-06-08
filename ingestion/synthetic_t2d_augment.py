@@ -322,9 +322,7 @@ def compute_censoring_diagnostics(
     # Latent dropouts whose event was censored by the cutoff (dropped=True, event_observed=0)
     n_dropout_censored = int((dropped_latent & (event_observed == 0)).sum())
     # True completers: non-dropper who reached planned end before cutoff
-    n_completers = int(
-        (~dropped_latent & (time_to_event >= planned_dur)).sum()
-    )
+    n_completers = int((~dropped_latent & (time_to_event >= planned_dur)).sum())
 
     latent_dropout_rate = float(dropped_latent.mean())
     observed_event_rate = float(event_observed.mean())
@@ -423,7 +421,11 @@ def build_calibration_report_v2(
             "snapshot_date": SNAPSHOT_DATE.isoformat(),
             "seed": SYNTHETIC_SEED,
             "enrollment_day_window": "Uniform[0, planned_duration_days/3)",
-            "survival_columns_added": ["enrollment_day", "time_to_event", "event_observed"],
+            "survival_columns_added": [
+                "enrollment_day",
+                "time_to_event",
+                "event_observed",
+            ],
             "note": (
                 "Calendar geometry added at augmentation step. "
                 "Original participants.parquet updated in-place. "
@@ -453,7 +455,9 @@ def truncate_engagement(
     pmap = participants.set_index("participant_id")[
         ["planned_duration_days", "n_visits"]
     ].copy()
-    pmap["day_per_visit"] = pmap["planned_duration_days"] / pmap["n_visits"].clip(lower=1)
+    pmap["day_per_visit"] = pmap["planned_duration_days"] / pmap["n_visits"].clip(
+        lower=1
+    )
 
     tte_series = pd.Series(
         time_to_event, index=participants["participant_id"].to_numpy()
@@ -485,9 +489,7 @@ def validate_augmented_participants(
     required_new = {"enrollment_day", "time_to_event", "event_observed"}
     missing = required_new - set(participants.columns)
     if missing:
-        raise ValueError(
-            f"Augmented participants.parquet missing columns: {missing}."
-        )
+        raise ValueError(f"Augmented participants.parquet missing columns: {missing}.")
     if (participants["time_to_event"] <= 0).any():
         raise ValueError(
             "time_to_event contains values <= 0. Hard lower bound of 1 must be enforced."
@@ -599,9 +601,7 @@ def run_augmentation(
     )
     if not v2_report["all_passed"]:
         failed = [
-            c["target"]
-            for c in v2_report["results_v2_new"]
-            if c["status"] != "PASS"
+            c["target"] for c in v2_report["results_v2_new"] if c["status"] != "PASS"
         ]
         raise CalibrationError(
             "calibration_report_v2: checks FAILED on: " + ", ".join(failed)

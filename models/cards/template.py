@@ -119,7 +119,10 @@ def _metric_table_lines(per_group: Mapping[str, Mapping[str, Any]]) -> list[str]
     for sponsor_class in sorted(per_group):
         group_metrics = per_group[sponsor_class]
         row = [_escape_markdown(sponsor_class)]
-        row.extend(_format_value(group_metrics.get(metric_name, "")) for metric_name in metric_names)
+        row.extend(
+            _format_value(group_metrics.get(metric_name, ""))
+            for metric_name in metric_names
+        )
         lines.append("| " + " | ".join(row) + " |")
     return lines
 

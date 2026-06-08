@@ -62,5 +62,7 @@ def write_preregistration(
             "operationally useful early-warning window."
         ),
     }
-    (out_root / "preregistration.json").write_text(json.dumps(prereg, indent=2), encoding="utf-8")
+    (out_root / "preregistration.json").write_text(
+        json.dumps(prereg, indent=2), encoding="utf-8"
+    )
     return prereg

@@ -71,9 +71,7 @@ def main() -> int:
     for row in ni["correlations"]:
         r_str = f"{row['r']:+.6f}" if row["r"] is not None else "N/A"
         p_str = f"{row['pvalue']:.4f}" if row["pvalue"] is not None else "N/A"
-        print(
-            f"  {row['covariate']:<20} r={r_str}  p={p_str}  [{row['status']}]"
-        )
+        print(f"  {row['covariate']:<20} r={r_str}  p={p_str}  [{row['status']}]")
     print()
 
     print("--- Engagement truncation ---")
@@ -87,7 +85,9 @@ def main() -> int:
     print()
 
     print("--- Summary ---")
-    print(f"  participants.parquet row count: {diag['participants_row_count']} (unchanged)")
+    print(
+        f"  participants.parquet row count: {diag['participants_row_count']} (unchanged)"
+    )
     status = "ALL PASS" if diag["v2_all_passed"] else "FAIL"
     print(f"  calibration_report_v2 : {status}")
     print()

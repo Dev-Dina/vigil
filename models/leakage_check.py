@@ -52,11 +52,16 @@ def assert_no_outcome_features(feature_names: list[str]) -> None:
             token in _FORBIDDEN_TOKENS
             or "dropout" in low
             or low in _FORBIDDEN_TOKENS
-            or any(low == f or low.startswith(f + "_") for f in ("nct_id", "arm_id", "study_url"))
+            or any(
+                low == f or low.startswith(f + "_")
+                for f in ("nct_id", "arm_id", "study_url")
+            )
         ):
             leaked.append(name)
     if leaked:
-        raise LeakageError(f"outcome/identity/synthetic column(s) used as features: {leaked}")
+        raise LeakageError(
+            f"outcome/identity/synthetic column(s) used as features: {leaked}"
+        )
 
 
 def assert_group_disjoint(matrices: dict[str, FeatureMatrix]) -> None:

@@ -41,8 +41,13 @@ def _fabricate(seed: int = 0) -> tuple[SyntheticT2D, object]:
     # 6 trials across 6 distinct dates so the temporal 3-way split is well-formed.
     for ti in range(6):
         nct = f"NCT{ti:08d}"
-        trials.append({"nct_id": nct, "phase": "PHASE3" if ti % 2 else "PHASE2",
-                       "start_date": date(2000 + ti, 1, 1)})
+        trials.append(
+            {
+                "nct_id": nct,
+                "phase": "PHASE3" if ti % 2 else "PHASE2",
+                "start_date": date(2000 + ti, 1, 1),
+            }
+        )
         n_visits = 8
         for _ in range(8):  # 8 participants/trial
             dropped = bool(rng.random() < 0.4)
@@ -52,45 +57,51 @@ def _fabricate(seed: int = 0) -> tuple[SyntheticT2D, object]:
             else:
                 dvi = -1
                 obs = n_visits
-            parts.append({
-                "participant_id": pid,
-                "nct_id": nct,
-                "arm_id": f"{nct}A",
-                "arm_type": "Experimental" if rng.random() < 0.5 else "Placebo Comparator",
-                "phase": trials[-1]["phase"],
-                "n_sites": int(rng.integers(1, 20)),
-                "planned_duration_days": int(rng.integers(180, 720)),
-                "n_visits": n_visits,
-                "age_years": float(rng.normal(60, 8)),
-                "age_baseline_imputed": False,
-                "sex": "MALE" if rng.random() < 0.5 else "FEMALE",
-                "hba1c_pct": float(rng.normal(7.5, 1.0)),
-                "hba1c_baseline_imputed": True,
-                "bmi": float(rng.normal(30, 4)),
-                "bmi_baseline_imputed": True,
-                "arm_real_dropout_rate": 0.3,
-                "synthetic": True,
-                "dropped": dropped,
-                "censored": not dropped,
-                "dropout_visit_index": float(dvi) if dropped else np.nan,
-                "dropout_reason": "WITHDRAWAL_BY_SUBJECT" if dropped else "",
-            })
+            parts.append(
+                {
+                    "participant_id": pid,
+                    "nct_id": nct,
+                    "arm_id": f"{nct}A",
+                    "arm_type": "Experimental"
+                    if rng.random() < 0.5
+                    else "Placebo Comparator",
+                    "phase": trials[-1]["phase"],
+                    "n_sites": int(rng.integers(1, 20)),
+                    "planned_duration_days": int(rng.integers(180, 720)),
+                    "n_visits": n_visits,
+                    "age_years": float(rng.normal(60, 8)),
+                    "age_baseline_imputed": False,
+                    "sex": "MALE" if rng.random() < 0.5 else "FEMALE",
+                    "hba1c_pct": float(rng.normal(7.5, 1.0)),
+                    "hba1c_baseline_imputed": True,
+                    "bmi": float(rng.normal(30, 4)),
+                    "bmi_baseline_imputed": True,
+                    "arm_real_dropout_rate": 0.3,
+                    "synthetic": True,
+                    "dropped": dropped,
+                    "censored": not dropped,
+                    "dropout_visit_index": float(dvi) if dropped else np.nan,
+                    "dropout_reason": "WITHDRAWAL_BY_SUBJECT" if dropped else "",
+                }
+            )
             cum = 0
             cons = 0
             for vi in range(obs):
                 missed = bool(rng.random() < (0.6 if dropped and vi >= 2 else 0.2))
                 cum += int(missed)
                 cons = cons + 1 if missed else 0
-                eng_rows.append({
-                    "participant_id": pid,
-                    "visit_index": vi,
-                    "attended": not missed,
-                    "missed": missed,
-                    "cumulative_missed": cum,
-                    "consecutive_missed": cons,
-                    "miss_probability": float(rng.random()),
-                    "synthetic": True,
-                })
+                eng_rows.append(
+                    {
+                        "participant_id": pid,
+                        "visit_index": vi,
+                        "attended": not missed,
+                        "missed": missed,
+                        "cumulative_missed": cum,
+                        "consecutive_missed": cons,
+                        "miss_probability": float(rng.random()),
+                        "synthetic": True,
+                    }
+                )
             pid += 1
     participants = pd.DataFrame(parts)
     engagement = pd.DataFrame(eng_rows)
@@ -107,7 +118,9 @@ def fabricated():
 # --- sequence pipeline runs + returns a panel ----------------------------------------------
 def test_sequence_runs_and_returns_panel(fabricated) -> None:
     synth, split = fabricated
-    cfg = SequenceConfig(epochs=2, hidden_size=8, batch_size=32, max_train_participants=1000)
+    cfg = SequenceConfig(
+        epochs=2, hidden_size=8, batch_size=32, max_train_participants=1000
+    )
     res = train_sequence_model(synth, split, cfg=cfg)
     panel = res["panel"]
     assert {"pr_auc", "recall_at_p50", "brier"} <= set(panel["test"]["overall"])
@@ -120,9 +133,18 @@ def test_forbidden_columns_not_in_feature_set() -> None:
     feature_cols = set(SEQ_NUMERIC) | set(STATIC_NUMERIC) | set(STATIC_CATEGORICAL)
     assert "miss_probability" not in feature_cols
     assert "synthetic" not in feature_cols
-    for prov in ("age_baseline_imputed", "hba1c_baseline_imputed", "bmi_baseline_imputed"):
+    for prov in (
+        "age_baseline_imputed",
+        "hba1c_baseline_imputed",
+        "bmi_baseline_imputed",
+    ):
         assert prov not in feature_cols
-    for outcome in ("dropped", "censored", "arm_real_dropout_rate", "dropout_visit_index"):
+    for outcome in (
+        "dropped",
+        "censored",
+        "arm_real_dropout_rate",
+        "dropout_visit_index",
+    ):
         assert outcome not in feature_cols
     # every feature column is NOT in the forbidden set
     assert feature_cols.isdisjoint(FORBIDDEN_FEATURES)
@@ -141,7 +163,9 @@ def test_leakage_assertion_fires_on_injected_violation() -> None:
 # --- determinism ----------------------------------------------------------------------------
 def test_determinism_same_seed_same_first_batch_loss(fabricated) -> None:
     synth, split = fabricated
-    cfg = SequenceConfig(epochs=1, hidden_size=8, batch_size=32, max_train_participants=1000)
+    cfg = SequenceConfig(
+        epochs=1, hidden_size=8, batch_size=32, max_train_participants=1000
+    )
     a = train_sequence_model(synth, split, cfg=cfg)["panel"]["first_batch_loss"]
     b = train_sequence_model(synth, split, cfg=cfg)["panel"]["first_batch_loss"]
     assert a == pytest.approx(b)

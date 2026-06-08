@@ -92,7 +92,9 @@ def plot_residuals(y_true: ArrayLike, y_pred: ArrayLike, out: Path) -> Path:
     return _save_png(fig, out)
 
 
-def plot_metric_by_group(metric_by_group: dict[str, float], out: Path, ylabel: str) -> Path:
+def plot_metric_by_group(
+    metric_by_group: dict[str, float], out: Path, ylabel: str
+) -> Path:
     """Save a sponsor-class metric bar chart PNG and return its output path."""
     groups = sorted(metric_by_group)
     values = [float(metric_by_group[group]) for group in groups]
@@ -159,7 +161,9 @@ def lead_time_curve(
     fig.legend(loc="upper center", bbox_to_anchor=(0.5, 0.98), ncols=2, frameon=False)
     fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.92))
 
-    markdown = _lead_time_markdown(sweep, medians, fractions, flagged_counts, dropper_count)
+    markdown = _lead_time_markdown(
+        sweep, medians, fractions, flagged_counts, dropper_count
+    )
     return fig, markdown
 
 
@@ -202,7 +206,9 @@ def _as_2d_float(values: ArrayLike, name: str) -> np.ndarray[Any, np.dtype[np.fl
     return array
 
 
-def _validate_same_length(left: np.ndarray[Any, Any], right: np.ndarray[Any, Any]) -> None:
+def _validate_same_length(
+    left: np.ndarray[Any, Any], right: np.ndarray[Any, Any]
+) -> None:
     if left.shape[0] != right.shape[0]:
         msg = "inputs must have the same length"
         raise ValueError(msg)
@@ -211,7 +217,9 @@ def _validate_same_length(left: np.ndarray[Any, Any], right: np.ndarray[Any, Any
 def _precision_recall_points(
     y_true: np.ndarray[Any, np.dtype[np.float64]],
     y_score: np.ndarray[Any, np.dtype[np.float64]],
-) -> tuple[np.ndarray[Any, np.dtype[np.float64]], np.ndarray[Any, np.dtype[np.float64]]]:
+) -> tuple[
+    np.ndarray[Any, np.dtype[np.float64]], np.ndarray[Any, np.dtype[np.float64]]
+]:
     positive = y_true > 0
     positives = int(np.sum(positive))
     if positives == 0:
@@ -253,7 +261,9 @@ def _calibration_points(
     return centers, observed, counts
 
 
-def _threshold_sweep(thresholds: ArrayLike | None) -> np.ndarray[Any, np.dtype[np.float64]]:
+def _threshold_sweep(
+    thresholds: ArrayLike | None,
+) -> np.ndarray[Any, np.dtype[np.float64]]:
     if thresholds is None:
         sweep = np.linspace(0.05, 0.5, 10)
     else:
@@ -287,7 +297,9 @@ def _lead_time_points(
     step_ids = np.arange(step_count, dtype=float)
     for index, threshold in enumerate(thresholds):
         lead_times = []
-        for sequence, event_time in zip(probs[dropper_mask], event_times[dropper_mask], strict=True):
+        for sequence, event_time in zip(
+            probs[dropper_mask], event_times[dropper_mask], strict=True
+        ):
             before_event = step_ids <= event_time
             flagged_steps = np.flatnonzero((sequence >= threshold) & before_event)
             if flagged_steps.size > 0:

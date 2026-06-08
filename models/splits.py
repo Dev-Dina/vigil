@@ -107,7 +107,9 @@ def temporal_group_split(
     return split
 
 
-def assign_folds(cohort: pd.DataFrame, split: Split, *, nct_col: str = "nct_id") -> pd.DataFrame:
+def assign_folds(
+    cohort: pd.DataFrame, split: Split, *, nct_col: str = "nct_id"
+) -> pd.DataFrame:
     """Return ``cohort`` with a ``fold`` column in {train, val, test}."""
     fold = pd.Series("", index=cohort.index, dtype="object")
     fold[cohort[nct_col].isin(split.train_ids)] = "train"
@@ -117,7 +119,9 @@ def assign_folds(cohort: pd.DataFrame, split: Split, *, nct_col: str = "nct_id")
     out["fold"] = fold
     if (out["fold"] == "").any():
         orphan = out.loc[out["fold"] == "", nct_col].unique()[:5]
-        raise LeakageError(f"rows not assigned to any fold (nct_id absent from split): {orphan}")
+        raise LeakageError(
+            f"rows not assigned to any fold (nct_id absent from split): {orphan}"
+        )
     return out
 
 
