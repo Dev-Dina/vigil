@@ -1,0 +1,27 @@
+{
+  "preregistered_at": "2026-06-08T14:16:32.857198+00:00",
+  "written_before_sequence_fit": true,
+  "baseline_1b_test_pr_auc": 0.2506,
+  "criteria": {
+    "pr_auc": {
+      "rule": "sequence-model TEST PR-AUC must exceed the 1b synthetic-structural TEST PR-AUC by >= +0.05",
+      "baseline": 0.2506,
+      "margin": 0.05,
+      "must_reach": 0.3006
+    },
+    "lead_time": {
+      "rule": "median lead-time (visits between first confident flag and the dropout event, on TEST droppers) must be >= 2.0 visits",
+      "must_reach": 2.0
+    }
+  },
+  "justification": "The trajectory->dropout relationship is a planted, literature-shaped assumption (>=3 consecutive missed visits / hazard threshold, noisy, non-separable AUC~0.77). +0.05 PR-AUC is a material gain over a covariate-only floor without claiming separability the generator never planted; >=2 visits of lead-time is the minimum operationally useful early-warning window.",
+  "evaluated_result": {
+    "sequence_test_pr_auc": 0.339,
+    "must_reach_pr_auc": 0.3006,
+    "pr_auc_pass": true,
+    "sequence_median_lead_time_visits": 17.0,
+    "must_reach_lead_time": 2.0,
+    "lead_time_pass": true,
+    "overall_pass": true
+  }
+}

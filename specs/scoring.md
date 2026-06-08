@@ -104,6 +104,35 @@ phrase "tenant → nct_ids" maps to: **`sponsor_id` → the set of `trial.nct_id
 sponsor** — resolved from the tenant-scoped operational `trial` table (RLS-protected), NOT from
 the RLS-exempt `ref_trial` table (which is public AACT reference data shared across all tenants).
 
+### Role model: capabilities layered on top of the tenancy key
+**Roles are capability grants, not a tenancy mechanism.** `sponsor_id` (RLS) is the hard tenant
+boundary; roles define what a user may DO within (or across, for CRO staff) that boundary. A
+CRO user may hold grants spanning multiple sponsors via `assignment_grant` rows — in every case
+the per-sponsor RLS still fires independently. Platform users (`ml_admin`, `auditor`) carry
+`scope: []` and reach only platform/global tables; the sponsor RLS therefore returns zero rows
+for them on any sponsor-scoped table.
+
+Role/scope is enforced in two layers: (1) Postgres RLS policies keyed on `sponsor_id` (and
+optionally `trial_id`/`site_id` where DB policies support it); (2) the API auth dependency
+checks the JWT `role` + `scope` tuples against the requested resource. Both layers must agree;
+RLS is the hard guarantee.
+
+The seven roles from `/specs/domain.md` and their scoring-specific access:
+
+| Role | Tenant level | Scoring read | Scoring trigger | Notes |
+|---|---|---|---|---|
+| Sponsor oversight | own sponsor, all trials | `GET /cohort`, `/participants/*/risk` for own sponsor | `POST /scoring/trigger` for own trials | full sponsor-level view; no identity access |
+| Study / project manager (CRO) | assigned sponsors + trials | cohort + risk within assignment scope | trigger for assigned trials | scope = `assignment_grant` union |
+| CRA / monitor (CRO) | assigned sites within trials | cohort + risk for assigned sites | — | read-only on scoring data |
+| Principal investigator | own site + trial | cohort + risk + identity for own site | log interventions | `identity` field populated (site role) |
+| Coordinator (CRC) | own site + trial | cohort + risk + identity for own site | log interventions; daily triage | `identity` field populated (site role) |
+| ML / platform admin | models, monitoring, cost only | `GET /monitoring/*` (aggregate model health, score distributions, drift) only; **no** `GET /cohort` or `/participants/*` | `POST /scoring/trigger` (model ops); manage model registry | NO access to identifiable participant data (`/specs/domain.md`); `scope: []` → RLS returns empty on sponsor-scoped tables |
+| Auditor | read-only, all activity | `GET /monitoring/*`, audit logs, `message_events` | — | no write actions of any kind; cannot trigger scoring |
+
+`trial_id` and `site_id` are sub-scope **filters** layered on top of the `sponsor_id` RLS key.
+Narrowing a request to a specific trial or site is an additional restriction, never an elevation.
+A trial-scoped CRO user cannot widen to the full sponsor by omitting `trial_id`.
+
 ### Scope resolution at job time
 The scoring worker resolves the `sponsor_id → nct_id` set from the DB at job time, using the
 tenant-scoped session opened by the job's own verified scope. The mapping is never passed in the
@@ -194,3 +223,21 @@ feature matrix MUST cause the job to raise, not silently proceed or drop the col
 If the input cohort has `synthetic=True` rows (from demo injection or the synthetic T2D cohort),
 the written `participant_score.synthetic` MUST be `True`. A test that injects synthetic events
 and reads back the score via the repository MUST assert `synthetic == True` on the retrieved row.
+
+### 4. ML-admin cannot read participant-level scoring rows
+An ML-admin JWT (`role: ml_admin`, `scope: []`) MUST receive `403 scope_denied` on
+`GET /cohort` and `GET /participants/{id}/risk`. The sponsor-scoped RLS policy returns zero rows
+to `scope: []` users; the API auth dependency must additionally reject the request before
+reaching the repository. Both layers are asserted independently:
+- Direct DB query under an ML-admin session must return an empty result set on `participant_score`.
+- HTTP call to `GET /cohort` with a valid ML-admin token must return `403`, not an empty list.
+
+### 5. Auditor is read-only on all scoring surfaces
+An auditor JWT (`role: auditor`) MUST receive `403 scope_denied` or `405 Method Not Allowed` on
+any mutating scoring call:
+- `POST /scoring/trigger` → `403`
+- `POST /participants/{id}/interventions` → `403`
+- Any `DELETE` on scoring-adjacent resources → `403`
+
+An auditor MAY successfully call read-only endpoints (`GET /monitoring/*`, `GET /audit_log`).
+A test MUST assert both directions: the write rejection AND the read success.

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from ingestion import SYNTHETIC_SEED
@@ -15,12 +17,17 @@ from ingestion.features import (
 from ingestion.synthetic import generate
 from ingestion.targets import compute_targets
 
+# Committed golden fixture — structurally valid, synthetic values, no real AACT data.
+# Keeps CI hermetic: tests never read data/eda/ (gitignored build-time artifact).
+_EDA_FIXTURE = Path(__file__).parent / "golden" / "eda_summary_fixture.json"
+
 
 def _cohort(clean_frames):
     targets = compute_targets(
         clean_frames["ref_trial"],
         clean_frames["ref_arm"],
         clean_frames["ref_withdrawal_reason"],
+        eda_path=_EDA_FIXTURE,
     )
     return generate(
         clean_frames["ref_trial"], clean_frames["ref_arm"], targets, seed=SYNTHETIC_SEED

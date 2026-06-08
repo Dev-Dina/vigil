@@ -1,0 +1,402 @@
+{
+  "all_passed": true,
+  "results": [
+    {
+      "detail": {
+        "abs_diff": 0.0002,
+        "real": 0.2018,
+        "synthetic": 0.2016,
+        "tolerance": 0.01
+      },
+      "status": "PASS",
+      "target": "overall_dropout_rate"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0205,
+            "level": "EARLY_PHASE1",
+            "real": 0.1389,
+            "status": "PASS",
+            "synthetic": 0.1184,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0025,
+            "level": "NA",
+            "real": 0.1418,
+            "status": "PASS",
+            "synthetic": 0.1443,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0068,
+            "level": "PHASE1",
+            "real": 0.1929,
+            "status": "PASS",
+            "synthetic": 0.1997,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0035,
+            "level": "PHASE1/PHASE2",
+            "real": 0.2945,
+            "status": "PASS",
+            "synthetic": 0.298,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.01,
+            "level": "PHASE2",
+            "real": 0.2524,
+            "status": "PASS",
+            "synthetic": 0.2424,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0029,
+            "level": "PHASE2/PHASE3",
+            "real": 0.2156,
+            "status": "PASS",
+            "synthetic": 0.2185,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0035,
+            "level": "PHASE3",
+            "real": 0.2323,
+            "status": "PASS",
+            "synthetic": 0.2358,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0039,
+            "level": "PHASE4",
+            "real": 0.158,
+            "status": "PASS",
+            "synthetic": 0.1619,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_phase"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.005,
+            "level": "CARDIOVASCULAR",
+            "real": 0.1845,
+            "status": "PASS",
+            "synthetic": 0.1895,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0089,
+            "level": "DERMATOLOGY",
+            "real": 0.1599,
+            "status": "PASS",
+            "synthetic": 0.1688,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0096,
+            "level": "ENDOCRINE_METABOLIC",
+            "real": 0.156,
+            "status": "PASS",
+            "synthetic": 0.1656,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0169,
+            "level": "GASTROENTEROLOGY",
+            "real": 0.1892,
+            "status": "PASS",
+            "synthetic": 0.2061,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0156,
+            "level": "IMMUNOLOGY_RHEUMATOLOGY",
+            "real": 0.1996,
+            "status": "PASS",
+            "synthetic": 0.2152,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0104,
+            "level": "INFECTIOUS_DISEASE",
+            "real": 0.1289,
+            "status": "PASS",
+            "synthetic": 0.1185,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0039,
+            "level": "MUSCULOSKELETAL",
+            "real": 0.2421,
+            "status": "PASS",
+            "synthetic": 0.246,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0012,
+            "level": "NEUROLOGY",
+            "real": 0.1661,
+            "status": "PASS",
+            "synthetic": 0.1649,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0098,
+            "level": "ONCOLOGY",
+            "real": 0.3597,
+            "status": "PASS",
+            "synthetic": 0.3499,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0144,
+            "level": "OPHTHALMOLOGY",
+            "real": 0.1136,
+            "status": "PASS",
+            "synthetic": 0.128,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0018,
+            "level": "OTHER",
+            "real": 0.1351,
+            "status": "PASS",
+            "synthetic": 0.1333,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0046,
+            "level": "PSYCHIATRY",
+            "real": 0.2048,
+            "status": "PASS",
+            "synthetic": 0.2002,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0249,
+            "level": "RENAL_UROLOGY",
+            "real": 0.1704,
+            "status": "PASS",
+            "synthetic": 0.1953,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0074,
+            "level": "RESPIRATORY",
+            "real": 0.142,
+            "status": "PASS",
+            "synthetic": 0.1494,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_therapeutic_area"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0029,
+            "level": "ACADEMIC_OTHER",
+            "real": 0.1618,
+            "status": "PASS",
+            "synthetic": 0.1647,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0026,
+            "level": "INDUSTRY",
+            "real": 0.2445,
+            "status": "PASS",
+            "synthetic": 0.2419,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0128,
+            "level": "NIH",
+            "real": 0.2343,
+            "status": "PASS",
+            "synthetic": 0.2215,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0013,
+            "level": "OTHER_GOV",
+            "real": 0.161,
+            "status": "PASS",
+            "synthetic": 0.1623,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_sponsor_class"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0032,
+            "level": "BLINDED",
+            "real": 0.1618,
+            "status": "PASS",
+            "synthetic": 0.1586,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0027,
+            "level": "OPEN_LABEL",
+            "real": 0.2344,
+            "status": "PASS",
+            "synthetic": 0.2371,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_blinding"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0068,
+            "level": "MULTI_SITE",
+            "real": 0.2558,
+            "status": "PASS",
+            "synthetic": 0.249,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0052,
+            "level": "SINGLE_SITE",
+            "real": 0.1544,
+            "status": "PASS",
+            "synthetic": 0.1596,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_site_count"
+    },
+    {
+      "detail": {
+        "chisq_pvalue": 0.5785668244063666,
+        "real_mix": {
+          "ADMINISTRATIVE": 0.0818,
+          "ADVERSE_EVENT": 0.0817,
+          "DEATH": 0.0909,
+          "LACK_OF_EFFICACY": 0.0762,
+          "LOST_TO_FOLLOWUP": 0.1071,
+          "NONCOMPLIANCE": 0.0053,
+          "OTHER": 0.1754,
+          "PHYSICIAN_DECISION": 0.0142,
+          "PREGNANCY": 0.002,
+          "PROTOCOL_VIOLATION": 0.0959,
+          "STUDY_TERMINATED": 0.1217,
+          "WITHDRAWAL_BY_SUBJECT": 0.1477
+        },
+        "synthetic_mix": {
+          "ADMINISTRATIVE": 0.0823,
+          "ADVERSE_EVENT": 0.0831,
+          "DEATH": 0.0938,
+          "LACK_OF_EFFICACY": 0.0765,
+          "LOST_TO_FOLLOWUP": 0.1053,
+          "NONCOMPLIANCE": 0.0052,
+          "OTHER": 0.1728,
+          "PHYSICIAN_DECISION": 0.0133,
+          "PREGNANCY": 0.0016,
+          "PROTOCOL_VIOLATION": 0.0927,
+          "STUDY_TERMINATED": 0.1246,
+          "WITHDRAWAL_BY_SUBJECT": 0.1487
+        },
+        "threshold": 0.05
+      },
+      "status": "PASS",
+      "target": "reason_mix"
+    },
+    {
+      "detail": {
+        "abs_diff": 0.0112,
+        "assumed_early_fraction": 0.6,
+        "assumption": "AACT lacks per-event timing; target is an ASSUMED early-dropout share, not estimated from real data (see the early_fraction TODO in targets.py).",
+        "synthetic_early_fraction": 0.6112,
+        "tolerance": 0.1
+      },
+      "status": "PASS",
+      "target": "dropout_timing"
+    },
+    {
+      "detail": {
+        "enrollment": {
+          "ok": true,
+          "real_sign": 0,
+          "synthetic_sign": 0
+        },
+        "max_age_years": {
+          "ok": true,
+          "real_sign": 1,
+          "synthetic_sign": 0
+        },
+        "min_age_years": {
+          "ok": true,
+          "real_sign": -1,
+          "synthetic_sign": 0
+        },
+        "n_arms": {
+          "ok": true,
+          "real_sign": 0,
+          "synthetic_sign": 0
+        },
+        "n_countries": {
+          "ok": true,
+          "pearson_r": 0.1282,
+          "real_sign": 1,
+          "synthetic_sign": 1
+        },
+        "n_sites": {
+          "ok": true,
+          "pearson_r": 0.123,
+          "real_sign": 1,
+          "synthetic_sign": 1
+        },
+        "open_label_vs_blinded": {
+          "ok": true,
+          "real_sign": 1,
+          "synthetic_blinded": 0.1586,
+          "synthetic_open": 0.2371,
+          "synthetic_sign": 1
+        },
+        "planned_duration_days": {
+          "ok": true,
+          "pearson_r": 0.0835,
+          "real_sign": 1,
+          "synthetic_sign": 1
+        }
+      },
+      "status": "PASS",
+      "target": "covariate_associations"
+    },
+    {
+      "detail": {
+        "arm_count_misses": [],
+        "enrollment_misses": [],
+        "tolerance_rel": 0.05
+      },
+      "status": "PASS",
+      "target": "enrollment_marginals"
+    }
+  ]
+}

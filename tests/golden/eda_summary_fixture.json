@@ -1,0 +1,118 @@
+{
+  "_fixture_note": "Synthetic golden fixture for CI hermetic tests. Values are plausible round numbers calibrated to the schema ingestion.targets.compute_targets expects — NOT the real AACT EDA statistics. Do NOT use for calibration pass/fail assertions; see data/eda/eda_summary.json (gitignored, real) for the production source.",
+  "source": "golden_fixture_synthetic",
+  "study_count_post_filter": 1000,
+  "trials_with_flow_arms": 850,
+  "overall_dropout_rate": {
+    "trial_mean": 0.2018,
+    "participant_weighted": 0.151
+  },
+  "dropout_by_phase": {
+    "EARLY_PHASE1": {"mean_dropout": 0.15, "n_trials": 10},
+    "NA":           {"mean_dropout": 0.20, "n_trials": 5},
+    "PHASE1":       {"mean_dropout": 0.16, "n_trials": 30},
+    "PHASE1/PHASE2":{"mean_dropout": 0.18, "n_trials": 40},
+    "PHASE2":       {"mean_dropout": 0.20, "n_trials": 120},
+    "PHASE2/PHASE3":{"mean_dropout": 0.21, "n_trials": 60},
+    "PHASE3":       {"mean_dropout": 0.22, "n_trials": 200},
+    "PHASE4":       {"mean_dropout": 0.18, "n_trials": 80}
+  },
+  "dropout_by_therapeutic_area": {
+    "CARDIOVASCULAR":          {"mean_dropout": 0.19, "n_trials": 80},
+    "DERMATOLOGY":             {"mean_dropout": 0.17, "n_trials": 40},
+    "ENDOCRINE_METABOLIC":     {"mean_dropout": 0.20, "n_trials": 90},
+    "GASTROENTEROLOGY":        {"mean_dropout": 0.21, "n_trials": 50},
+    "IMMUNOLOGY_RHEUMATOLOGY": {"mean_dropout": 0.18, "n_trials": 70},
+    "INFECTIOUS_DISEASE":      {"mean_dropout": 0.16, "n_trials": 60},
+    "MUSCULOSKELETAL":         {"mean_dropout": 0.19, "n_trials": 45},
+    "NEUROLOGY":               {"mean_dropout": 0.22, "n_trials": 75},
+    "ONCOLOGY":                {"mean_dropout": 0.25, "n_trials": 110},
+    "OPHTHALMOLOGY":           {"mean_dropout": 0.15, "n_trials": 30},
+    "PSYCHIATRY":              {"mean_dropout": 0.23, "n_trials": 65},
+    "RENAL_UROLOGY":           {"mean_dropout": 0.20, "n_trials": 35},
+    "RESPIRATORY":             {"mean_dropout": 0.18, "n_trials": 55},
+    "OTHER":                   {"mean_dropout": 0.20, "n_trials": 95}
+  },
+  "dropout_by_sponsor_class": {
+    "ACADEMIC_OTHER": {"mean_dropout": 0.22, "n_trials": 200},
+    "INDUSTRY":       {"mean_dropout": 0.19, "n_trials": 600},
+    "NIH":            {"mean_dropout": 0.21, "n_trials": 80},
+    "OTHER_GOV":      {"mean_dropout": 0.20, "n_trials": 70}
+  },
+  "dropout_by_site_count": {
+    "MULTI_SITE":  {"mean_dropout": 0.21, "n_trials": 700},
+    "SINGLE_SITE": {"mean_dropout": 0.17, "n_trials": 250}
+  },
+  "dropout_by_enrollment_size": {
+    "1-50":     {"mean_dropout": 0.17, "n_trials": 150},
+    "51-100":   {"mean_dropout": 0.19, "n_trials": 200},
+    "101-250":  {"mean_dropout": 0.21, "n_trials": 250},
+    "251-500":  {"mean_dropout": 0.22, "n_trials": 180},
+    "501-1000": {"mean_dropout": 0.20, "n_trials": 120},
+    "1000+":    {"mean_dropout": 0.18, "n_trials": 50}
+  },
+  "withdrawal_reason_mix": {
+    "ADVERSE_EVENT":        0.18,
+    "LACK_OF_EFFICACY":     0.12,
+    "WITHDRAWAL_BY_SUBJECT":0.30,
+    "LOST_TO_FOLLOWUP":     0.08,
+    "PHYSICIAN_DECISION":   0.05,
+    "PROTOCOL_VIOLATION":   0.07,
+    "DEATH":                0.02,
+    "PREGNANCY":            0.01,
+    "NONCOMPLIANCE":        0.04,
+    "STUDY_TERMINATED":     0.06,
+    "ADMINISTRATIVE":       0.03,
+    "OTHER":                0.04
+  },
+  "covariate_dropout_associations": [
+    {
+      "covariate": "enrollment",
+      "pearson_r": 0.005,
+      "sign": 0,
+      "n": 950
+    },
+    {
+      "covariate": "n_arms",
+      "pearson_r": -0.003,
+      "sign": 0,
+      "n": 950
+    },
+    {
+      "covariate": "n_sites",
+      "pearson_r": 0.12,
+      "sign": 1,
+      "n": 950
+    },
+    {
+      "covariate": "n_countries",
+      "pearson_r": 0.09,
+      "sign": 1,
+      "n": 950
+    },
+    {
+      "covariate": "planned_duration_days",
+      "pearson_r": 0.15,
+      "sign": 1,
+      "n": 950
+    },
+    {
+      "covariate": "min_age_years",
+      "pearson_r": -0.04,
+      "sign": -1,
+      "n": 900
+    },
+    {
+      "covariate": "max_age_years",
+      "pearson_r": 0.03,
+      "sign": 1,
+      "n": 870
+    },
+    {
+      "covariate": "blinded(vs open label)",
+      "blinded_mean_dropout": 0.19,
+      "open_mean_dropout": 0.23,
+      "n": 950
+    }
+  ]
+}

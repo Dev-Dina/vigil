@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -10,12 +12,17 @@ from ingestion.calibration import evaluate
 from ingestion.synthetic import generate
 from ingestion.targets import compute_targets
 
+# Committed golden fixture — structurally valid, synthetic values, no real AACT data.
+# Keeps CI hermetic: tests never read data/eda/ (gitignored build-time artifact).
+_EDA_FIXTURE = Path(__file__).parent / "golden" / "eda_summary_fixture.json"
+
 
 def _targets(clean_frames):
     return compute_targets(
         clean_frames["ref_trial"],
         clean_frames["ref_arm"],
         clean_frames["ref_withdrawal_reason"],
+        eda_path=_EDA_FIXTURE,
     )
 
 

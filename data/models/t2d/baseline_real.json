@@ -1,0 +1,158 @@
+{
+  "data_source": "REAL_T2D",
+  "task": "1a_real_structural_floor",
+  "model_class": "HistGradientBoostingRegressor + LogisticRegression (train-median label)",
+  "n_trials": 755,
+  "n_arms_guarded": 2111,
+  "threshold_train_median_dropout_rate": 0.12307692307692308,
+  "fold_sizes": {
+    "train": 455,
+    "val": 149,
+    "test": 151
+  },
+  "n_arms_per_fold": {
+    "train": 1323,
+    "val": 373,
+    "test": 415
+  },
+  "date_ranges": {
+    "train": [
+      "1995-11-30",
+      "2012-12-31"
+    ],
+    "val": [
+      "2013-01-11",
+      "2016-08-15"
+    ],
+    "test": [
+      "2016-09-20",
+      "2023-09-22"
+    ]
+  },
+  "test": {
+    "gbt": {
+      "mae": 0.12062716566799837,
+      "rmse": 0.1820381427605737,
+      "r2": -0.08885609724763599,
+      "pr_auc": 0.3425093262360569,
+      "recall_at_p50": 0.05128205128205128,
+      "brier": 0.21688409193826458,
+      "n": 415,
+      "positives": 117
+    },
+    "logit": {
+      "pr_auc": 0.33750801082099235,
+      "recall_at_p50": 0.08547008547008547,
+      "brier": 0.2565635789084345,
+      "n": 415,
+      "positives": 117
+    },
+    "per_stratum_gbt": {
+      "arm_type": {
+        "Other": {
+          "pr_auc": 0.3277915272195068,
+          "recall_at_p50": 0.0449438202247191,
+          "brier": 0.20898992636306965,
+          "n": 331,
+          "positives": 89
+        },
+        "Placebo Comparator": {
+          "pr_auc": 0.4265296189730326,
+          "recall_at_p50": 0.2857142857142857,
+          "brier": 0.24799086343099697,
+          "n": 84,
+          "positives": 28
+        }
+      },
+      "phase": {
+        "PHASE2": {
+          "pr_auc": 0.47815919687821634,
+          "recall_at_p50": 0.5,
+          "brier": 0.27866974324132415,
+          "n": 143,
+          "positives": 52
+        },
+        "PHASE2/PHASE3": {
+          "pr_auc": NaN,
+          "recall_at_p50": NaN,
+          "brier": 0.7090455264144216,
+          "n": 6,
+          "positives": 6
+        },
+        "PHASE3": {
+          "pr_auc": 0.30377864992448544,
+          "recall_at_p50": 0.06779661016949153,
+          "brier": 0.17256711170069147,
+          "n": 266,
+          "positives": 59
+        }
+      }
+    },
+    "per_stratum_logit": {
+      "arm_type": {
+        "Other": {
+          "pr_auc": 0.35861132419897246,
+          "recall_at_p50": 0.1348314606741573,
+          "brier": 0.24400809289174738,
+          "n": 331,
+          "positives": 89
+        },
+        "Placebo Comparator": {
+          "pr_auc": 0.28892388275759806,
+          "recall_at_p50": 0.0,
+          "brier": 0.30603817261704674,
+          "n": 84,
+          "positives": 28
+        }
+      },
+      "phase": {
+        "PHASE2": {
+          "pr_auc": 0.36375396920938297,
+          "recall_at_p50": 0.057692307692307696,
+          "brier": 0.2876981734757855,
+          "n": 143,
+          "positives": 52
+        },
+        "PHASE2/PHASE3": {
+          "pr_auc": NaN,
+          "recall_at_p50": NaN,
+          "brier": 0.05894469242729578,
+          "n": 6,
+          "positives": 6
+        },
+        "PHASE3": {
+          "pr_auc": 0.25567944818231064,
+          "recall_at_p50": 0.0,
+          "brier": 0.24428337701277897,
+          "n": 266,
+          "positives": 59
+        }
+      }
+    }
+  },
+  "val": {
+    "gbt": {
+      "mae": 0.09904236495968725,
+      "rmse": 0.14036074137261076,
+      "r2": -0.43628432034261655,
+      "pr_auc": 0.3532672288224967,
+      "recall_at_p50": 0.07865168539325842,
+      "brier": 0.18356540530308013,
+      "n": 373,
+      "positives": 89
+    },
+    "logit": {
+      "pr_auc": 0.2296365982891974,
+      "recall_at_p50": 0.0,
+      "brier": 0.26985132881317453,
+      "n": 373,
+      "positives": 89
+    }
+  },
+  "artifacts": {
+    "pr_curve_real_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_real_gbt.png",
+    "pr_curve_real_logit": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_real_logit.png",
+    "calibration_real_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\calib_real_gbt.png",
+    "residuals_real_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\resid_real_gbt.png"
+  }
+}

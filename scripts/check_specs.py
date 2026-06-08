@@ -37,6 +37,15 @@ REQUIRED: dict[str, list[str]] = {
         "## message_events",
         "## Admin observability",
     ],
+    "scoring.md": [
+        "## Decisions (fixed)",
+        "## Scoring contract",
+        "## Writeback",
+        "## Tenancy",
+        "## Execution model",
+        "## Demo-scope boundary",
+        "## Leakage-test invariants",
+    ],
 }
 
 

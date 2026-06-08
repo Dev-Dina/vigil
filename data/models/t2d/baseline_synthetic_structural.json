@@ -1,0 +1,160 @@
+{
+  "data_source": "SYNTHETIC_T2D",
+  "task": "1b_synthetic_structural_only_ablation",
+  "model_class": "HistGradientBoostingClassifier + LogisticRegression",
+  "features": {
+    "numeric": [
+      "age_years",
+      "hba1c_pct",
+      "bmi",
+      "n_sites",
+      "planned_duration_days"
+    ],
+    "categorical": [
+      "sex",
+      "phase",
+      "arm_type"
+    ]
+  },
+  "feature_names": [
+    "sex_FEMALE",
+    "sex_MALE",
+    "phase_PHASE1/PHASE2",
+    "phase_PHASE2",
+    "phase_PHASE2/PHASE3",
+    "phase_PHASE3",
+    "arm_type_Experimental",
+    "arm_type_Other",
+    "arm_type_Placebo Comparator",
+    "age_years",
+    "hba1c_pct",
+    "bmi",
+    "n_sites",
+    "planned_duration_days"
+  ],
+  "label": "dropped",
+  "censoring_note": "No early right-censoring in this cohort: censored==observed completer==negative. Non-droppers are legitimate negatives, not excluded.",
+  "n_participants_per_fold": {
+    "train": 76079,
+    "val": 21568,
+    "test": 23578
+  },
+  "test": {
+    "gbt": {
+      "pr_auc": 0.25056108704017355,
+      "recall_at_p50": 0.0,
+      "brier": 0.12577363408825903,
+      "n": 23578,
+      "positives": 3634
+    },
+    "logit": {
+      "pr_auc": 0.24913492142816923,
+      "recall_at_p50": 0.0170610897083104,
+      "brier": 0.1261317904343847,
+      "n": 23578,
+      "positives": 3634
+    },
+    "per_stratum_gbt": {
+      "arm_type": {
+        "Other": {
+          "pr_auc": 0.2307800415887507,
+          "recall_at_p50": 0.0,
+          "brier": 0.12099068650300156,
+          "n": 18823,
+          "positives": 2747
+        },
+        "Placebo Comparator": {
+          "pr_auc": 0.3075635015048897,
+          "recall_at_p50": 0.07440811724915446,
+          "brier": 0.14470726655877464,
+          "n": 4755,
+          "positives": 887
+        }
+      },
+      "phase": {
+        "PHASE2": {
+          "pr_auc": 0.17883066576108447,
+          "recall_at_p50": 0.0,
+          "brier": 0.11812529536843111,
+          "n": 7312,
+          "positives": 1013
+        },
+        "PHASE2/PHASE3": {
+          "pr_auc": 0.1776370288500026,
+          "recall_at_p50": 0.01818181818181818,
+          "brier": 0.1292966388884381,
+          "n": 360,
+          "positives": 55
+        },
+        "PHASE3": {
+          "pr_auc": 0.27356063157306726,
+          "recall_at_p50": 0.0,
+          "brier": 0.12920984501440755,
+          "n": 15906,
+          "positives": 2566
+        }
+      }
+    },
+    "per_stratum_logit": {
+      "arm_type": {
+        "Other": {
+          "pr_auc": 0.22495191139129264,
+          "recall_at_p50": 0.0,
+          "brier": 0.12144530820776624,
+          "n": 18823,
+          "positives": 2747
+        },
+        "Placebo Comparator": {
+          "pr_auc": 0.314987264977536,
+          "recall_at_p50": 0.1600901916572717,
+          "brier": 0.1446835580372531,
+          "n": 4755,
+          "positives": 887
+        }
+      },
+      "phase": {
+        "PHASE2": {
+          "pr_auc": 0.17260353039020876,
+          "recall_at_p50": 0.0,
+          "brier": 0.11844510508665627,
+          "n": 7312,
+          "positives": 1013
+        },
+        "PHASE2/PHASE3": {
+          "pr_auc": 0.20000171278556295,
+          "recall_at_p50": 0.0,
+          "brier": 0.13092788469413705,
+          "n": 360,
+          "positives": 55
+        },
+        "PHASE3": {
+          "pr_auc": 0.274437634501848,
+          "recall_at_p50": 0.024162120031176928,
+          "brier": 0.12955681553994733,
+          "n": 15906,
+          "positives": 2566
+        }
+      }
+    }
+  },
+  "val": {
+    "gbt": {
+      "pr_auc": 0.19831996438440164,
+      "recall_at_p50": 0.0027266530334014998,
+      "brier": 0.11519009902387406,
+      "n": 21568,
+      "positives": 2934
+    },
+    "logit": {
+      "pr_auc": 0.19703705482452477,
+      "recall_at_p50": 0.0027266530334014998,
+      "brier": 0.11551009554237332,
+      "n": 21568,
+      "positives": 2934
+    }
+  },
+  "artifacts": {
+    "pr_synth_structural_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_synth_struct_gbt.png",
+    "calibration_synth_structural_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\calib_synth_struct_gbt.png"
+  }
+}

@@ -1,0 +1,437 @@
+{
+  "participants": [
+    {
+      "participant_id": "101646",
+      "type": "early_dropout",
+      "curve": [
+        {
+          "visit_index": 0,
+          "hazard_h": 0.009704111806549233,
+          "cumulative_H": 0.009704111806549287
+        },
+        {
+          "visit_index": 1,
+          "hazard_h": 0.015154944747719333,
+          "cumulative_H": 0.024711991276014644
+        },
+        {
+          "visit_index": 2,
+          "hazard_h": 0.027687201797870303,
+          "cumulative_H": 0.05171498718459866
+        },
+        {
+          "visit_index": 3,
+          "hazard_h": 0.02972668877929142,
+          "cumulative_H": 0.07990436063462847
+        },
+        {
+          "visit_index": 4,
+          "hazard_h": 0.014563920110025374,
+          "cumulative_H": 0.09330456001992848
+        },
+        {
+          "visit_index": 5,
+          "hazard_h": 0.02927193955082123,
+          "cumulative_H": 0.11984529413003042
+        },
+        {
+          "visit_index": 6,
+          "hazard_h": 0.018423585826262745,
+          "cumulative_H": 0.13606089989401482
+        },
+        {
+          "visit_index": 7,
+          "hazard_h": 0.016663986377338114,
+          "cumulative_H": 0.15045756928903076
+        }
+      ]
+    },
+    {
+      "participant_id": "112652",
+      "type": "late_dropout",
+      "curve": [
+        {
+          "visit_index": 0,
+          "hazard_h": 0.006684352829074063,
+          "cumulative_H": 0.006684352829074092
+        },
+        {
+          "visit_index": 1,
+          "hazard_h": 0.004424045063067981,
+          "cumulative_H": 0.01107882601400878
+        },
+        {
+          "visit_index": 2,
+          "hazard_h": 0.009246132695683201,
+          "cumulative_H": 0.02022252241425404
+        },
+        {
+          "visit_index": 3,
+          "hazard_h": 0.005841448611751448,
+          "cumulative_H": 0.02594584220052265
+        },
+        {
+          "visit_index": 4,
+          "hazard_h": 0.008273192522168488,
+          "cumulative_H": 0.03400437977501647
+        },
+        {
+          "visit_index": 5,
+          "hazard_h": 0.021127549741899353,
+          "cumulative_H": 0.05441350029177672
+        },
+        {
+          "visit_index": 6,
+          "hazard_h": 0.04523872031758139,
+          "cumulative_H": 0.09719062348815777
+        },
+        {
+          "visit_index": 7,
+          "hazard_h": 0.06970191552387096,
+          "cumulative_H": 0.16011816638394483
+        },
+        {
+          "visit_index": 8,
+          "hazard_h": 0.01378376869237748,
+          "cumulative_H": 0.1716949033074383
+        },
+        {
+          "visit_index": 9,
+          "hazard_h": 0.024774012381390036,
+          "cumulative_H": 0.1922153440284683
+        },
+        {
+          "visit_index": 10,
+          "hazard_h": 0.024113306713980737,
+          "cumulative_H": 0.2116937031967573
+        },
+        {
+          "visit_index": 11,
+          "hazard_h": 0.02796915887420147,
+          "cumulative_H": 0.23374196725358065
+        },
+        {
+          "visit_index": 12,
+          "hazard_h": 0.03443347360909018,
+          "cumulative_H": 0.26012689300190783
+        },
+        {
+          "visit_index": 13,
+          "hazard_h": 0.03620298454878059,
+          "cumulative_H": 0.286912507662618
+        },
+        {
+          "visit_index": 14,
+          "hazard_h": 0.019291187534420006,
+          "cumulative_H": 0.3006688122057477
+        },
+        {
+          "visit_index": 15,
+          "hazard_h": 0.019291187534420006,
+          "cumulative_H": 0.3141597412981554
+        },
+        {
+          "visit_index": 16,
+          "hazard_h": 0.017294374257702777,
+          "cumulative_H": 0.3260209194131447
+        },
+        {
+          "visit_index": 17,
+          "hazard_h": 0.015780184186156558,
+          "cumulative_H": 0.3366564334424218
+        },
+        {
+          "visit_index": 18,
+          "hazard_h": 0.015780184186156558,
+          "cumulative_H": 0.34712411710140234
+        },
+        {
+          "visit_index": 19,
+          "hazard_h": 0.014191070949941193,
+          "cumulative_H": 0.35638912507712184
+        },
+        {
+          "visit_index": 20,
+          "hazard_h": 0.014191070949941193,
+          "cumulative_H": 0.3655226526673061
+        },
+        {
+          "visit_index": 21,
+          "hazard_h": 0.014191070949941193,
+          "cumulative_H": 0.3745265657194349
+        },
+        {
+          "visit_index": 22,
+          "hazard_h": 0.014191070949941193,
+          "cumulative_H": 0.38340270360261375
+        },
+        {
+          "visit_index": 23,
+          "hazard_h": 0.010835837236422906,
+          "cumulative_H": 0.39008405154679415
+        },
+        {
+          "visit_index": 24,
+          "hazard_h": 0.01237567613398134,
+          "cumulative_H": 0.3976321737938011
+        },
+        {
+          "visit_index": 25,
+          "hazard_h": 0.00853332699191525,
+          "cumulative_H": 0.4027723754242277
+        },
+        {
+          "visit_index": 26,
+          "hazard_h": 0.0146260904766386,
+          "cumulative_H": 0.41150748069642096
+        },
+        {
+          "visit_index": 27,
+          "hazard_h": 0.009082453846160889,
+          "cumulative_H": 0.4168524368418066
+        },
+        {
+          "visit_index": 28,
+          "hazard_h": 0.009082453846160889,
+          "cumulative_H": 0.4221488476696922
+        },
+        {
+          "visit_index": 29,
+          "hazard_h": 0.017602940040997207,
+          "cumulative_H": 0.4323207268567837
+        },
+        {
+          "visit_index": 30,
+          "hazard_h": 0.016104952813833933,
+          "cumulative_H": 0.44146317476414676
+        },
+        {
+          "visit_index": 31,
+          "hazard_h": 0.02013963239801762,
+          "cumulative_H": 0.4527119011051526
+        },
+        {
+          "visit_index": 32,
+          "hazard_h": 0.0316905355801747,
+          "cumulative_H": 0.4700557540757859
+        },
+        {
+          "visit_index": 33,
+          "hazard_h": 0.03461813960767655,
+          "cumulative_H": 0.4884014379654753
+        },
+        {
+          "visit_index": 34,
+          "hazard_h": 0.0447567084199476,
+          "cumulative_H": 0.511298905634519
+        }
+      ]
+    },
+    {
+      "participant_id": "103154",
+      "type": "completer",
+      "curve": [
+        {
+          "visit_index": 0,
+          "hazard_h": 0.004605170457356832,
+          "cumulative_H": 0.004605170457356866
+        },
+        {
+          "visit_index": 1,
+          "hazard_h": 0.010231381763766291,
+          "cumulative_H": 0.01478943496408669
+        },
+        {
+          "visit_index": 2,
+          "hazard_h": 0.004537900745082306,
+          "cumulative_H": 0.019260222721226072
+        },
+        {
+          "visit_index": 3,
+          "hazard_h": 0.004440589750154384,
+          "cumulative_H": 0.02361528572377891
+        },
+        {
+          "visit_index": 4,
+          "hazard_h": 0.00391325467940238,
+          "cumulative_H": 0.027436127775817276
+        },
+        {
+          "visit_index": 5,
+          "hazard_h": 0.005724181195092957,
+          "cumulative_H": 0.033003259604229784
+        },
+        {
+          "visit_index": 6,
+          "hazard_h": 0.010408586941547279,
+          "cumulative_H": 0.04306832924883197
+        },
+        {
+          "visit_index": 7,
+          "hazard_h": 0.005902231191403431,
+          "cumulative_H": 0.04871636120398126
+        },
+        {
+          "visit_index": 8,
+          "hazard_h": 0.005264621394031825,
+          "cumulative_H": 0.05372450940057927
+        },
+        {
+          "visit_index": 9,
+          "hazard_h": 0.0051071094239987245,
+          "cumulative_H": 0.05855724187631861
+        },
+        {
+          "visit_index": 10,
+          "hazard_h": 0.008169434295804984,
+          "cumulative_H": 0.06624829663207144
+        },
+        {
+          "visit_index": 11,
+          "hazard_h": 0.005007607066501019,
+          "cumulative_H": 0.07092415826021403
+        },
+        {
+          "visit_index": 12,
+          "hazard_h": 0.004945508017170996,
+          "cumulative_H": 0.07551891028409807
+        },
+        {
+          "visit_index": 13,
+          "hazard_h": 0.009403153259177293,
+          "cumulative_H": 0.08421194765590789
+        },
+        {
+          "visit_index": 14,
+          "hazard_h": 0.004878164422456585,
+          "cumulative_H": 0.08867931235136362
+        },
+        {
+          "visit_index": 15,
+          "hazard_h": 0.004878164422456585,
+          "cumulative_H": 0.09312488450729994
+        },
+        {
+          "visit_index": 16,
+          "hazard_h": 0.004139436311546608,
+          "cumulative_H": 0.09687883629040839
+        },
+        {
+          "visit_index": 17,
+          "hazard_h": 0.0032296842690337545,
+          "cumulative_H": 0.09979563250587276
+        },
+        {
+          "visit_index": 18,
+          "hazard_h": 0.004420612921499461,
+          "cumulative_H": 0.10377508756480747
+        },
+        {
+          "visit_index": 19,
+          "hazard_h": 0.010029795708361067,
+          "cumulative_H": 0.11276404034527632
+        },
+        {
+          "visit_index": 20,
+          "hazard_h": 0.00544695187207869,
+          "cumulative_H": 0.11759677191669315
+        },
+        {
+          "visit_index": 21,
+          "hazard_h": 0.00544695187207869,
+          "cumulative_H": 0.12240317983182969
+        },
+        {
+          "visit_index": 22,
+          "hazard_h": 0.005439458192229821,
+          "cumulative_H": 0.1271768310447683
+        },
+        {
+          "visit_index": 23,
+          "hazard_h": 0.0052412095889060465,
+          "cumulative_H": 0.13175148020731586
+        },
+        {
+          "visit_index": 24,
+          "hazard_h": 0.004268223067324752,
+          "cumulative_H": 0.1354573585676656
+        },
+        {
+          "visit_index": 25,
+          "hazard_h": 0.00406325432620286,
+          "cumulative_H": 0.13897021519565234
+        },
+        {
+          "visit_index": 26,
+          "hazard_h": 0.004778375892504888,
+          "cumulative_H": 0.14308453916209007
+        },
+        {
+          "visit_index": 27,
+          "hazard_h": 0.0035217075887710586,
+          "cumulative_H": 0.1461023448434583
+        },
+        {
+          "visit_index": 28,
+          "hazard_h": 0.007128279967937265,
+          "cumulative_H": 0.1521891663933792
+        },
+        {
+          "visit_index": 29,
+          "hazard_h": 0.011182978938952445,
+          "cumulative_H": 0.16167021708981777
+        },
+        {
+          "visit_index": 30,
+          "hazard_h": 0.008146234773544104,
+          "cumulative_H": 0.1684994483190584
+        },
+        {
+          "visit_index": 31,
+          "hazard_h": 0.010546218253344878,
+          "cumulative_H": 0.1772686346148623
+        },
+        {
+          "visit_index": 32,
+          "hazard_h": 0.022329523334181933,
+          "cumulative_H": 0.19563983383599304
+        },
+        {
+          "visit_index": 33,
+          "hazard_h": 0.008572006030966731,
+          "cumulative_H": 0.20253481403142026
+        },
+        {
+          "visit_index": 34,
+          "hazard_h": 0.01627393256378116,
+          "cumulative_H": 0.21551270868983619
+        },
+        {
+          "visit_index": 35,
+          "hazard_h": 0.013290916406991269,
+          "cumulative_H": 0.2259392637009866
+        },
+        {
+          "visit_index": 36,
+          "hazard_h": 0.013290916406991269,
+          "cumulative_H": 0.2362272402410709
+        },
+        {
+          "visit_index": 37,
+          "hazard_h": 0.013290916406991269,
+          "cumulative_H": 0.24637848014496377
+        },
+        {
+          "visit_index": 38,
+          "hazard_h": 0.013290916406991269,
+          "cumulative_H": 0.2563948007678668
+        },
+        {
+          "visit_index": 39,
+          "hazard_h": 0.016632529518387604,
+          "cumulative_H": 0.26876283619412167
+        }
+      ]
+    }
+  ]
+}

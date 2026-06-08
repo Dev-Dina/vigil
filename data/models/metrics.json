@@ -1,0 +1,165 @@
+{
+  "data_source": "REAL",
+  "threshold_train_median_dropout_rate": 0.11290322580645161,
+  "fold_sizes": {
+    "train": 22348,
+    "val": 7452,
+    "test": 7446
+  },
+  "n_arms": {
+    "train": 55449,
+    "val": 20562,
+    "test": 20668
+  },
+  "date_ranges": {
+    "train": [
+      "1966-07-31",
+      "2015-02-19"
+    ],
+    "val": [
+      "2015-02-20",
+      "2018-07-18"
+    ],
+    "test": [
+      "2018-07-19",
+      "2025-06-24"
+    ]
+  },
+  "lead_time_gain": "N/A (no per-participant time series in the aggregate baseline)",
+  "test": {
+    "gbt": {
+      "mae": 0.2040165744521972,
+      "rmse": 0.28175794822483763,
+      "r2": 0.32218307453542394,
+      "pr_auc": 0.69677217284103,
+      "brier": 0.26478215575317177,
+      "recall_at_p50": 0.98274982137389
+    },
+    "logit": {
+      "pr_auc": 0.6537626078226497,
+      "recall_at_p50": 0.9325303664387057,
+      "brier": 0.22437554438159174
+    },
+    "per_sponsor_class": {
+      "ACADEMIC_OTHER": {
+        "gbt_mae": 0.1856614625047572,
+        "gbt_rmse": 0.26087874949064027,
+        "gbt_r2": 0.1117251271579327,
+        "gbt_pr_auc": 0.44906007974797624,
+        "gbt_brier": 0.25783056230611656,
+        "gbt_recall_at_p50": 0.05837424986361157,
+        "logit_pr_auc": 0.4344071482459172,
+        "logit_recall_at_p50": 0.11074740861974905,
+        "logit_brier": 0.22893681116565265
+      },
+      "INDUSTRY": {
+        "gbt_mae": 0.21029096481362786,
+        "gbt_rmse": 0.2882716973141926,
+        "gbt_r2": 0.3498107012879069,
+        "gbt_pr_auc": 0.7413837070502747,
+        "gbt_brier": 0.2679251185464556,
+        "gbt_recall_at_p50": 1.0,
+        "logit_pr_auc": 0.6879061489071171,
+        "logit_recall_at_p50": 1.0,
+        "logit_brier": 0.22196817797033347
+      },
+      "NIH": {
+        "gbt_mae": 0.204160571802258,
+        "gbt_rmse": 0.2875800365001072,
+        "gbt_r2": 0.17263067794415132,
+        "gbt_pr_auc": 0.5220212087956536,
+        "gbt_brier": 0.24936775414674411,
+        "gbt_recall_at_p50": 0.5607142857142857,
+        "logit_pr_auc": 0.4482240721941283,
+        "logit_recall_at_p50": 0.3392857142857143,
+        "logit_brier": 0.24145303542858562
+      }
+    }
+  },
+  "val": {
+    "gbt": {
+      "mae": 0.2089318033808063,
+      "rmse": 0.2830424067505406,
+      "r2": 0.380835705427244,
+      "pr_auc": 0.7284077360711797,
+      "brier": 0.2571633575298842,
+      "recall_at_p50": 1.0
+    },
+    "logit": {
+      "pr_auc": 0.6567440500731896,
+      "recall_at_p50": 0.9908050474420425,
+      "brier": 0.22861691572939966
+    },
+    "per_sponsor_class": {
+      "ACADEMIC_OTHER": {
+        "gbt_mae": 0.19248186313167034,
+        "gbt_rmse": 0.2699934959226944,
+        "gbt_r2": 0.08707208107838693,
+        "gbt_pr_auc": 0.46684482254480764,
+        "gbt_brier": 0.27795398433342033,
+        "gbt_recall_at_p50": 0.2304916553901669,
+        "logit_pr_auc": 0.4574126939000174,
+        "logit_recall_at_p50": 0.17230491655390168,
+        "logit_brier": 0.24094076823461766
+      },
+      "INDUSTRY": {
+        "gbt_mae": 0.21400395038342268,
+        "gbt_rmse": 0.286009902375135,
+        "gbt_r2": 0.42946347264011664,
+        "gbt_pr_auc": 0.7756167002290598,
+        "gbt_brier": 0.24718309855437798,
+        "gbt_recall_at_p50": 1.0,
+        "logit_pr_auc": 0.6906363981923767,
+        "logit_recall_at_p50": 1.0,
+        "logit_brier": 0.22231154371382528
+      },
+      "NIH": {
+        "gbt_mae": 0.2406700617926703,
+        "gbt_rmse": 0.32530960729883357,
+        "gbt_r2": 0.20974580048355662,
+        "gbt_pr_auc": 0.6622529171824729,
+        "gbt_brier": 0.29550140425972377,
+        "gbt_recall_at_p50": 1.0,
+        "logit_pr_auc": 0.5671222621259995,
+        "logit_recall_at_p50": 0.9876543209876543,
+        "logit_brier": 0.25990159123580253
+      }
+    }
+  },
+  "shap_global_importance_top": {
+    "sponsor_class_INDUSTRY": 0.04781236307900072,
+    "therapeutic_area_ONCOLOGY": 0.0447855451121758,
+    "n_sites": 0.04381343013143173,
+    "enrollment": 0.0313636289890263,
+    "started": 0.030405120473403546,
+    "planned_duration_days": 0.02088100433875575,
+    "max_age_years": 0.013284870655869942,
+    "sponsor_class_ACADEMIC_OTHER": 0.010262574387801687,
+    "min_age_years": 0.010166490395613337,
+    "therapeutic_area_PSYCHIATRY": 0.009827682182259257,
+    "allocation_RANDOMIZED": 0.009794353786411384,
+    "masking_NONE": 0.0064468243559520615,
+    "intervention_model_CROSSOVER": 0.005357614868669675,
+    "primary_purpose_TREATMENT": 0.005065566597588211,
+    "n_arms": 0.004862947200803387,
+    "n_countries": 0.004683822213811264,
+    "therapeutic_area_MUSCULOSKELETAL": 0.004448944133925093,
+    "healthy_volunteers": 0.0037363411468832345,
+    "phase_PHASE3": 0.003059952991180134,
+    "phase_PHASE1/PHASE2": 0.002900798918966641
+  },
+  "artifacts": {
+    "pr_curve_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\pr_curve_gbt.png",
+    "pr_curve_logit": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\pr_curve_logit.png",
+    "calibration_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\calibration_gbt.png",
+    "calibration_logit": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\calibration_logit.png",
+    "residuals_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\residuals_gbt.png",
+    "mae_by_sponsor_class": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\mae_by_sponsor_class.png",
+    "shap_global": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_global.png",
+    "shap_local": [
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_0.png",
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_1.png",
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_2.png"
+    ]
+  }
+}

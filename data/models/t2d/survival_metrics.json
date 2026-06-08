@@ -1,0 +1,96 @@
+{
+  "c_index": {
+    "overall": 0.3997801411221711,
+    "by_arm_type": {
+      "Other": 0.40582710902020763,
+      "Placebo Comparator": 0.37669581311184597
+    },
+    "by_phase": {
+      "PHASE2": 0.3638661908325521,
+      "PHASE2/PHASE3": 0.43979776886299937,
+      "PHASE3": 0.41781849471809795
+    }
+  },
+  "calibration_quartiles": [
+    {
+      "quartile": 1,
+      "mean_pred_H": 0.026774751497647235,
+      "obs_event_rate": 0.1803223070398643,
+      "n": 5895
+    },
+    {
+      "quartile": 2,
+      "mean_pred_H": 0.06616824028778769,
+      "obs_event_rate": 0.11028164234815066,
+      "n": 5894
+    },
+    {
+      "quartile": 3,
+      "mean_pred_H": 0.12344234761489986,
+      "obs_event_rate": 0.12724804886325075,
+      "n": 5894
+    },
+    {
+      "quartile": 4,
+      "mean_pred_H": 0.3496045315089007,
+      "obs_event_rate": 0.1984732824427481,
+      "n": 5895
+    }
+  ],
+  "lead_time_curve": [
+    {
+      "t_flag": 1,
+      "flagged_fraction": 0.0014363688595231256,
+      "median_lead_time_visits": 21.0,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 2,
+      "flagged_fraction": 0.0021109770808202654,
+      "median_lead_time_visits": 18.0,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 3,
+      "flagged_fraction": 0.0035031847133757963,
+      "median_lead_time_visits": 14.5,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 5,
+      "flagged_fraction": 0.006073597713469096,
+      "median_lead_time_visits": 10.0,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 8,
+      "flagged_fraction": 0.019965277777777776,
+      "median_lead_time_visits": 7.0,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 13,
+      "flagged_fraction": 0.08878807517822424,
+      "median_lead_time_visits": 5.0,
+      "threshold": 0.3
+    },
+    {
+      "t_flag": 21,
+      "flagged_fraction": 0.3047138047138047,
+      "median_lead_time_visits": 5.0,
+      "threshold": 0.3
+    }
+  ],
+  "comparison": {
+    "baseline_1b_pr_auc": 0.2506,
+    "sequence_pr_auc": 0.339,
+    "sequence_lead_time_median_visits": 17.0
+  },
+  "formulation": "discrete-time hazard (HistGradientBoostingClassifier per visit; cumulative H = 1 - prod(1 - h))",
+  "n_train_visits": 1414100,
+  "n_test_participants": 23578,
+  "preregistration_bar": {
+    "pr_auc_bar": 0.3006,
+    "note": "Survival model evaluated on C-index, not PR-AUC; bar applies to the sequence model"
+  }
+}

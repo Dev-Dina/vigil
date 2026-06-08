@@ -1,0 +1,408 @@
+{
+  "covariate_dropout_associations": [
+    {
+      "covariate": "enrollment",
+      "high_minus_low_tercile_dropout_gap": -0.0055,
+      "n": 72842,
+      "pearson_r": -0.0057,
+      "sign": "negative"
+    },
+    {
+      "covariate": "n_arms",
+      "high_minus_low_tercile_dropout_gap": NaN,
+      "n": 72842,
+      "pearson_r": -0.004,
+      "sign": "negative"
+    },
+    {
+      "covariate": "n_sites",
+      "high_minus_low_tercile_dropout_gap": 0.1332,
+      "n": 72842,
+      "pearson_r": 0.1353,
+      "sign": "positive"
+    },
+    {
+      "covariate": "n_countries",
+      "high_minus_low_tercile_dropout_gap": NaN,
+      "n": 72842,
+      "pearson_r": 0.1844,
+      "sign": "positive"
+    },
+    {
+      "covariate": "planned_duration_days",
+      "high_minus_low_tercile_dropout_gap": 0.1126,
+      "n": 72842,
+      "pearson_r": 0.1277,
+      "sign": "positive"
+    },
+    {
+      "covariate": "min_age_years",
+      "high_minus_low_tercile_dropout_gap": NaN,
+      "n": 70391,
+      "pearson_r": -0.0277,
+      "sign": "negative"
+    },
+    {
+      "covariate": "max_age_years",
+      "high_minus_low_tercile_dropout_gap": 0.0432,
+      "n": 35256,
+      "pearson_r": 0.0692,
+      "sign": "positive"
+    },
+    {
+      "blinded_mean_dropout": 0.1618,
+      "covariate": "blinded(vs open label)",
+      "n": 72842,
+      "open_mean_dropout": 0.2344
+    }
+  ],
+  "dropout_by_blinding_pw": {
+    "BLINDED": {
+      "mean_dropout": 0.1448,
+      "n_trials": 32693
+    },
+    "OPEN_LABEL": {
+      "mean_dropout": 0.1562,
+      "n_trials": 40149
+    }
+  },
+  "dropout_by_enrollment_size": {
+    "1-50": {
+      "mean_dropout": 0.2035,
+      "n_trials": 32249
+    },
+    "1000+": {
+      "mean_dropout": 0.1857,
+      "n_trials": 3218
+    },
+    "101-250": {
+      "mean_dropout": 0.2038,
+      "n_trials": 13114
+    },
+    "251-500": {
+      "mean_dropout": 0.2051,
+      "n_trials": 7027
+    },
+    "501-1000": {
+      "mean_dropout": 0.2251,
+      "n_trials": 4263
+    },
+    "51-100": {
+      "mean_dropout": 0.1899,
+      "n_trials": 12971
+    }
+  },
+  "dropout_by_enrollment_size_pw": {
+    "1-50": {
+      "mean_dropout": 0.1139,
+      "n_trials": 32249
+    },
+    "1000+": {
+      "mean_dropout": 0.1379,
+      "n_trials": 3218
+    },
+    "101-250": {
+      "mean_dropout": 0.2032,
+      "n_trials": 13114
+    },
+    "251-500": {
+      "mean_dropout": 0.2031,
+      "n_trials": 7027
+    },
+    "501-1000": {
+      "mean_dropout": 0.2187,
+      "n_trials": 4263
+    },
+    "51-100": {
+      "mean_dropout": 0.1532,
+      "n_trials": 12971
+    }
+  },
+  "dropout_by_phase": {
+    "EARLY_PHASE1": {
+      "mean_dropout": 0.1389,
+      "n_trials": 464
+    },
+    "NA": {
+      "mean_dropout": 0.1418,
+      "n_trials": 21918
+    },
+    "PHASE1": {
+      "mean_dropout": 0.1929,
+      "n_trials": 5512
+    },
+    "PHASE1/PHASE2": {
+      "mean_dropout": 0.2945,
+      "n_trials": 3935
+    },
+    "PHASE2": {
+      "mean_dropout": 0.2524,
+      "n_trials": 18807
+    },
+    "PHASE2/PHASE3": {
+      "mean_dropout": 0.2156,
+      "n_trials": 1319
+    },
+    "PHASE3": {
+      "mean_dropout": 0.2323,
+      "n_trials": 13102
+    },
+    "PHASE4": {
+      "mean_dropout": 0.158,
+      "n_trials": 7785
+    }
+  },
+  "dropout_by_phase_pw": {
+    "EARLY_PHASE1": {
+      "mean_dropout": 0.1271,
+      "n_trials": 464
+    },
+    "NA": {
+      "mean_dropout": 0.1245,
+      "n_trials": 21918
+    },
+    "PHASE1": {
+      "mean_dropout": 0.2184,
+      "n_trials": 5512
+    },
+    "PHASE1/PHASE2": {
+      "mean_dropout": 0.3385,
+      "n_trials": 3935
+    },
+    "PHASE2": {
+      "mean_dropout": 0.233,
+      "n_trials": 18807
+    },
+    "PHASE2/PHASE3": {
+      "mean_dropout": 0.3182,
+      "n_trials": 1319
+    },
+    "PHASE3": {
+      "mean_dropout": 0.2076,
+      "n_trials": 13102
+    },
+    "PHASE4": {
+      "mean_dropout": 0.0829,
+      "n_trials": 7785
+    }
+  },
+  "dropout_by_site_count": {
+    "MULTI_SITE": {
+      "mean_dropout": 0.2558,
+      "n_trials": 34065
+    },
+    "SINGLE_SITE": {
+      "mean_dropout": 0.1544,
+      "n_trials": 38777
+    }
+  },
+  "dropout_by_site_count_pw": {
+    "MULTI_SITE": {
+      "mean_dropout": 0.1487,
+      "n_trials": 34065
+    },
+    "SINGLE_SITE": {
+      "mean_dropout": 0.1537,
+      "n_trials": 38777
+    }
+  },
+  "dropout_by_sponsor_class": {
+    "ACADEMIC_OTHER": {
+      "mean_dropout": 0.1618,
+      "n_trials": 35544
+    },
+    "INDUSTRY": {
+      "mean_dropout": 0.2445,
+      "n_trials": 33218
+    },
+    "NIH": {
+      "mean_dropout": 0.2343,
+      "n_trials": 2319
+    },
+    "OTHER_GOV": {
+      "mean_dropout": 0.161,
+      "n_trials": 1761
+    }
+  },
+  "dropout_by_sponsor_class_pw": {
+    "ACADEMIC_OTHER": {
+      "mean_dropout": 0.0668,
+      "n_trials": 35544
+    },
+    "INDUSTRY": {
+      "mean_dropout": 0.2525,
+      "n_trials": 33218
+    },
+    "NIH": {
+      "mean_dropout": 0.1404,
+      "n_trials": 2319
+    },
+    "OTHER_GOV": {
+      "mean_dropout": 0.4812,
+      "n_trials": 1761
+    }
+  },
+  "dropout_by_therapeutic_area": {
+    "CARDIOVASCULAR": {
+      "mean_dropout": 0.1845,
+      "n_trials": 6716
+    },
+    "DERMATOLOGY": {
+      "mean_dropout": 0.1599,
+      "n_trials": 2104
+    },
+    "ENDOCRINE_METABOLIC": {
+      "mean_dropout": 0.156,
+      "n_trials": 4399
+    },
+    "GASTROENTEROLOGY": {
+      "mean_dropout": 0.1892,
+      "n_trials": 1819
+    },
+    "IMMUNOLOGY_RHEUMATOLOGY": {
+      "mean_dropout": 0.1996,
+      "n_trials": 3366
+    },
+    "INFECTIOUS_DISEASE": {
+      "mean_dropout": 0.1289,
+      "n_trials": 7282
+    },
+    "MUSCULOSKELETAL": {
+      "mean_dropout": 0.2421,
+      "n_trials": 2613
+    },
+    "NEUROLOGY": {
+      "mean_dropout": 0.1661,
+      "n_trials": 4682
+    },
+    "ONCOLOGY": {
+      "mean_dropout": 0.3597,
+      "n_trials": 14339
+    },
+    "OPHTHALMOLOGY": {
+      "mean_dropout": 0.1136,
+      "n_trials": 2337
+    },
+    "OTHER": {
+      "mean_dropout": 0.1351,
+      "n_trials": 12086
+    },
+    "PSYCHIATRY": {
+      "mean_dropout": 0.2048,
+      "n_trials": 6244
+    },
+    "RENAL_UROLOGY": {
+      "mean_dropout": 0.1704,
+      "n_trials": 1643
+    },
+    "RESPIRATORY": {
+      "mean_dropout": 0.142,
+      "n_trials": 3212
+    }
+  },
+  "dropout_by_therapeutic_area_pw": {
+    "CARDIOVASCULAR": {
+      "mean_dropout": 0.3088,
+      "n_trials": 6716
+    },
+    "DERMATOLOGY": {
+      "mean_dropout": 0.1629,
+      "n_trials": 2104
+    },
+    "ENDOCRINE_METABOLIC": {
+      "mean_dropout": 0.1557,
+      "n_trials": 4399
+    },
+    "GASTROENTEROLOGY": {
+      "mean_dropout": 0.2136,
+      "n_trials": 1819
+    },
+    "IMMUNOLOGY_RHEUMATOLOGY": {
+      "mean_dropout": 0.2179,
+      "n_trials": 3366
+    },
+    "INFECTIOUS_DISEASE": {
+      "mean_dropout": 0.0877,
+      "n_trials": 7282
+    },
+    "MUSCULOSKELETAL": {
+      "mean_dropout": 0.2441,
+      "n_trials": 2613
+    },
+    "NEUROLOGY": {
+      "mean_dropout": 0.1992,
+      "n_trials": 4682
+    },
+    "ONCOLOGY": {
+      "mean_dropout": 0.3007,
+      "n_trials": 14339
+    },
+    "OPHTHALMOLOGY": {
+      "mean_dropout": 0.1103,
+      "n_trials": 2337
+    },
+    "OTHER": {
+      "mean_dropout": 0.0631,
+      "n_trials": 12086
+    },
+    "PSYCHIATRY": {
+      "mean_dropout": 0.1706,
+      "n_trials": 6244
+    },
+    "RENAL_UROLOGY": {
+      "mean_dropout": 0.1413,
+      "n_trials": 1643
+    },
+    "RESPIRATORY": {
+      "mean_dropout": 0.156,
+      "n_trials": 3212
+    }
+  },
+  "enrollment_distribution": {
+    "0.1": 11.0,
+    "0.25": 25.0,
+    "0.5": 61.0,
+    "0.75": 189.0,
+    "0.9": 510.0,
+    "0.99": 3945.5
+  },
+  "figures": {
+    "dropout_by_enrollment_size": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_enrollment_size.png",
+    "dropout_by_phase": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_phase.png",
+    "dropout_by_therapeutic_area": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_therapeutic_area.png",
+    "dropout_rate_hist": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_rate_hist.png",
+    "enrollment_hist": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\enrollment_hist.png",
+    "missingness": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\missingness.png",
+    "withdrawal_reason_mix": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\withdrawal_reason_mix.png"
+  },
+  "missingness_ref_trial": {
+    "actual_duration_days": 0.0004,
+    "max_age_years": 0.5159,
+    "min_age_years": 0.0338
+  },
+  "n_arms": 182240,
+  "n_withdrawal_rows": 384802,
+  "overall_dropout_rate": {
+    "participant_weighted": 0.151,
+    "trial_mean": 0.2018,
+    "trial_median": 0.0933
+  },
+  "source": "real hosted AACT snapshot (data/clean/ref_*.parquet); build-time only",
+  "study_count_post_filter": 73073,
+  "trials_with_flow_arms": 72842,
+  "withdrawal_reason_mix": {
+    "ADMINISTRATIVE": 0.0818,
+    "ADVERSE_EVENT": 0.0817,
+    "DEATH": 0.0909,
+    "LACK_OF_EFFICACY": 0.0762,
+    "LOST_TO_FOLLOWUP": 0.1071,
+    "NONCOMPLIANCE": 0.0053,
+    "OTHER": 0.1754,
+    "PHYSICIAN_DECISION": 0.0142,
+    "PREGNANCY": 0.002,
+    "PROTOCOL_VIOLATION": 0.0959,
+    "STUDY_TERMINATED": 0.1217,
+    "WITHDRAWAL_BY_SUBJECT": 0.1477
+  },
+  "withdrawal_reason_mix_note": "Shares are over ref_withdrawal_reason volume. STUDY_TERMINATED (sponsor/DSMB) and ADMINISTRATIVE (survey/data bookkeeping) are real exits but not participant-level retention events. Right-censoring / still-ongoing rows are excluded from this mix entirely (recorded in the data-quality report as excluded-censoring)."
+}

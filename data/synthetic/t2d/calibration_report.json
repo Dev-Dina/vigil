@@ -1,0 +1,353 @@
+{
+  "all_passed": true,
+  "cohort": {
+    "hazard_intercept": -7.28125,
+    "n_participants": 121225,
+    "n_visit_rows": 2285102,
+    "non_separability_auc": 0.7673,
+    "phase_offsets": {
+      "PHASE1/PHASE2": -0.5312,
+      "PHASE2": 0.2656,
+      "PHASE2/PHASE3": -0.25,
+      "PHASE3": -0.0625
+    },
+    "seed": 20240601
+  },
+  "results": [
+    {
+      "detail": {
+        "abs_diff": 0.0001,
+        "real": 0.1438,
+        "synthetic": 0.1439,
+        "tolerance": 0.01
+      },
+      "status": "PASS",
+      "target": "overall_dropout"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0038,
+            "level": "PHASE1/PHASE2",
+            "real": 0.0494,
+            "status": "PASS",
+            "synthetic": 0.0457,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0012,
+            "level": "PHASE2",
+            "real": 0.1329,
+            "status": "PASS",
+            "synthetic": 0.1341,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.003,
+            "level": "PHASE2/PHASE3",
+            "real": 0.1135,
+            "status": "PASS",
+            "synthetic": 0.1104,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0007,
+            "level": "PHASE3",
+            "real": 0.1502,
+            "status": "PASS",
+            "synthetic": 0.1496,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_phase"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0015,
+            "level": "ACTIVE_OR_EXP",
+            "real": 0.1402,
+            "status": "PASS",
+            "synthetic": 0.1387,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0066,
+            "level": "PLACEBO_CONTROL",
+            "real": 0.1581,
+            "status": "PASS",
+            "synthetic": 0.1647,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_arm_type"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0011,
+            "level": "MULTI_SITE",
+            "real": 0.1422,
+            "status": "PASS",
+            "synthetic": 0.1433,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0045,
+            "level": "SINGLE_SITE",
+            "real": 0.1511,
+            "status": "PASS",
+            "synthetic": 0.1465,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_site_band"
+    },
+    {
+      "detail": {
+        "levels": [
+          {
+            "abs_diff": 0.0014,
+            "level": "12-24mo",
+            "real": 0.1378,
+            "status": "PASS",
+            "synthetic": 0.1364,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0047,
+            "level": "6-12mo",
+            "real": 0.1186,
+            "status": "PASS",
+            "synthetic": 0.1138,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0097,
+            "level": "<=6mo",
+            "real": 0.0815,
+            "status": "PASS",
+            "synthetic": 0.0717,
+            "tolerance": 0.03
+          },
+          {
+            "abs_diff": 0.0052,
+            "level": ">24mo",
+            "real": 0.1849,
+            "status": "PASS",
+            "synthetic": 0.1901,
+            "tolerance": 0.03
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "dropout_by_duration_band"
+    },
+    {
+      "detail": {
+        "chisq_pvalue": 0.6337855686606897,
+        "real_mix": {
+          "ADMINISTRATIVE": 0.0606,
+          "ADVERSE_EVENT": 0.1378,
+          "DEATH": 0.0431,
+          "LACK_OF_EFFICACY": 0.0316,
+          "LOST_TO_FOLLOWUP": 0.0653,
+          "NONCOMPLIANCE": 0.0092,
+          "OTHER": 0.1424,
+          "PHYSICIAN_DECISION": 0.0142,
+          "PREGNANCY": 0.0008,
+          "PROTOCOL_VIOLATION": 0.0434,
+          "STUDY_TERMINATED": 0.2627,
+          "WITHDRAWAL_BY_SUBJECT": 0.1889
+        },
+        "synthetic_mix": {
+          "ADMINISTRATIVE": 0.0627,
+          "ADVERSE_EVENT": 0.1392,
+          "DEATH": 0.0433,
+          "LACK_OF_EFFICACY": 0.031,
+          "LOST_TO_FOLLOWUP": 0.0679,
+          "NONCOMPLIANCE": 0.01,
+          "OTHER": 0.1398,
+          "PHYSICIAN_DECISION": 0.0136,
+          "PREGNANCY": 0.001,
+          "PROTOCOL_VIOLATION": 0.0421,
+          "STUDY_TERMINATED": 0.2622,
+          "WITHDRAWAL_BY_SUBJECT": 0.1873
+        },
+        "threshold": 0.05
+      },
+      "status": "PASS",
+      "target": "reason_mix"
+    },
+    {
+      "detail": {
+        "abs_diff": 0.0914,
+        "assumed_early_fraction": 0.6,
+        "assumption": "AACT lacks per-event timing; early share is an ASSUMPTION.",
+        "synthetic_early_fraction": 0.5086,
+        "tolerance": 0.12
+      },
+      "status": "PASS",
+      "target": "dropout_timing"
+    },
+    {
+      "detail": {
+        "age_years": {
+          "ok": true,
+          "pearson_r": -0.0803,
+          "required": -1,
+          "synthetic": -1
+        },
+        "hba1c_real": {
+          "ok": true,
+          "pearson_r": 0.1061,
+          "required": 1,
+          "synthetic": 1
+        },
+        "n_sites": {
+          "ok": true,
+          "pearson_r": 0.0361,
+          "required": 1,
+          "synthetic": 1
+        },
+        "placebo_control_vs_active": {
+          "active": 0.1387,
+          "ok": true,
+          "placebo": 0.1647,
+          "required": 1,
+          "synthetic": 1
+        },
+        "planned_duration_days": {
+          "ok": true,
+          "pearson_r": 0.1417,
+          "required": 1,
+          "synthetic": 1
+        }
+      },
+      "status": "PASS",
+      "target": "covariate_signs"
+    },
+    {
+      "detail": {
+        "covariates": [
+          {
+            "covariate": "age_years",
+            "real_mean": 56.6879,
+            "rel_diff": 0.0009,
+            "status": "PASS",
+            "synthetic_mean": 56.6348,
+            "tolerance_rel": 0.08
+          },
+          {
+            "covariate": "pct_female",
+            "real_mean": 0.439,
+            "rel_diff": 0.0029,
+            "status": "PASS",
+            "synthetic_mean": 0.4377,
+            "tolerance_rel": 0.08
+          },
+          {
+            "covariate": "hba1c_real",
+            "real_mean": 8.1728,
+            "rel_diff": 0.0029,
+            "status": "PASS",
+            "synthetic_mean": 8.1966,
+            "tolerance_rel": 0.08
+          },
+          {
+            "covariate": "bmi_real",
+            "real_mean": 30.985,
+            "rel_diff": 0.003,
+            "status": "PASS",
+            "synthetic_mean": 30.8927,
+            "tolerance_rel": 0.08
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "baseline_marginals"
+    },
+    {
+      "detail": {
+        "imputed_flag_prevalence": {
+          "age_baseline_imputed_prevalence": 0.0917,
+          "bmi_baseline_imputed_prevalence": 0.7958,
+          "hba1c_baseline_imputed_prevalence": 0.5539
+        },
+        "provenance": [
+          {
+            "covariate": "age_years",
+            "coverage_pct": 0.9219,
+            "mean": 56.6879,
+            "note": "Real Table-1 continuous age; missing trials use the real cohort marginal (age_baseline_imputed=True for those).",
+            "sd": 7.6609,
+            "source": "real_table1"
+          },
+          {
+            "covariate": "pct_female",
+            "coverage_pct": 1.0,
+            "mean": 0.439,
+            "note": "Real Table-1 sex split (category/classification counts).",
+            "sd": 0.1076,
+            "source": "real_table1"
+          },
+          {
+            "covariate": "hba1c_pct",
+            "coverage_pct": 0.445,
+            "mean": 8.1728,
+            "note": "Real where posted; elsewhere a LABELLED literature prior (~8.0%, hba1c_baseline_imputed=True).",
+            "sd": 0.5742,
+            "source": "real_table1"
+          },
+          {
+            "covariate": "bmi",
+            "coverage_pct": 0.2053,
+            "mean": 30.985,
+            "note": "Real where posted; elsewhere a LABELLED literature prior (~31.0 kg/m^2, bmi_baseline_imputed=True).",
+            "sd": 2.6463,
+            "source": "real_table1"
+          },
+          {
+            "covariate": "hba1c_prior",
+            "coverage_pct": 0.555,
+            "mean": 8.0,
+            "note": "Literature prior for trials with no posted HbA1c (T2D entry ~7.5-8.5%).",
+            "sd": 0.6,
+            "source": "literature_prior"
+          },
+          {
+            "covariate": "bmi_prior",
+            "coverage_pct": 0.7947,
+            "mean": 31.0,
+            "note": "Literature prior for trials with no posted BMI (T2D ~30-32 kg/m^2).",
+            "sd": 3.0,
+            "source": "literature_prior"
+          }
+        ]
+      },
+      "status": "PASS",
+      "target": "covariate_provenance"
+    },
+    {
+      "detail": {
+        "auc": 0.7673,
+        "band": [
+          0.55,
+          0.85
+        ],
+        "note": "Engagement->dropout logistic AUC; near-1.0 == leaky planted rule."
+      },
+      "status": "PASS",
+      "target": "non_separability_auc"
+    }
+  ]
+}

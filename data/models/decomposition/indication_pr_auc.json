@@ -1,0 +1,77 @@
+{
+  "pan_indication": 0.69677217284103,
+  "by_indication": [
+    {
+      "indication": "T2D",
+      "n_trials": 863,
+      "n_arms": 2666,
+      "test_pr_auc": 0.3809319238242386,
+      "split_type": "temporal",
+      "n_train_arms": 1669,
+      "n_test_arms": 516
+    },
+    {
+      "indication": "PSO",
+      "n_trials": 352,
+      "n_arms": 1407,
+      "test_pr_auc": 0.6474459403313242,
+      "split_type": "temporal",
+      "n_train_arms": 899,
+      "n_test_arms": 240
+    },
+    {
+      "indication": "IBD",
+      "n_trials": 354,
+      "n_arms": 1207,
+      "test_pr_auc": 0.4974972069160333,
+      "split_type": "temporal",
+      "n_train_arms": 646,
+      "n_test_arms": 229
+    },
+    {
+      "indication": "ALZ",
+      "n_trials": 332,
+      "n_arms": 927,
+      "test_pr_auc": 0.7747289607340884,
+      "split_type": "temporal",
+      "n_train_arms": 581,
+      "n_test_arms": 172
+    },
+    {
+      "indication": "MDD",
+      "n_trials": 310,
+      "n_arms": 791,
+      "test_pr_auc": 0.32058483462375603,
+      "split_type": "temporal",
+      "n_train_arms": 481,
+      "n_test_arms": 152
+    },
+    {
+      "indication": "MS",
+      "n_trials": 259,
+      "n_arms": 719,
+      "test_pr_auc": 0.6201353098269733,
+      "split_type": "temporal",
+      "n_train_arms": 452,
+      "n_test_arms": 142
+    },
+    {
+      "indication": "HF",
+      "n_trials": 235,
+      "n_arms": 548,
+      "test_pr_auc": 0.5829197668780985,
+      "split_type": "temporal",
+      "n_train_arms": 320,
+      "n_test_arms": 107
+    },
+    {
+      "indication": "RA",
+      "n_trials": 4,
+      "n_arms": 9,
+      "test_pr_auc": null,
+      "split_type": "small-N random",
+      "n_train_arms": 8,
+      "n_test_arms": 1
+    }
+  ]
+}

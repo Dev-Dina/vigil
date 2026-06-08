@@ -1,0 +1,114 @@
+{
+  "task": "3_sequence_lstm_synthetic",
+  "seed": 20240601,
+  "config": {
+    "hidden_size": 32,
+    "num_layers": 1,
+    "epochs": 3,
+    "batch_size": 256,
+    "lr": 0.001,
+    "max_train_participants": 20000
+  },
+  "n_train_participants": 20000,
+  "n_test_participants": 23578,
+  "n_test_decision_points": 454272,
+  "first_batch_loss": 0.6369408965110779,
+  "test": {
+    "overall": {
+      "pr_auc": 0.3390398896276865,
+      "recall_at_p50": 0.18905734701355809,
+      "brier": 0.07525722664197201,
+      "n": 454272,
+      "positives": 43664
+    },
+    "per_stratum": {
+      "arm_type": {
+        "Other": {
+          "pr_auc": 0.31361679895346734,
+          "recall_at_p50": 0.15119470958887019,
+          "brier": 0.07144393299935442,
+          "n": 358731,
+          "positives": 32058
+        },
+        "Placebo Comparator": {
+          "pr_auc": 0.4040034711222267,
+          "recall_at_p50": 0.29467516801654314,
+          "brier": 0.08957512829372209,
+          "n": 95541,
+          "positives": 11606
+        }
+      },
+      "phase": {
+        "PHASE2": {
+          "pr_auc": 0.22432345523716513,
+          "recall_at_p50": 0.019775014801657786,
+          "brier": 0.06799590402397528,
+          "n": 105883,
+          "positives": 8445
+        },
+        "PHASE2/PHASE3": {
+          "pr_auc": 0.20972597238637003,
+          "recall_at_p50": 0.04678362573099415,
+          "brier": 0.07140174647520256,
+          "n": 8309,
+          "positives": 684
+        },
+        "PHASE3": {
+          "pr_auc": 0.36604766715612325,
+          "recall_at_p50": 0.2350658751990734,
+          "brier": 0.07761221901866877,
+          "n": 340080,
+          "positives": 34535
+        }
+      }
+    }
+  },
+  "val": {
+    "overall": {
+      "pr_auc": 0.3004081907909105,
+      "recall_at_p50": 0.13523352617468604,
+      "brier": 0.07000246945861907,
+      "n": 410162,
+      "positives": 35435
+    }
+  },
+  "lead_time": {
+    "threshold": 0.5,
+    "n_test_droppers": 3634,
+    "n_flagged": 326,
+    "flag_coverage": 0.08970831040176115,
+    "median_lead_time_visits": 17.0,
+    "mean_lead_time_visits": 17.573619631901842,
+    "p25_lead_time_visits": 8.0,
+    "p75_lead_time_visits": 26.0
+  },
+  "held_out_axis": "temporal, trial-level, keyed on ref_trial.start_date, group-disjoint by nct_id (earlier-starting trials -> train, later -> test). Within-participant visit-time is the sequence the LSTM consumes; lead-time is measured in visits before the dropout event.",
+  "bar_vs_1b": {
+    "sequence_test_pr_auc": 0.339,
+    "must_reach_pr_auc": 0.3006,
+    "pr_auc_pass": true,
+    "sequence_median_lead_time_visits": 17.0,
+    "must_reach_lead_time": 2.0,
+    "lead_time_pass": true,
+    "overall_pass": true
+  },
+  "global_attribution_top": {
+    "attended": 0.001557981001562765,
+    "visit_index": 0.0014401525103918812,
+    "consecutive_missed": 0.0014272412584412078,
+    "missed": 0.001241287534262827,
+    "cumulative_missed": 0.000899953277821998
+  },
+  "artifacts": {
+    "pr_sequence": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_sequence.png",
+    "calibration_sequence": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\calib_sequence.png",
+    "lead_time": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\lead_time.png",
+    "per_stratum_pr_auc": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\per_stratum_pr_auc.png",
+    "attr_global": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_global.png",
+    "attr_local": [
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_0.png",
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_1.png",
+      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_2.png"
+    ]
+  }
+}
