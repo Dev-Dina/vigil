@@ -38,6 +38,10 @@ api:  ## Run the FastAPI app locally
 worker:  ## Run the Arq worker
 	uv run arq vigil.workers.settings.WorkerSettings
 
+.PHONY: baseline
+baseline:  ## Train the Phase-3 baselines on REAL data/clean (metrics + SHAP + card -> data/models)
+	uv run python -m models.baselines
+
 .PHONY: leakage
 leakage:  ## Run the sacred cross-tenant leakage test
 	uv run pytest tests/spine/test_leakage.py -q

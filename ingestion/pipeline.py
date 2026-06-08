@@ -33,7 +33,7 @@ from ingestion.features import (
     assert_no_leakage,
     build_features,
     fit_scaler_on_train,
-    group_split_by_trial,
+    synthetic_group_split_by_trial,
 )
 from ingestion.report import QualityReport
 from ingestion.synthetic import (
@@ -169,7 +169,7 @@ def run(
 
     # --- features + leakage check ----------------------------------------------------
     fm = build_features(cohort.participants, cohort.engagement)
-    splits = group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
+    splits = synthetic_group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
     fit_scaler_on_train(splits, fm.feature_columns)  # scalers fit on train only
     assert_no_leakage(fm, splits)
 

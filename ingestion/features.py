@@ -18,6 +18,7 @@ import pandas as pd
 
 from ingestion.config import DEFAULT_HORIZON_DAYS
 from ingestion.errors import LeakageError
+from ingestion.leakage import assert_group_disjoint
 
 # Static features carried through from the participant table (no outcome-derived columns).
 STATIC_FEATURES = [
@@ -146,14 +147,20 @@ def build_features(
     return FeatureMatrix(X=X, feature_columns=feature_cols, horizon_days=horizon_days)
 
 
-def group_split_by_trial(
+def synthetic_group_split_by_trial(
     X: pd.DataFrame,
     *,
     seed: int,
     val_frac: float = 0.15,
     test_frac: float = 0.15,
 ) -> dict[str, pd.DataFrame]:
-    """Split on ``nct_id`` so one trial's participants never span splits."""
+    """Random group split for the Phase-1 SYNTHETIC per-participant leakage demo.
+
+    Splits the synthetic feature matrix on ``nct_id`` so one trial's participants never span
+    folds. This is **NOT** the Phase-3 held-out evaluation split — that is the temporal,
+    group-disjoint ``models.splits.temporal_group_split`` keyed on ``ref_trial.start_date``.
+    This one only exists to demonstrate group-disjointness of the synthetic feature pipeline.
+    """
     rng = np.random.default_rng(seed)
     trials = np.array(sorted(X["nct_id"].unique()))
     rng.shuffle(trials)
@@ -208,15 +215,8 @@ def assert_no_leakage(
             "A forbidden (outcome/metadata) column is used as a feature."
         )
 
-    # 3. Group split: no nct_id appears in two splits.
-    seen: dict[str, str] = {}
-    for name, df in splits.items():
-        for nct in df["nct_id"].unique():
-            if nct in seen and seen[nct] != name:
-                raise LeakageError(
-                    f"nct_id {nct} appears in both {seen[nct]} and {name} splits."
-                )
-            seen[nct] = name
+    # 3. Group split: no nct_id appears in two splits (shared primitive).
+    assert_group_disjoint({name: df["nct_id"].unique() for name, df in splits.items()})
 
     # 4. Censoring: every retained sample has a known label (0 or 1).
     if not X["label"].isin((0, 1)).all():

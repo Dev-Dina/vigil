@@ -10,7 +10,7 @@ from ingestion.features import (
     assert_no_leakage,
     build_features,
     fit_scaler_on_train,
-    group_split_by_trial,
+    synthetic_group_split_by_trial,
 )
 from ingestion.synthetic import generate
 from ingestion.targets import compute_targets
@@ -45,7 +45,7 @@ def test_no_outcome_derived_feature(clean_frames) -> None:
 def test_group_split_no_trial_overlap_and_passes(clean_frames) -> None:
     cohort = _cohort(clean_frames)
     fm = build_features(cohort.participants, cohort.engagement)
-    splits = group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
+    splits = synthetic_group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
     train = set(splits["train"]["nct_id"])
     val = set(splits["val"]["nct_id"])
     test = set(splits["test"]["nct_id"])
@@ -59,7 +59,7 @@ def test_group_split_no_trial_overlap_and_passes(clean_frames) -> None:
 def test_leakage_check_catches_future_feature(clean_frames) -> None:
     cohort = _cohort(clean_frames)
     fm = build_features(cohort.participants, cohort.engagement)
-    splits = group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
+    splits = synthetic_group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
     # Inject a future observation: push one sample's max feature day to >= t.
     fm.X.loc[fm.X.index[0], "max_feature_day"] = int(fm.X.loc[fm.X.index[0], "t"])
     with pytest.raises(LeakageError, match="future"):
@@ -69,7 +69,7 @@ def test_leakage_check_catches_future_feature(clean_frames) -> None:
 def test_leakage_check_catches_trial_overlap(clean_frames) -> None:
     cohort = _cohort(clean_frames)
     fm = build_features(cohort.participants, cohort.engagement)
-    splits = group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
+    splits = synthetic_group_split_by_trial(fm.X, seed=SYNTHETIC_SEED)
     # Force a trial into both train and test.
     shared = splits["train"]["nct_id"].iloc[0]
     splits["test"] = splits["test"].copy()

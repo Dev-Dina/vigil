@@ -8,6 +8,7 @@ import numpy as np
 
 from models.cards.template import render_model_card
 from models.plots import (
+    lead_time_curve,
     plot_calibration_curve,
     plot_metric_by_group,
     plot_pr_curve,
@@ -64,3 +65,29 @@ def test_plot_helpers_write_non_empty_pngs(tmp_path: Path) -> None:
         assert output.exists()
         assert output.stat().st_size > 0
         assert output.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_lead_time_curve_returns_figure_and_markdown(tmp_path: Path) -> None:
+    probs = np.array(
+        [
+            [0.01, 0.08, 0.20, 0.40],
+            [0.02, 0.04, 0.06, 0.09],
+            [0.30, 0.20, 0.10, 0.05],
+            [0.01, 0.02, 0.03, 0.04],
+        ],
+        dtype=float,
+    )
+    event_times = np.array([3.0, 2.0, np.nan, 3.0], dtype=float)
+    thresholds = np.array([0.05, 0.1, 0.5], dtype=float)
+
+    fig, markdown = lead_time_curve(probs, event_times, thresholds)
+    output = tmp_path / "lead_time.png"
+    fig.savefig(output, format="png")
+
+    assert "Caveat:" in markdown
+    assert "| 0.05 | 1 | 0.667 | 2 |" in markdown
+    assert "| 0.1 | 1 | 0.333 | 1 |" in markdown
+    assert "| 0.5 | NA | 0 | 0 |" in markdown
+    assert output.exists()
+    assert output.stat().st_size > 0
+    assert output.read_bytes().startswith(b"\x89PNG\r\n\x1a\n")

@@ -106,6 +106,63 @@ def plot_metric_by_group(metric_by_group: dict[str, float], out: Path, ylabel: s
     return _save_png(fig, out)
 
 
+def lead_time_curve(
+    probs: ArrayLike,
+    event_times: ArrayLike,
+    thresholds: ArrayLike | None = None,
+) -> tuple[plt.Figure, str]:
+    """Plot threshold-swept lead time and flagged-dropper coverage.
+
+    ``probs`` is expected to be shaped ``(n_subjects, n_steps)`` where each row is
+    a saved sequence of dropout probabilities. ``event_times`` contains the
+    event step for droppers; non-finite values are treated as non-droppers.
+    """
+    probability_sequences = _as_2d_float(probs, "probs")
+    events = _as_1d_float_allowing_nonfinite(event_times, "event_times")
+    _validate_same_length(probability_sequences, events)
+
+    sweep = _threshold_sweep(thresholds)
+    medians, fractions, flagged_counts, dropper_count = _lead_time_points(
+        probability_sequences,
+        events,
+        sweep,
+    )
+
+    fig, ax_lead = _new_figure()
+    ax_flagged = ax_lead.twinx()
+    ax_lead.plot(
+        sweep,
+        medians,
+        color="#2f5f8f",
+        marker="o",
+        linewidth=2,
+        label="Median lead time",
+    )
+    ax_flagged.plot(
+        sweep,
+        fractions,
+        color="#7a6f55",
+        marker="s",
+        linewidth=2,
+        label="Droppers ever flagged",
+    )
+    ax_lead.set(
+        title="Lead Time by Flag Threshold",
+        xlabel="Flag threshold",
+        ylabel="Median lead time (steps)",
+        xlim=(float(np.min(sweep)), float(np.max(sweep))),
+    )
+    ax_flagged.set(ylabel="Fraction of droppers ever flagged", ylim=(0.0, 1.0))
+    ax_lead.grid(True, color="#d9d9d9", linewidth=0.8)
+    for spine in ax_flagged.spines.values():
+        spine.set_color("#666666")
+    fig.legend(loc="upper center", bbox_to_anchor=(0.5, 0.98), ncols=2, frameon=False)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.92))
+
+    markdown = _lead_time_markdown(sweep, medians, fractions, flagged_counts, dropper_count)
+    return fig, markdown
+
+
 def _as_1d_float(values: ArrayLike, name: str) -> np.ndarray[Any, np.dtype[np.float64]]:
     array = np.asarray(values, dtype=float).reshape(-1)
     if array.size == 0:
@@ -113,6 +170,34 @@ def _as_1d_float(values: ArrayLike, name: str) -> np.ndarray[Any, np.dtype[np.fl
         raise ValueError(msg)
     if not np.all(np.isfinite(array)):
         msg = f"{name} must contain only finite values"
+        raise ValueError(msg)
+    return array
+
+
+def _as_1d_float_allowing_nonfinite(
+    values: ArrayLike,
+    name: str,
+) -> np.ndarray[Any, np.dtype[np.float64]]:
+    array = np.asarray(values, dtype=float).reshape(-1)
+    if array.size == 0:
+        msg = f"{name} must not be empty"
+        raise ValueError(msg)
+    return array
+
+
+def _as_2d_float(values: ArrayLike, name: str) -> np.ndarray[Any, np.dtype[np.float64]]:
+    array = np.asarray(values, dtype=float)
+    if array.ndim != 2:
+        msg = f"{name} must be a 2D array of sequence probabilities"
+        raise ValueError(msg)
+    if array.shape[0] == 0 or array.shape[1] == 0:
+        msg = f"{name} must not be empty"
+        raise ValueError(msg)
+    if not np.all(np.isfinite(array)):
+        msg = f"{name} must contain only finite values"
+        raise ValueError(msg)
+    if np.any((array < 0.0) | (array > 1.0)):
+        msg = f"{name} must contain probabilities in [0, 1]"
         raise ValueError(msg)
     return array
 
@@ -166,6 +251,89 @@ def _calibration_points(
             centers[bin_id] = float(np.mean(y_prob[in_bin]))
             observed[bin_id] = float(np.mean(y_true[in_bin]))
     return centers, observed, counts
+
+
+def _threshold_sweep(thresholds: ArrayLike | None) -> np.ndarray[Any, np.dtype[np.float64]]:
+    if thresholds is None:
+        sweep = np.linspace(0.05, 0.5, 10)
+    else:
+        sweep = _as_1d_float(thresholds, "thresholds")
+    if np.any((sweep < 0.05) | (sweep > 0.5)):
+        msg = "thresholds must stay within the 0.05 to 0.5 sweep range"
+        raise ValueError(msg)
+    return np.unique(np.sort(sweep))
+
+
+def _lead_time_points(
+    probs: np.ndarray[Any, np.dtype[np.float64]],
+    event_times: np.ndarray[Any, np.dtype[np.float64]],
+    thresholds: np.ndarray[Any, np.dtype[np.float64]],
+) -> tuple[
+    np.ndarray[Any, np.dtype[np.float64]],
+    np.ndarray[Any, np.dtype[np.float64]],
+    np.ndarray[Any, np.dtype[np.int64]],
+    int,
+]:
+    dropper_mask = np.isfinite(event_times) & (event_times >= 0.0)
+    dropper_count = int(np.sum(dropper_mask))
+    medians = np.full(thresholds.shape, np.nan, dtype=float)
+    fractions = np.zeros(thresholds.shape, dtype=float)
+    flagged_counts = np.zeros(thresholds.shape, dtype=int)
+
+    if dropper_count == 0:
+        return medians, fractions, flagged_counts, dropper_count
+
+    step_count = probs.shape[1]
+    step_ids = np.arange(step_count, dtype=float)
+    for index, threshold in enumerate(thresholds):
+        lead_times = []
+        for sequence, event_time in zip(probs[dropper_mask], event_times[dropper_mask], strict=True):
+            before_event = step_ids <= event_time
+            flagged_steps = np.flatnonzero((sequence >= threshold) & before_event)
+            if flagged_steps.size > 0:
+                lead_times.append(float(event_time - flagged_steps[0]))
+        flagged_counts[index] = len(lead_times)
+        fractions[index] = len(lead_times) / dropper_count
+        if lead_times:
+            medians[index] = float(np.median(np.asarray(lead_times, dtype=float)))
+    return medians, fractions, flagged_counts, dropper_count
+
+
+def _lead_time_markdown(
+    thresholds: np.ndarray[Any, np.dtype[np.float64]],
+    medians: np.ndarray[Any, np.dtype[np.float64]],
+    fractions: np.ndarray[Any, np.dtype[np.float64]],
+    flagged_counts: np.ndarray[Any, np.dtype[np.int64]],
+    dropper_count: int,
+) -> str:
+    lines = [
+        "### Lead-Time Threshold Sweep",
+        "",
+        (
+            "Caveat: lead time is measured on saved sequence-prediction steps, not "
+            "calendar time, and reflects thresholded model flags before observed "
+            "dropout events. It is descriptive only and should not be read as "
+            "causal, prospective warning performance, or a recommendation to "
+            "intervene without workflow validation."
+        ),
+        "",
+        f"Droppers evaluated: {dropper_count}",
+        "",
+        "| threshold | median_lead_time_steps | fraction_droppers_ever_flagged | flagged_droppers |",
+        "| --- | --- | --- | --- |",
+    ]
+    for threshold, median, fraction, flagged_count in zip(
+        thresholds,
+        medians,
+        fractions,
+        flagged_counts,
+        strict=True,
+    ):
+        median_text = "NA" if np.isnan(median) else f"{median:.3g}"
+        lines.append(
+            f"| {threshold:.3g} | {median_text} | {fraction:.3g} | {flagged_count} |"
+        )
+    return "\n".join(lines)
 
 
 def _new_figure() -> tuple[plt.Figure, plt.Axes]:
