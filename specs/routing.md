@@ -12,7 +12,9 @@
 - **`audit_log` is immutable transition history; the routing-state table is current projection.**
   These are distinct. The routing-state table holds the live champion/challenger/shadow mapping
   per regime. `audit_log` records every state transition permanently. Never read `audit_log` to
-  determine the current champion; never treat routing-state as an audit trail.
+  determine the current champion — that is routing-state's role. Reading audit history to
+  identify a prior `model_version` as a rollback target is permitted (it is a history query,
+  not a source-of-current-champion query). Never treat routing-state as an audit trail.
 - **Drift computation is out of scope.** PSI/KS/calibration logic, drift tables, and drift
   dashboards belong to `specs/observability.md`. Routing CONSUMES `DriftPoint.breached`
   (from `specs/api.md`) as an opaque boolean; it does not produce it, store it, or define how it
@@ -48,6 +50,8 @@ routing_state(
   role           text        NOT NULL  CHECK (role IN ('champion', 'challenger', 'shadow')),
   model_version  text        NOT NULL,
   model_card_ref text        NOT NULL,
+  health         text        NOT NULL DEFAULT 'healthy'
+                             CHECK (health IN ('healthy', 'degraded', 'fallback')),
   promoted_at    timestamptz NOT NULL DEFAULT now(),
   promoted_by    uuid        REFERENCES user(id) ON DELETE SET NULL,  -- NULL = system
   UNIQUE (regime, role)
@@ -56,6 +60,12 @@ routing_state(
 
 One row per (regime, role) pair. At most one champion, one challenger, and one shadow per
 regime at any time (enforced by the unique constraint).
+
+`health` backs `ModelStatus.health` in `specs/api.md`. Transitions: `'healthy'` is the default;
+`'fallback'` is set by the drift-triggered fallback rule (see `## Drift-triggered fallback`
+step 3). The `'degraded'` transition (breach observed but fallback not yet triggered) is
+**deferred** — its semantics are owned by `specs/observability.md` and must not be defined or
+set by routing code until that spec is ratified.
 
 ### Resolver contract
 
@@ -116,7 +126,9 @@ consumes; observability defines how the signal is produced.
 
 If the breach signal indicates `breached = True` for the current champion in a regime:
 1. Routing queries `audit_log` for the most recent non-breached promotion record in that regime
-   to identify the last-known-good version.
+   to identify the last-known-good version. (This is a permitted history query per
+   `## Decisions (fixed)` — finding a prior `model_version` to roll back to, not sourcing the
+   current champion.)
 2. It updates `routing_state` to set the champion `model_version` to the last-known-good version.
 3. If no prior champion record exists, the regime is marked `health: "fallback"` in the
    routing-state table and scoring for that regime is suspended pending a manual platform_admin
@@ -211,8 +223,9 @@ challenger feature matrix MUST cause the challenger job to raise, not silently p
 
 ### (iii) Routing-state table is platform-accessible, not sponsor-accessible
 
-- A sponsor-role JWT MUST receive a permission error (or empty result if RLS applies) when
-  attempting to read `routing_state`.
+- A sponsor-role JWT MUST receive an app-layer permission error when attempting to read
+  `routing_state`. (The table carries no RLS; sponsor sessions are blocked because only
+  platform-scoped endpoints query it — there is no RLS empty-result fallback to rely on.)
 - A `platform_admin` JWT MUST be able to read `routing_state` rows.
 - Assert both directions in a single test.
 

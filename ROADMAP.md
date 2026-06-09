@@ -53,7 +53,12 @@ calibration + SHAP · temporal-only eval (PR-AUC, recall@precision, lead-time ga
 FastAPI per api spec · four screens (v0) via scoped layer · routing (regime, champion/challenger, drift-fallback, audited promotion).
 - [~] Frontend v0 scaffolded (`frontend/`): four screens + login + docked assistant, shared `AppNav`/`AppChrome` (assistant gated off `/login`), fake auth context. **All data STUBBED** in `lib/stubs.ts`, typed to `specs/api.md` schemas (`lib/types.ts`). No backend, no real auth, no model routing.
 - [ ] FastAPI endpoints per `specs/api.md`; wire each stub boundary to the scoped data layer (see frontend register below)
+- [x] specs/routing.md ratified on main (routing spec-complete; BUILD pending — see line below)
 - [ ] Model routing (regime, champion/challenger, drift-fallback, audited promotion)
+  - [x] B1 built: routing_state migration + ORM, champion resolver wired in score_trial, t2d seed row
+  - [ ] **B2 dependency — regime not threaded**: `ScoringTriggerIn` has no `regime` field; `trigger_scoring` drops it; resolver hard-raise is unreachable from real API callers until wired through the trigger path
+  - [ ] **B2 dependency — no indication column on `trial`**: operational `trial` table has no `therapeutic_area`/`regime` column; regime must derive from a persisted source (`ref_trial.therapeutic_area` exists in AACT ingestion but was never written to the operational `trial` table — requires migration + backfill decision)
+  - [ ] **B2 seed — ALZ champion**: add a second regime (`alz`) seeded with the structural-only champion (real decomposition, PR-AUC 0.77, NOT a trajectory/synthetic model) to prove multi-regime dispatch end-to-end
 - [x] scoring writeback: `participant_score` behind RLS (no platform bypass), Alembic migration 0002, `ParticipantScore` ORM in `TENANT_TABLES`, `POST /scoring/trigger` (202), `GET /scoring/jobs/{job_id}`, `POST /scoring/inject_events` (DEMO_MODE gated), Arq `score_trial` worker with jitter + `assert_no_outcome_features` + `run_smoke` guards, seed writes demo score rows, 5 isolation invariants in `tests/spine/test_scoring_leakage.py`
 - [~] Dashboard data layer wired: real API client (lib/api.ts) replacing stubs; synthetic badge on watchlist + banner on participant panel; role-gate for ml_admin/auditor; demo loop (inject→poll→refresh→alert); participants router stub with correct 403 guards; synthetic added to CohortRow (api.md + cohort router + types.ts). STOP — user reviews before commit.
 **Done when:** coordinator sees only scoped cohort; routing decisions audited.

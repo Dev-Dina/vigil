@@ -38,25 +38,78 @@ def _demo_scorer(features: Any) -> list[float]:  # noqa: ANN401
     return [rng.random() for _ in range(n)]
 
 
-def _load_scorer(model_version: str | None, ctx: dict[str, Any]) -> tuple[Any, str]:
+def _resolve_champion_version(regime: str) -> str:
+    """Query routing_state for the champion model version; hard error if absent.
+
+    specs/routing.md § Resolver contract: no silent sentinel fallback.
+    """
+    from vigil.repositories import routing as routing_repo
+    from vigil.repositories.session import platform_session
+
+    with platform_session() as session:
+        row = routing_repo.get_champion(session, regime=regime)
+    if row is None:
+        raise ValueError(
+            f"No champion model registered for regime {regime!r}. "
+            "Seed routing_state before scoring. "
+            f"(Demo: regime='t2d', model_version='{_DEMO_MODEL_VERSION}')"
+        )
+    return row.model_version
+
+
+def _load_scorer(
+    model_version: str | None,
+    ctx: dict[str, Any],
+    regime: str | None = None,
+) -> tuple[Any, str]:
     """Return (scorer_callable, resolved_model_version).
 
     Priority:
-    1. ctx['_scorer_override'] — test injection, skips all artifact logic.
-    2. Real artifact at models/t2d/<model_version>.pkl — fail loud if missing.
-    3. Demo mode (settings.demo_mode=True) + no artifact → _demo_scorer sentinel.
+    1. ctx['_scorer_override'] — test injection; skips artifact + registry logic.
+    2. Explicit model_version provided → use it directly.
+    3. regime provided, model_version=None → query routing_state for champion.
+    4. Neither provided in demo_mode → regime='t2d' with a loud warning.
+    5. Neither provided in production → hard error (routing.md § Resolver contract).
     """
     if "_scorer_override" in ctx:
+        # Test injection path: _DEMO_MODEL_VERSION as placeholder version is fine here
+        # since this path never reaches the DB or a real artifact.
         mv = model_version or _DEMO_MODEL_VERSION
         return ctx["_scorer_override"], mv
 
     settings = get_settings()
 
+    if model_version is not None:
+        mv = model_version
+    elif regime is not None:
+        mv = _resolve_champion_version(regime)
+    elif settings.demo_mode:
+        # regime not threaded through from the API yet — tracked B2 dependencies in
+        # ROADMAP.md (ScoringTriggerIn missing regime field; trial table has no
+        # indication column). Fall back to the demo regime so the demo remains
+        # functional. This is NOT a silent fallback: it is logged, demo-mode-only,
+        # and still routes through routing_state (hard error if t2d has no champion).
+        log.warning(
+            "score_trial.regime_unset",
+            extra={
+                "extra": {
+                    "reason": "regime not provided; defaulting to 't2d' in demo mode",
+                    "action": "wire regime from ScoringTriggerIn in B2/B3",
+                }
+            },
+        )
+        mv = _resolve_champion_version("t2d")
+    else:
+        raise ValueError(
+            "score_trial: regime must be provided when model_version is None "
+            "(specs/routing.md § Resolver contract). "
+            "Pass regime=<indication_code> to resolve the champion model."
+        )
+
     # Attempt real artifact load.
     import pickle
     from pathlib import Path
 
-    mv = model_version or _DEMO_MODEL_VERSION
     artifact_path = Path("data/models/t2d") / f"{mv.replace(':', '_')}.pkl"
 
     if artifact_path.exists():
@@ -88,6 +141,7 @@ async def score_trial(
     trial_id: str,
     model_version: str | None = None,
     sponsor_id: str | None = None,
+    regime: str | None = None,
 ) -> dict[str, Any]:
     """Score all participants in a trial and write back risk scores.
 
@@ -113,12 +167,12 @@ async def score_trial(
     )
 
     # 2. Load scorer.
-    scorer, resolved_mv = _load_scorer(model_version, ctx)
+    scorer, resolved_mv = _load_scorer(model_version, ctx, regime=regime)
 
     # 3. Load participants under the sponsor-scoped session.
+    from vigil.db.models import Participant
     from vigil.repositories import scoring as scoring_repo
     from vigil.repositories.session import sponsor_bootstrap_session
-    from vigil.db.models import Participant
 
     if sponsor_id is None:
         raise ValueError(
@@ -159,7 +213,7 @@ async def score_trial(
         }
 
     # 4. Build minimal feature representation (coded_ref as placeholder features).
-    # In production the full ContractTransformer pipeline runs here; for the demo/scoring
+    # In production the full ContractTransformer pipeline runs here; for the demo
     # stub we build a trivial numeric matrix from the participant index.
     import pandas as pd
 
@@ -196,7 +250,8 @@ async def score_trial(
     scores = scorer(feature_df)
     if len(scores) != len(participant_snapshots):
         raise ValueError(
-            f"scorer returned {len(scores)} scores for {len(participant_snapshots)} participants"
+            f"scorer returned {len(scores)} scores for "
+            f"{len(participant_snapshots)} participants"
         )
 
     # 8. Compute risk_band.

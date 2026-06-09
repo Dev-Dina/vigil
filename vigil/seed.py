@@ -1,20 +1,20 @@
-"""Seed for demonstrable isolation (domain.md seed entities; CLAUDE.md sacred-test fixture).
+"""Seed for demonstrable isolation (domain.md entities; CLAUDE.md sacred-test fixture).
 
 Creates:
 - Sponsor A and Sponsor B (tenant roots), each with one trial, one site.
 - One coordinator per sponsor, scoped to that sponsor's site/trial.
 - One PI on Sponsor A's site/trial (site role).
-- One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant) and
-  one CRA/monitor staffed via a grant narrowed to a specific site within Sponsor A's trial.
+- One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant)
+  and one CRA/monitor narrowed to a specific site within Sponsor A's trial.
 - One platform admin and one auditor.
-- One participant per sponsor (so a leak is visible: A's coordinator / the CRO user see
-  only A; nobody crosses the sponsor wall).
+- One participant per sponsor (leak is visible: A's coordinator / CRO user see only A;
+  nobody crosses the sponsor wall).
 
-All writes go through repositories on a platform-privileged session (bootstrap only). Run:
-    uv run python -m vigil.seed
+All writes go through repositories on a platform-privileged session (bootstrap only).
+Run: uv run python -m vigil.seed
 Returns the created ids (printed as JSON) so tests can pin the fixture.
 
-NOTE: passwords here are demo fixtures, sourced from env (SEED_PASSWORD) with a documented
+NOTE: passwords are demo fixtures, sourced from env (SEED_PASSWORD) with a documented
 local default — never a production secret, never logged.
 """
 
@@ -26,7 +26,14 @@ import uuid
 
 from vigil.core.logging import configure_logging, get_logger
 from vigil.core.security import hash_password
-from vigil.db.models import AssignmentGrant, Participant, Site, Trial, User
+from vigil.db.models import (
+    AssignmentGrant,
+    Participant,
+    RoutingState,
+    Site,
+    Trial,
+    User,
+)
 from vigil.domain import Role
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import tenancy as tenancy_repo
@@ -53,8 +60,10 @@ def _add_user(session, *, email, role, **kw) -> User:  # type: ignore[no-untyped
 def _seed_sponsor_tenant_rows(
     sponsor_id: uuid.UUID, prefix: str
 ) -> dict[str, uuid.UUID]:
-    """Insert one trial/site/participant under a sponsor-bound session (RLS binds to that
-    sponsor). UUIDs are minted here and returned so the platform pass can FK to them."""
+    """Insert one trial/site/participant under a sponsor-bound session.
+
+    RLS binds to that sponsor. UUIDs returned so the platform pass can FK to them.
+    """
     trial_id = uuid.uuid4()
     site_id = uuid.uuid4()
     participant_id = uuid.uuid4()
@@ -112,7 +121,7 @@ def seed() -> dict[str, str]:
         participant_b=str(tenant_b["participant"]),
     )
 
-    # 3) Users + the single CRO grant (cross-tenant by design → platform bootstrap session).
+    # 3) Users + single CRO grant (cross-tenant by design → platform bootstrap session).
     with platform_session() as session:
         admin = _add_user(
             session, email="admin@vigil.example", role=Role.PLATFORM_ADMIN
@@ -152,7 +161,7 @@ def seed() -> dict[str, str]:
         )
         ids.update(coordinator_a=str(coord_a.id), coordinator_b=str(coord_b.id))
 
-        # PI on Sponsor A's site/trial (site role: own site & trial, like the coordinator).
+        # PI on Sponsor A's site/trial (site role: own site & trial).
         pi_a = _add_user(
             session,
             email="pi.a@vigil.example",
@@ -202,10 +211,25 @@ def seed() -> dict[str, str]:
         )
         session.flush()
 
-    # 4) Scoring demo rows: one ParticipantScore per sponsor, demonstrating the pipeline.
-    #    These are written under the sponsor-bound session so RLS is enforced on insert.
+    # 4) Scoring demo rows: one ParticipantScore per sponsor.
+    #    Written under sponsor-bound session so RLS is enforced on insert.
     _seed_score(sponsor_a_id, tenant_a, ids, "score_a")
     _seed_score(sponsor_b_id, tenant_b, ids, "score_b")
+
+    # 5) Routing state: champion row for the demo regime (t2d).
+    #    score_trial(model_version=None, regime='t2d') resolves through this row.
+    #    model_version value must match _DEMO_MODEL_VERSION in vigil/workers/tasks.py.
+    with platform_session() as session:
+        session.add(
+            RoutingState(
+                regime="t2d",
+                role="champion",
+                model_version="sequence_v1.0:demo",
+                model_card_ref="data/models/t2d/model_card.md",
+            )
+        )
+        session.flush()
+    ids["routing_t2d_champion"] = "sequence_v1.0:demo"
 
     log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
     return ids

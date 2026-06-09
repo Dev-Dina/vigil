@@ -266,3 +266,31 @@ class ParticipantScore(Base):
     model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     computed_at: Mapped[datetime] = created_at()
+
+
+# ------------------------------------------------------ platform / global routing
+class RoutingState(Base):
+    """Platform-scoped model routing registry. RLS-exempt: global infrastructure tier.
+
+    No sponsor_id — routing decisions apply across all tenants.
+    RLS-exempt per domain.md: routing tables are global infrastructure.
+    Sponsor sessions blocked at app layer. See migration 0003_routing_state.
+    """
+
+    __tablename__ = "routing_state"
+    __table_args__ = (
+        UniqueConstraint("regime", "role", name="uq_routing_state_regime_role"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    regime: Mapped[str] = mapped_column(String(128), nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    health: Mapped[str] = mapped_column(String(16), nullable=False, default="healthy")
+    promoted_at: Mapped[datetime] = created_at()
+    promoted_by: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
