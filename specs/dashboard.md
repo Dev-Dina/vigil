@@ -86,7 +86,7 @@ caller has no API access — suppression is cosmetic only.
 | Auditor | **Hidden** (403 on `GET /cohort`) | **Hidden** (403 on `GET /participants/*`) | N/A | Hidden (403 on `POST /scoring/trigger`) | Monitoring tab (read-only): same endpoints as ML admin | No write actions; read-only on all surfaces |
 
 ### ML-admin surface (model-ops panel)
-Visible only when `role == ml_admin`. Replaces the watchlist entirely; no cohort or
+Visible only when `role == platform_admin`. Replaces the watchlist entirely; no cohort or
 participant surfaces are rendered.
 
 ```

@@ -108,7 +108,7 @@ the RLS-exempt `ref_trial` table (which is public AACT reference data shared acr
 **Roles are capability grants, not a tenancy mechanism.** `sponsor_id` (RLS) is the hard tenant
 boundary; roles define what a user may DO within (or across, for CRO staff) that boundary. A
 CRO user may hold grants spanning multiple sponsors via `assignment_grant` rows — in every case
-the per-sponsor RLS still fires independently. Platform users (`ml_admin`, `auditor`) carry
+the per-sponsor RLS still fires independently. Platform users (`platform_admin`, `auditor`) carry
 `scope: []` and reach only platform/global tables; the sponsor RLS therefore returns zero rows
 for them on any sponsor-scoped table.
 
@@ -225,7 +225,7 @@ the written `participant_score.synthetic` MUST be `True`. A test that injects sy
 and reads back the score via the repository MUST assert `synthetic == True` on the retrieved row.
 
 ### 4. ML-admin cannot read participant-level scoring rows
-An ML-admin JWT (`role: ml_admin`, `scope: []`) MUST receive `403 scope_denied` on
+An ML-admin JWT (`role: platform_admin`, `scope: []`) MUST receive `403 scope_denied` on
 `GET /cohort` and `GET /participants/{id}/risk`. The sponsor-scoped RLS policy returns zero rows
 to `scope: []` users; the API auth dependency must additionally reject the request before
 reaching the repository. Both layers are asserted independently:

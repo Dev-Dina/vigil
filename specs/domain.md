@@ -12,15 +12,20 @@
   assign a scope that is a subset of their own, never outside their tenant.
 
 ## Roles (seven) and scope
-| Role | Level | Scoped to | Key capabilities |
-|---|---|---|---|
-| Study / project manager | CRO | assigned sponsors & trials | view cohort/detail, reports; assigns CRAs/coordinators to trials & follow-ups within own scope; creates/scopes staff within assigned sponsors & trials |
-| CRA / monitor | CRO | assigned sites within trials | view cohort/detail for those sites |
-| Sponsor oversight | Sponsor | own sponsor, all its trials | view coded data & reports; no cross-sponsor; creates/scopes users within own sponsor |
-| Principal investigator | Site | own site & trial | view detail; holds participant identities; manages users at own site |
-| Coordinator (CRC) | Site | own site & trial | daily triage, log interventions; holds identities |
-| ML / platform admin | Platform | models, monitoring, cost; creates top-level sponsor/CRO accounts and their first admins | NO access to identifiable participant data |
-| Auditor | Platform | read-only, all activity | audit logs & dashboards; no actions |
+
+Canonical JWT `role` strings (snake_case; these are the exact strings emitted in tokens and used by all consumers — specs, backend, frontend, tests):
+
+| JWT string | Display name | Level | Scoped to | Key capabilities |
+|---|---|---|---|---|
+| `study_manager` | Study / project manager | CRO | assigned sponsors & trials | view cohort/detail, reports; assigns CRAs/coordinators to trials & follow-ups within own scope; creates/scopes staff within assigned sponsors & trials |
+| `cra` | CRA / monitor | CRO | assigned sites within trials | view cohort/detail for those sites |
+| `sponsor_oversight` | Sponsor oversight | Sponsor | own sponsor, all its trials | view coded data & reports; no cross-sponsor; creates/scopes users within own sponsor |
+| `principal_investigator` | Principal investigator | Site | own site & trial | view detail; holds participant identities; manages users at own site |
+| `coordinator` | Coordinator (CRC) | Site | own site & trial | daily triage, log interventions; holds identities |
+| `platform_admin` | ML / platform admin | Platform | models, monitoring, cost; creates top-level sponsor/CRO accounts and their first admins | NO access to identifiable participant data |
+| `auditor` | Auditor | Platform | read-only, all activity | audit logs & dashboards; no actions |
+
+**Canonical string rule:** `platform_admin` is the JWT role string for the ML / platform admin role. All specs, backend enums, and frontend types must use this exact string. The strings `ml_admin` and `ML_ADMIN` are non-canonical aliases and must not appear in JWTs or authorization checks.
 
 ## Tenancy rules
 

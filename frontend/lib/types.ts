@@ -16,15 +16,15 @@ export interface ErrorOut {
 }
 
 // ---- auth (/auth) ----
-// Seven roles (snake_case enum) — /specs/domain.md. Exact enum strings are
-// owned by the backend; api.md shows "study_manager" as one example.
+// Seven canonical JWT role strings — /specs/domain.md § Roles.
+// Canonical platform/ML-admin string is "platform_admin" (matches domain.py).
 export type Role =
   | "study_manager"
   | "cra"
   | "sponsor_oversight"
   | "principal_investigator"
   | "coordinator"
-  | "ml_admin"
+  | "platform_admin"
   | "auditor"
 
 export interface ScopeTuple {

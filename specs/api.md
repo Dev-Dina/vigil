@@ -29,7 +29,9 @@ asserts scope — it comes only from these verified claims.
 }
 ```
 
-Rules: `role` ∈ the seven roles (`/specs/domain.md`). Exactly one of `home_sponsor_id` /
+Rules: `role` ∈ the seven canonical JWT strings defined in `/specs/domain.md § Roles`
+(`study_manager`, `cra`, `sponsor_oversight`, `principal_investigator`, `coordinator`,
+`platform_admin`, `auditor`). Exactly one of `home_sponsor_id` /
 `home_cro_id` is set, or neither for platform (ML admin, auditor). `scope` is the union of the
 user's `assignment_grant` tuples (CRO) or the single fixed tuple (sponsor/site user); a `null`
 `trial_id`/`site_id` widens to all under the parent. Platform users carry `scope: []` and reach

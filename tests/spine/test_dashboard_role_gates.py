@@ -113,9 +113,7 @@ def test_synthetic_field_present_in_cohort_row(migrated_db: dict[str, str]) -> N
     items = resp.json()["items"]
     # If there are rows, every row must carry the `synthetic` field.
     for row in items:
-        assert "synthetic" in row, (
-            f"CohortRow missing `synthetic` field: {row}"
-        )
+        assert "synthetic" in row, f"CohortRow missing `synthetic` field: {row}"
         assert isinstance(row["synthetic"], bool), (
             f"CohortRow.synthetic must be bool, got {type(row['synthetic'])}: {row}"
         )
