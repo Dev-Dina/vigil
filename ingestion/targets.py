@@ -122,6 +122,7 @@ def _load_eda_summary(path: Path) -> dict[str, Any]:
         "dropout_by_therapeutic_area",
         "dropout_by_sponsor_class",
         "dropout_by_site_count",
+        "dropout_by_enrollment_size",
         "withdrawal_reason_mix",
         "covariate_dropout_associations",
     }
