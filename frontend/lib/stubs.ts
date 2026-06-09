@@ -42,6 +42,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "high",
     top_factors: ["missed_visits", "symptom_burden", "travel_distance"],
     updated_at: ISO("2026-06-04T09:15:00Z"),
+    synthetic: true,
   },
   {
     participant_id: "PT-1002",
@@ -51,6 +52,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "high",
     top_factors: ["adverse_event", "non_compliance"],
     updated_at: ISO("2026-06-04T08:40:00Z"),
+    synthetic: true,
   },
   {
     participant_id: "PT-1003",
@@ -60,6 +62,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "medium",
     top_factors: ["work_schedule", "side_effect_concerns"],
     updated_at: ISO("2026-06-03T14:05:00Z"),
+    synthetic: true,
   },
   {
     participant_id: "PT-1004",
@@ -69,6 +72,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "medium",
     top_factors: ["distance_to_site"],
     updated_at: ISO("2026-06-03T11:20:00Z"),
+    synthetic: true,
   },
   {
     participant_id: "PT-1005",
@@ -78,6 +82,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "low",
     top_factors: ["family_obligations"],
     updated_at: ISO("2026-06-02T16:42:00Z"),
+    synthetic: true,
   },
   {
     participant_id: "PT-1006",
@@ -87,6 +92,7 @@ const COHORT_ROWS: CohortRow[] = [
     risk_band: "low",
     top_factors: ["loss_of_interest"],
     updated_at: ISO("2026-06-02T10:30:00Z"),
+    synthetic: true,
   },
 ]
 
@@ -114,6 +120,7 @@ export async function getParticipant(participantId: string): Promise<Participant
     status: "active",
     risk_score: 0.78,
     enrolled_at: ISO("2026-01-15T00:00:00Z"),
+    synthetic: true, // all seed data is synthetic
     identity: null, // populated ONLY for site roles; null otherwise
   }
 }

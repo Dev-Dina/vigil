@@ -1,4 +1,4 @@
-"""cohort router (api.md /cohort) — ranked, scope-filtered triage list (coded data only)."""
+"""cohort router (api.md /cohort) — ranked, scope-filtered triage list (coded only)."""
 
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ class CohortRow(BaseModel):
     risk_band: str
     top_factors: list[str] = []
     updated_at: datetime
+    synthetic: bool
 
 
 @router.get("", response_model=Page)
@@ -52,7 +53,9 @@ async def list_cohort(
             site_id=r.site_id,
             risk_score=r.risk_score,
             risk_band=r.risk_band,
+            top_factors=r.top_factors,
             updated_at=r.updated_at,
+            synthetic=r.synthetic,
         ).model_dump()
         for r in rows
     ]

@@ -63,6 +63,7 @@ export interface CohortRow {
   risk_band: RiskBand
   top_factors: string[] // explanation tags
   updated_at: string // ISO datetime
+  synthetic: boolean // from participant_score.synthetic; always surfaced
 }
 
 export interface CohortSummary {
@@ -87,6 +88,7 @@ export interface ParticipantDetail {
   status: ParticipantStatus
   risk_score: number // 0..1
   enrolled_at: string // ISO datetime
+  synthetic: boolean // from participant_score.synthetic; always surfaced
   identity: ParticipantIdentity | null
 }
 

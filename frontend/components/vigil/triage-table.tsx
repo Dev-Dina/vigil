@@ -24,6 +24,8 @@ interface TriageTableProps {
   participants: Participant[]
   onCallParticipant: (participantId: string) => void
   className?: string
+  /** Participant IDs whose scores are synthetic — a permanent visible badge is shown. */
+  syntheticIds?: Set<string>
 }
 
 function getStatus(score: number): "calm" | "watch" | "risk" {
@@ -36,6 +38,7 @@ export function TriageTable({
   participants,
   onCallParticipant,
   className,
+  syntheticIds,
 }: TriageTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("riskScore")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
@@ -189,12 +192,19 @@ export function TriageTable({
                     <StatusDot status={status} />
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/participant/${participant.id}`}
-                      className="font-mono text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                    >
-                      {participant.id}
-                    </Link>
+                    <div className="flex flex-col gap-0.5">
+                      <Link
+                        href={`/participant/${participant.id}`}
+                        className="font-mono text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                      >
+                        {participant.id}
+                      </Link>
+                      {syntheticIds?.has(participant.id) && (
+                        <span className="inline-flex w-fit items-center rounded border border-amber-400 bg-amber-50 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                          SYNTHETIC
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">

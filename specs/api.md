@@ -103,6 +103,7 @@ class CohortRow(BaseModel):
     risk_band: Literal["high", "medium", "low"]
     top_factors: list[str]                  # explanation tags
     updated_at: datetime
+    synthetic: bool                         # from participant_score.synthetic; always surfaced
 class CohortSummary(BaseModel):
     total: int
     by_band: dict[Literal["high", "medium", "low"], int]
@@ -125,6 +126,7 @@ class ParticipantDetail(BaseModel):
     status: Literal["active", "completed", "withdrawn", "censored"]
     risk_score: float = Field(ge=0, le=1)
     enrolled_at: datetime
+    synthetic: bool                               # from participant_score.synthetic; always surfaced
     identity: ParticipantIdentity | None = None   # populated ONLY for site roles; null otherwise
 class RiskExplanation(BaseModel):
     participant_id: str

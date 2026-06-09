@@ -6,7 +6,10 @@ import { TriageHeader } from "@/components/vigil/triage-header"
 import { TriageTable, type Participant } from "@/components/vigil/triage-table"
 import { MetricCard } from "@/components/vigil/metric-card"
 import { PulseDivider } from "@/components/vigil/pulse-divider"
-import { getCohort, getCohortSummary } from "@/lib/stubs"
+import { DemoLoop } from "@/components/vigil/demo-loop"
+import { getCohort, getCohortSummary, ApiError } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
+import { PLATFORM_ROLES } from "@/lib/role-gates"
 import type { CohortRow, CohortSummary } from "@/lib/types"
 
 // Trial selector options are UI-local; trial scope ultimately comes from the
@@ -28,24 +31,42 @@ function toRow(r: CohortRow): Participant {
   return {
     id: r.participant_id,
     riskScore: Math.round(r.risk_score * 100),
-    riskTrend: [], // TODO(phase4/5): no CohortRow field; needs a risk-history endpoint
+    riskTrend: [], // TODO(phase5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",
-    daysEnrolled: 0, // TODO(phase4/5): no CohortRow field; comes from ParticipantDetail.enrolled_at
+    daysEnrolled: 0, // TODO(phase5): no CohortRow field; comes from ParticipantDetail.enrolled_at
   }
 }
 
 export default function CohortTriagePage() {
   const router = useRouter()
+  const { me } = useAuth()
   const [selectedTrial, setSelectedTrial] = useState(TRIALS[0].id)
   const [searchQuery, setSearchQuery] = useState("")
   const [rows, setRows] = useState<CohortRow[]>([])
   const [summary, setSummary] = useState<CohortSummary | null>(null)
+  const [scopeDenied, setScopeDenied] = useState(false)
+
+  // Role gate: platform roles (ml_admin / auditor) see a message, not the cohort.
+  const isPlatformRole = me?.role != null && (PLATFORM_ROLES as string[]).includes(me.role)
 
   useEffect(() => {
-    // TODO(phase4/5): wire to GET /cohort and GET /cohort/summary (scope-filtered by trial)
-    getCohort().then((page) => setRows(page.items))
-    getCohortSummary().then(setSummary)
-  }, [selectedTrial])
+    if (isPlatformRole) return
+    setScopeDenied(false)
+    Promise.all([
+      getCohort({ trial_id: selectedTrial }),
+      getCohortSummary({ trial_id: selectedTrial }),
+    ])
+      .then(([page, sum]) => {
+        setRows(page.items)
+        setSummary(sum)
+      })
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 403) {
+          setScopeDenied(true)
+        }
+        // Other errors: leave rows empty; user sees blank table.
+      })
+  }, [selectedTrial, isPlatformRole])
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return rows
@@ -60,8 +81,25 @@ export default function CohortTriagePage() {
   const participants = useMemo(() => filteredRows.map(toRow), [filteredRows])
 
   const handleCallParticipant = (participantId: string) => {
-    // TODO(phase4/5): wire to POST /participants/{participant_id}/interventions { kind: "call" }
     router.push(`/participant/${participantId}`)
+  }
+
+  const handleDemoRefresh = (newRows: CohortRow[], newSummary: CohortSummary) => {
+    setRows(newRows)
+    setSummary(newSummary)
+  }
+
+  // Platform role message replaces the cohort view.
+  if (isPlatformRole || scopeDenied) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="mx-auto max-w-7xl px-6 py-16">
+          <p className="text-muted-foreground">
+            This view is not available for your role.
+          </p>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -103,8 +141,8 @@ export default function CohortTriagePage() {
               summary && summary.mean_risk >= 0.7
                 ? "risk"
                 : summary && summary.mean_risk >= 0.4
-                ? "watch"
-                : "calm"
+                  ? "watch"
+                  : "calm"
             }
           />
         </div>
@@ -114,7 +152,12 @@ export default function CohortTriagePage() {
         <TriageTable
           participants={participants}
           onCallParticipant={handleCallParticipant}
+          syntheticIds={new Set(filteredRows.filter((r) => r.synthetic).map((r) => r.participant_id))}
         />
+
+        <PulseDivider className="my-8" />
+
+        <DemoLoop trialId={selectedTrial} onRefresh={handleDemoRefresh} />
       </main>
     </div>
   )

@@ -14,7 +14,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from vigil.api.routers import admin, auth, cohort, scoring
+from vigil.api.routers import admin, auth, cohort, participants, scoring
 from vigil.core.config import get_settings
 from vigil.core.logging import configure_logging, get_logger, request_id_var, route_var
 
@@ -68,6 +68,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api/v1")
     app.include_router(admin.router, prefix="/api/v1")
     app.include_router(cohort.router, prefix="/api/v1")
+    app.include_router(participants.router, prefix="/api/v1")
     app.include_router(scoring.router, prefix="/api/v1")
 
     @app.get("/healthz")

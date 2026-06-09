@@ -55,6 +55,7 @@ FastAPI per api spec · four screens (v0) via scoped layer · routing (regime, c
 - [ ] FastAPI endpoints per `specs/api.md`; wire each stub boundary to the scoped data layer (see frontend register below)
 - [ ] Model routing (regime, champion/challenger, drift-fallback, audited promotion)
 - [x] scoring writeback: `participant_score` behind RLS (no platform bypass), Alembic migration 0002, `ParticipantScore` ORM in `TENANT_TABLES`, `POST /scoring/trigger` (202), `GET /scoring/jobs/{job_id}`, `POST /scoring/inject_events` (DEMO_MODE gated), Arq `score_trial` worker with jitter + `assert_no_outcome_features` + `run_smoke` guards, seed writes demo score rows, 5 isolation invariants in `tests/spine/test_scoring_leakage.py`
+- [~] Dashboard data layer wired: real API client (lib/api.ts) replacing stubs; synthetic badge on watchlist + banner on participant panel; role-gate for ml_admin/auditor; demo loop (inject→poll→refresh→alert); participants router stub with correct 403 guards; synthetic added to CohortRow (api.md + cohort router + types.ts). STOP — user reviews before commit.
 **Done when:** coordinator sees only scoped cohort; routing decisions audited.
 > Frontend is stubs-only (typed to api.md). Stays [~] until the API exists and the boundaries below are wired through the scoped layer.
 
