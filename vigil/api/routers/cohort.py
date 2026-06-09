@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from vigil.api.deps import ScopeDep
 from vigil.core.schemas import Page
 from vigil.core.scope import Scope, ScopeError
+from vigil.domain import PLATFORM_ROLES
 from vigil.services import cohort_service
 
 router = APIRouter(prefix="/cohort", tags=["cohort"])
@@ -31,6 +32,13 @@ async def list_cohort(
     limit: int = Query(default=50, le=200),
     scope: Scope = ScopeDep,
 ) -> Page:
+    # Platform users (ML admin, auditor) have no sponsor scope; participant-level
+    # access is explicitly forbidden (specs/scoring.md, specs/domain.md).
+    if scope.role in PLATFORM_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="platform roles may not access participant cohort data",
+        )
     try:
         rows = cohort_service.list_cohort(scope, sponsor_id=sponsor_id, limit=limit)
     except ScopeError as exc:

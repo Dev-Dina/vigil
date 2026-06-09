@@ -25,7 +25,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,7 +33,13 @@ from vigil.db.base import Base, created_at, pk, sponsor_fk
 
 # Tenant tables that MUST carry sponsor_id + the default RLS policy. The migration reads
 # this list; adding a tenant table here without RLS is impossible by construction.
-TENANT_TABLES: tuple[str, ...] = ("trial", "site", "participant", "intervention")
+TENANT_TABLES: tuple[str, ...] = (
+    "trial",
+    "site",
+    "participant",
+    "intervention",
+    "participant_score",
+)
 
 
 # --------------------------------------------------------------------------- tenant root
@@ -218,3 +224,45 @@ class AuditLog(Base):
     )
     detail: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = created_at()
+
+
+# ---------------------------------------------------------------- scoring writeback
+class ParticipantScore(Base):
+    """Scoring writeback — tenant-scoped, RLS on sponsor_id (no platform bypass).
+
+    Unique key: (participant_id, model_version) — upsert-safe.
+    synthetic=True on every row from the demo/synthetic cohort.
+    """
+
+    __tablename__ = "participant_score"
+    __table_args__ = (
+        UniqueConstraint(
+            "participant_id", "model_version", name="uq_participant_score"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("participant.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sponsor_id: Mapped[uuid.UUID] = sponsor_fk()
+    trial_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("trial.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    site_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("site.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    risk_score: Mapped[float] = mapped_column(Float, nullable=False)
+    risk_band: Mapped[str] = mapped_column(String(8), nullable=False)
+    top_factors: Mapped[list] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    reasons: Mapped[dict] = mapped_column(JSONB, nullable=False, default=list)
+    model_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    computed_at: Mapped[datetime] = created_at()

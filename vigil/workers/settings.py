@@ -13,7 +13,7 @@ from arq import create_pool
 from arq.connections import RedisSettings
 
 from vigil.core.config import get_settings
-from vigil.workers.tasks import ping
+from vigil.workers.tasks import ping, score_trial
 
 
 def _redis_settings() -> RedisSettings:
@@ -23,7 +23,7 @@ def _redis_settings() -> RedisSettings:
 class WorkerSettings:
     """Consumed by ``arq vigil.workers.settings.WorkerSettings``."""
 
-    functions = [ping]
+    functions = [ping, score_trial]
     redis_settings = _redis_settings()
     max_jobs = 10  # bounded concurrency / backpressure
     max_tries = 5

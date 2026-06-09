@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     db_pool_size: int = 5
     db_max_overflow: int = 10
 
+    # --- demo / scoring ---
+    # set via VIGIL_DEMO_MODE=true; in production read from Vault
+    demo_mode: bool = False
+    # validated against the demo_mode_key in POST /scoring/inject_events
+    demo_secret: str = "vigil-demo-secret"
+
     @cached_property
     def _secrets(self) -> SecretsProvider:
         return build_secrets_provider()

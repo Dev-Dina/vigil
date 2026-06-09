@@ -28,6 +28,7 @@ from vigil.core.logging import configure_logging, get_logger
 from vigil.core.security import hash_password
 from vigil.db.models import AssignmentGrant, Participant, Site, Trial, User
 from vigil.domain import Role
+from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import tenancy as tenancy_repo
 from vigil.repositories.session import platform_session, sponsor_bootstrap_session
 
@@ -201,8 +202,49 @@ def seed() -> dict[str, str]:
         )
         session.flush()
 
+    # 4) Scoring demo rows: one ParticipantScore per sponsor, demonstrating the pipeline.
+    #    These are written under the sponsor-bound session so RLS is enforced on insert.
+    _seed_score(sponsor_a_id, tenant_a, ids, "score_a")
+    _seed_score(sponsor_b_id, tenant_b, ids, "score_b")
+
     log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
     return ids
+
+
+def _seed_score(
+    sponsor_id: uuid.UUID,
+    tenant: dict[str, uuid.UUID],
+    ids: dict[str, str],
+    key: str,
+) -> None:
+    """Write a demo ParticipantScore row under the sponsor-bound session."""
+    with sponsor_bootstrap_session(str(sponsor_id)) as session:
+        row = scoring_repo.upsert_score(
+            session,
+            participant_id=tenant["participant"],
+            sponsor_id=sponsor_id,
+            trial_id=tenant["trial"],
+            site_id=tenant["site"],
+            risk_score=0.82 if key == "score_a" else 0.40,
+            risk_band="high" if key == "score_a" else "medium",
+            top_factors=["missed_visits", "hba1c_trend", "bmi"]
+            if key == "score_a"
+            else ["missed_calls"],
+            reasons=[{"factor": "missed_visits", "contribution": 0.45}]
+            if key == "score_a"
+            else [{"factor": "missed_calls", "contribution": 0.20}],
+            model_version="sequence_v1.0:demo",
+            model_card_ref="data/models/t2d/model_card.md",
+            synthetic=True,
+        )
+        scoring_repo.write_score_audit(
+            session,
+            sponsor_id=sponsor_id,
+            participant_id=tenant["participant"],
+            model_version="sequence_v1.0:demo",
+            synthetic=True,
+        )
+    ids[key] = str(row.id)
 
 
 def main() -> None:
