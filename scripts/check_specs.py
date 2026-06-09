@@ -53,6 +53,15 @@ REQUIRED: dict[str, list[str]] = {
         "## Demo loop",
         "## Synthetic data disclosure",
     ],
+    "routing.md": [
+        "## Decisions (fixed)",
+        "## Regime routing",
+        "## Champion / challenger / shadow",
+        "## Drift-triggered fallback",
+        "## Audited promotion",
+        "## Tenancy",
+        "## Leakage / isolation invariants",
+    ],
 }
 
 

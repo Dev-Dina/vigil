@@ -7,8 +7,8 @@
   path. Any schema drift from the training contract is a hard error, not a silent fallback.
 - **Champion model.** The sequence model (Phase 3, Step 3) is the operational scorer for the
   synthetic T2D demo. The discrete-time hazard and pan-indication baselines are evaluation
-  artifacts only. Model routing (champion / challenger / shadow) is governed by the model registry
-  (`/specs/infra.md`); this spec fixes the contract, not the model identity.
+  artifacts only. Model routing (champion / challenger / shadow) is governed by the routing spec
+  (`/specs/routing.md`); this spec fixes the contract, not the model identity.
 - **Async only.** Scoring runs in the Arq worker; it is NEVER executed synchronously in the
   request path. The request path returns `202 Accepted + job_id` immediately.
 - **Tenancy = sponsor.** In Vigil "tenant" = sponsor (`sponsor_id` in every table). The scoring
