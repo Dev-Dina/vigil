@@ -46,6 +46,13 @@ REQUIRED: dict[str, list[str]] = {
         "## Demo-scope boundary",
         "## Leakage-test invariants",
     ],
+    "dashboard.md": [
+        "## Decisions (fixed)",
+        "## Views",
+        "## Role-scoped rendering",
+        "## Demo loop",
+        "## Synthetic data disclosure",
+    ],
 }
 
 
