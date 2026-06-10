@@ -75,6 +75,11 @@ class Trial(Base):
     sponsor_id: Mapped[uuid.UUID] = sponsor_fk()
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     created_at: Mapped[datetime] = created_at()
+    # Trial-level static context for LSTM scoring (B2b). planned_duration_days is
+    # intentionally here, NOT on participant (spec B2a-spec-2 decision c).
+    n_sites: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    planned_duration_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    phase: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Site(Base):
@@ -130,6 +135,8 @@ class Participant(Base):
     bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
     bmi_baseline_imputed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     sex: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Per-arm context added in B2b (arm_type is per-participant / per-arm; no companion flag).
+    arm_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class Intervention(Base):

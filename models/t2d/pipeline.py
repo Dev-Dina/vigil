@@ -125,6 +125,11 @@ def run_t2d_pipeline(
     seq_pr_auc = panel["test"]["overall"]["pr_auc"]
     median_lead = panel["lead_time"]["median_lead_time_visits"]
 
+    # Persist the LSTM artifact so the scoring worker can load it.
+    # Artifact name: sequence_v1.0:demo → sequence_v1.0_demo.pt (colon→underscore).
+    # The version string is documented here; workers/tasks.py must match _DEMO_MODEL_VERSION.
+    _persist_sequence_artifact(seq, seq_pr_auc, out_root)
+
     # sequence plots
     seq_plots: dict[str, str] = {}
     seq_plots["pr_sequence"] = str(
@@ -308,6 +313,54 @@ def _write_card(
     }
     card = render_model_card(meta)
     (out_root / "model_card.md").write_text(card, encoding="utf-8")
+
+
+def _persist_sequence_artifact(
+    seq: dict[str, Any],
+    seq_pr_auc: float,
+    out_root: Path,
+) -> Path:
+    """Save the trained LSTM to disk and verify the reload reproduces the PR-AUC.
+
+    Artifact dict schema (consumed by vigil/workers/tasks.py LSTMScorer):
+      state_dict, cfg, static_enc, seq_means, seq_stds, seq_dim, static_dim, test_pr_auc
+    """
+    import torch
+
+    from models.t2d.metrics import classifier_panel
+    from models.t2d.sequence import LSTMClassifier, _decision_point_eval, _predict_steps
+
+    artifact_path = out_root / "sequence_v1.0_demo.pt"
+    model: LSTMClassifier = seq["model"]
+    test_t = seq["test_tensors"]
+
+    artifact = {
+        "state_dict": model.state_dict(),
+        "cfg": seq["cfg"],
+        "static_enc": seq["static_enc"],
+        "seq_means": seq["seq_means"],
+        "seq_stds": seq["seq_stds"],
+        "seq_dim": int(test_t.seq.shape[2]),
+        "static_dim": int(test_t.static.shape[1]),
+        "test_pr_auc": float(seq_pr_auc),
+    }
+    torch.save(artifact, artifact_path)
+
+    # Verify reload: reconstruct model and re-score test fold.
+    reloaded = torch.load(str(artifact_path), weights_only=False)
+    model_ck = LSTMClassifier(
+        reloaded["seq_dim"], reloaded["static_dim"], reloaded["cfg"]
+    )
+    model_ck.load_state_dict(reloaded["state_dict"])
+    ck_probs = _predict_steps(model_ck, test_t, batch_size=reloaded["cfg"].batch_size)
+    ck_y, ck_pr, _ = _decision_point_eval(test_t, ck_probs)
+    ck_auc = classifier_panel(ck_y, ck_pr)["pr_auc"]
+    if abs(ck_auc - seq_pr_auc) > 0.001:
+        raise ValueError(
+            f"Reloaded model PR-AUC {ck_auc:.4f} deviates from trained {seq_pr_auc:.4f} "
+            "(state_dict or scaler mismatch — artifact not trustworthy)"
+        )
+    return artifact_path
 
 
 def run_from_disk(

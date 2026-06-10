@@ -117,6 +117,15 @@ def _seed_engagement(
     ]
 
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
+        # Update Trial with static context features from the mapped parquet participant.
+        # planned_duration_days is trial-level (spec B2a-spec-2 decision c) — set here, not on p.
+        t = session.get(Trial, trial_id)
+        assert t is not None, f"demo trial {trial_id} not found in seed"
+        t.n_sites = int(par_row["n_sites"])
+        t.planned_duration_days = planned_duration_days
+        t.phase = str(par_row["phase"]) if pd.notna(par_row["phase"]) else None
+        session.flush()
+
         p = session.get(Participant, participant_id)
         assert p is not None, f"demo participant {participant_id} not found in seed"
         p.age_years = (
@@ -130,6 +139,7 @@ def _seed_engagement(
         p.bmi = float(par_row["bmi"]) if pd.notna(par_row["bmi"]) else None
         p.bmi_baseline_imputed = bool(par_row["bmi_baseline_imputed"])
         p.sex = str(par_row["sex"]) if pd.notna(par_row["sex"]) else None
+        p.arm_type = str(par_row["arm_type"]) if pd.notna(par_row["arm_type"]) else None
         session.flush()
 
         existing_indexes: set[int] = set(

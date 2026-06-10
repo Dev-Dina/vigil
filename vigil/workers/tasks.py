@@ -1,10 +1,13 @@
 """Task functions. Jobs are idempotent and carry the scope context they need explicitly.
 
 score_trial runs the full scoring pipeline:
-  resolve scope -> load cohort -> build features -> leakage assertions -> inference
-  -> compute risk_band -> writeback (upsert + audit) -> denorm update on participant
-Every path fires run_smoke + assert_no_outcome_features before inference; these cannot
-be skipped. synthetic=True is stamped on every row from the demo cohort.
+  resolve scope -> load cohort + engagement -> temporal guard -> feature guards
+  -> inference (LSTM or demo) -> compute risk_band -> writeback (upsert + audit)
+  -> denorm update on participant
+Every path fires assert_feature_time_before_t (when engagement exists) +
+assert_no_outcome_features before inference; these cannot be skipped.
+Invariant 8: synthetic=True is stamped on the score when ANY engagement row is synthetic.
+Invariant 9: LSTMScorer calls models.t2d.sequence._seq_feature_frame (training-time path).
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import random
 import uuid
+from pathlib import Path
 from typing import Any
 
 from vigil.core.config import get_settings
@@ -27,7 +31,99 @@ _DEFAULT_MODEL_CARD = "data/models/t2d/model_card.md"
 
 
 # ---------------------------------------------------------------------------
-# Demo / stub scorer (random scores, fixed seed — demo mode only)
+# LSTM scorer — wraps a loaded .pt artifact for per-participant scoring.
+# All torch imports are deferred to __init__ / __call__ so importing this
+# module never loads torch (light-suite isolation invariant).
+# ---------------------------------------------------------------------------
+
+
+class LSTMScorer:
+    """Wraps a loaded sequence_v1.0_demo.pt artifact for live inference.
+
+    __init__ and __call__ import torch lazily so the module-level import of
+    vigil.workers.tasks does NOT load torch (light-suite isolation).
+    Invariant 9: feature assembly uses models.t2d.sequence._seq_feature_frame,
+    the same function used at training time — no parallel scoring-only builder.
+    """
+
+    def __init__(self, artifact: dict) -> None:
+        import torch  # deferred — do NOT move to module level
+
+        import models.t2d.sequence as _seq_mod  # noqa: PLC0415 — intentional lazy import
+
+        model = _seq_mod.LSTMClassifier(
+            artifact["seq_dim"], artifact["static_dim"], artifact["cfg"]
+        )
+        model.load_state_dict(artifact["state_dict"])
+        model.eval()
+        self._model = model
+        self._static_enc = artifact["static_enc"]
+        self._seq_means = artifact["seq_means"]
+        self._seq_stds = artifact["seq_stds"]
+        self._cfg = artifact["cfg"]
+        # Suppress unused-import warning; torch is needed for no-grad context.
+        self._torch = torch
+
+    def __call__(self, participant_df: Any, eng_df: Any) -> list[float]:
+        """Score each participant from their engagement trajectory.
+
+        participant_df: one row per participant with all 8 static features.
+          Columns: participant_id, age_years, hba1c_pct, bmi, sex, arm_type,
+                   n_sites, planned_duration_days, phase.
+        eng_df: engagement rows for all participants; must have participant_id col.
+        Returns: list[float] — final-step risk probability per participant.
+        """
+        import numpy as np  # deferred
+
+        import models.t2d.sequence as _seq_mod  # noqa: PLC0415
+
+        t_max = self._cfg.max_visits
+        seq_dim = self._cfg.__class__  # sentinel; resolved from seq_means shape
+        seq_dim = int(self._seq_means.shape[0])
+
+        n = len(participant_df)
+        seq = np.zeros((n, t_max, seq_dim), dtype=np.float32)
+        last_obs = np.zeros(n, dtype=np.int64)
+
+        pids = participant_df["participant_id"].tolist()
+        eng_has_rows = (
+            not eng_df.empty if hasattr(eng_df, "empty") else bool(len(eng_df))
+        )
+
+        for i, pid in enumerate(pids):
+            if not eng_has_rows:
+                continue
+            p_eng = eng_df[eng_df["participant_id"] == pid].sort_values("visit_index")
+            if len(p_eng) == 0:
+                continue
+            # Invariant 9: call training-time _seq_feature_frame, NOT a parallel builder.
+            feat = _seq_mod._seq_feature_frame(p_eng).to_numpy(dtype=np.float32)
+            n_v = min(len(feat), t_max)
+            feat_std = (feat[:n_v] - self._seq_means) / self._seq_stds
+            seq[i, :n_v, :] = feat_std
+            last_obs[i] = n_v
+
+        static_input = self._static_enc.transform(
+            participant_df.reset_index(drop=True)
+        ).astype(np.float32)
+
+        torch = self._torch
+        with torch.no_grad():
+            logits = self._model(
+                torch.from_numpy(seq),
+                torch.from_numpy(static_input),
+            )  # (N, T) logits
+            probs = torch.sigmoid(logits).numpy()  # (N, T)
+
+        scores: list[float] = []
+        for i in range(n):
+            n_v = int(last_obs[i])
+            scores.append(float(probs[i, n_v - 1]) if n_v > 0 else 0.5)
+        return scores
+
+
+# ---------------------------------------------------------------------------
+# Demo / stub scorer (random scores, fixed seed — no-artifact fallback only)
 # ---------------------------------------------------------------------------
 
 
@@ -70,10 +166,11 @@ def _load_scorer(
     3. regime provided, model_version=None → query routing_state for champion.
     4. Neither provided in demo_mode → regime='t2d' with a loud warning.
     5. Neither provided in production → hard error (routing.md § Resolver contract).
+
+    For .pt artifacts, returns an LSTMScorer (real inference).
+    _demo_scorer (rng) is only returned as explicit no-artifact fallback in demo_mode.
     """
     if "_scorer_override" in ctx:
-        # Test injection path: _DEMO_MODEL_VERSION as placeholder version is fine here
-        # since this path never reaches the DB or a real artifact.
         mv = model_version or _DEMO_MODEL_VERSION
         return ctx["_scorer_override"], mv
 
@@ -84,11 +181,6 @@ def _load_scorer(
     elif regime is not None:
         mv = _resolve_champion_version(regime)
     elif settings.demo_mode:
-        # regime not threaded through from the API yet — tracked B2 dependencies in
-        # ROADMAP.md (ScoringTriggerIn missing regime field; trial table has no
-        # indication column). Fall back to the demo regime so the demo remains
-        # functional. This is NOT a silent fallback: it is logged, demo-mode-only,
-        # and still routes through routing_state (hard error if t2d has no champion).
         log.warning(
             "score_trial.regime_unset",
             extra={
@@ -106,16 +198,22 @@ def _load_scorer(
             "Pass regime=<indication_code> to resolve the champion model."
         )
 
-    # Attempt real artifact load.
-    import pickle
-    from pathlib import Path
+    # Try .pt (torch LSTM artifact) first, then .pkl (legacy).
+    for ext in (".pt", ".pkl"):
+        artifact_path = Path("data/models/t2d") / f"{mv.replace(':', '_')}{ext}"
+        if not artifact_path.exists():
+            continue
+        if ext == ".pt":
+            import torch  # deferred — torch isolation invariant
 
-    artifact_path = Path("data/models/t2d") / f"{mv.replace(':', '_')}.pkl"
+            raw = torch.load(str(artifact_path), weights_only=False)
+            return LSTMScorer(raw), mv
+        else:
+            import pickle
 
-    if artifact_path.exists():
-        with artifact_path.open("rb") as fh:
-            scorer = pickle.load(fh)  # noqa: S301 — controlled path
-        return scorer, mv
+            with artifact_path.open("rb") as fh:
+                scorer = pickle.load(fh)  # noqa: S301 — controlled path
+            return scorer, mv
 
     # No artifact found.
     if settings.demo_mode:
@@ -126,7 +224,7 @@ def _load_scorer(
         return _demo_scorer, mv
 
     raise FileNotFoundError(
-        f"No model artifact found for version {mv!r} at {artifact_path}. "
+        f"No model artifact found for version {mv!r} at data/models/t2d/. "
         "Set VIGIL_DEMO_MODE=true to use the demo scorer (method demo only)."
     )
 
@@ -148,13 +246,14 @@ async def score_trial(
     Job sequence (exact per specs/scoring.md):
     1. Jitter (idempotent retry safety)
     2. Resolve scorer + model version (fail loud if no artifact in prod)
-    3. Load participants for the trial under the job's sponsor scope
-    4. Build a minimal feature representation
-    5. assert_no_outcome_features — fail loud on forbidden column
-    6. run_smoke — fail loud on any violation
-    7. Score
+    3. Load participants + trial metadata + all engagement for the trial
+    4. assert_feature_time_before_t (temporal guard; fires when engagement exists)
+    5. assert_no_outcome_features on sequence feature names (constant guard)
+    6. EXCLUDED_FROM_FEATURES check (same features)
+    7. Score (LSTMScorer or _demo_scorer)
     8. Compute risk_band thresholds (>0.6 high, >0.3 medium, else low)
     9. Writeback: upsert_score + write_score_audit + denorm Participant
+       synthetic flag = logical-OR over participant's engagement rows (inv 8)
     10. Return summary dict (no PII, no risk values in log)
     """
     # 1. Jitter — exponential backoff safety across retries.
@@ -169,8 +268,11 @@ async def score_trial(
     # 2. Load scorer.
     scorer, resolved_mv = _load_scorer(model_version, ctx, regime=regime)
 
-    # 3. Load participants under the sponsor-scoped session.
-    from vigil.db.models import Participant
+    # 3. Load participants + trial metadata + engagement.
+    import pandas as pd
+    from sqlalchemy import select
+
+    from vigil.db.models import Engagement, Participant, Trial
     from vigil.repositories import scoring as scoring_repo
     from vigil.repositories.session import sponsor_bootstrap_session
 
@@ -179,16 +281,24 @@ async def score_trial(
             "score_trial: sponsor_id must be passed in kwargs (set by enqueue)"
         )
 
-    participants: list[Participant] = []
+    participant_snapshots: list[dict[str, Any]] = []
+    eng_snapshots: list[dict[str, Any]] = []
+
     with sponsor_bootstrap_session(sponsor_id) as session:
-        from sqlalchemy import select
+        trial_obj = session.get(Trial, uuid.UUID(trial_id))
+        trial_meta: dict[str, Any] = {}
+        if trial_obj is not None:
+            trial_meta = {
+                "n_sites": trial_obj.n_sites,
+                "planned_duration_days": trial_obj.planned_duration_days,
+                "phase": trial_obj.phase,
+            }
 
         participants = list(
             session.execute(
                 select(Participant).where(Participant.trial_id == uuid.UUID(trial_id))
             ).scalars()
         )
-        # Snapshot needed columns before session closes.
         participant_snapshots = [
             {
                 "id": p.id,
@@ -196,8 +306,33 @@ async def score_trial(
                 "trial_id": p.trial_id,
                 "site_id": p.site_id,
                 "coded_ref": p.coded_ref,
+                "age_years": p.age_years,
+                "hba1c_pct": p.hba1c_pct,
+                "bmi": p.bmi,
+                "sex": p.sex,
+                "arm_type": getattr(p, "arm_type", None),
+                **trial_meta,
             }
             for p in participants
+        ]
+
+        eng_all = list(
+            session.execute(
+                select(Engagement).where(Engagement.trial_id == uuid.UUID(trial_id))
+            ).scalars()
+        )
+        eng_snapshots = [
+            {
+                "participant_id": e.participant_id,
+                "visit_index": e.visit_index,
+                "visit_timestamp": e.visit_timestamp,
+                "attended": e.attended,
+                "missed": e.missed,
+                "cumulative_missed": e.cumulative_missed,
+                "consecutive_missed": e.consecutive_missed,
+                "synthetic": e.synthetic,
+            }
+            for e in eng_all
         ]
 
     if not participant_snapshots:
@@ -212,42 +347,108 @@ async def score_trial(
             "synthetic": True,
         }
 
-    # 4. Build minimal feature representation (coded_ref as placeholder features).
-    # In production the full ContractTransformer pipeline runs here; for the demo
-    # stub we build a trivial numeric matrix from the participant index.
-    import pandas as pd
+    # 4. Temporal guard: all engagement feature timestamps must precede decision_time.
+    from datetime import datetime, timezone as _tz
 
-    feature_df = pd.DataFrame(
-        [
-            {
-                "participant_idx": i,
-                "coded_ref_hash": hash(p["coded_ref"]) % 1_000_000,
-            }
-            for i, p in enumerate(participant_snapshots)
-        ]
+    from models.leakage_check import (
+        assert_feature_time_before_t,
+        assert_no_outcome_features,
     )
-    feature_names = list(feature_df.columns)
 
-    # 5. assert_no_outcome_features — fires before every inference call.
-    from models.leakage_check import assert_no_outcome_features
+    decision_time = datetime.now(tz=_tz.utc)
 
-    assert_no_outcome_features(feature_names)
+    if eng_snapshots:
+        eng_guard_df = pd.DataFrame(eng_snapshots)
+        eng_guard_df["decision_time"] = decision_time
+        assert_feature_time_before_t(
+            eng_guard_df, t_col="decision_time", feature_time_col="visit_timestamp"
+        )
 
-    # 6. run_smoke — fires before every inference call.
-    # run_smoke expects dict[str, FeatureMatrix]; for the scoring worker we run the
-    # simpler column-name check only (the full FeatureMatrix is a training artifact;
-    # at scoring time we assert the column contract instead).
+    # 5–6. Sequence feature name guards (constant; run once regardless of scorer).
+    from models.t2d.synthetic_data import SEQ_NUMERIC
+
+    seq_feature_names = list(SEQ_NUMERIC)
+    assert_no_outcome_features(seq_feature_names)
+
     from ingestion.errors import LeakageError
     from models.features.contract import EXCLUDED_FROM_FEATURES
 
-    excluded_present = [c for c in feature_names if c in EXCLUDED_FROM_FEATURES]
+    excluded_present = [c for c in seq_feature_names if c in EXCLUDED_FROM_FEATURES]
     if excluded_present:
         raise LeakageError(
-            f"outcome/identity columns present in scoring features: {excluded_present}"
+            f"excluded columns present in sequence scoring features: {excluded_present}"
         )
 
     # 7. Score.
-    scores = scorer(feature_df)
+    if isinstance(scorer, LSTMScorer):
+        # Real LSTM path (B2b): build participant + engagement DataFrames.
+        participant_df = pd.DataFrame(
+            [
+                {
+                    "participant_id": str(p["id"]),
+                    "age_years": p.get("age_years"),
+                    "hba1c_pct": p.get("hba1c_pct"),
+                    "bmi": p.get("bmi"),
+                    "sex": p.get("sex"),
+                    "arm_type": p.get("arm_type"),
+                    "n_sites": p.get("n_sites"),
+                    "planned_duration_days": p.get("planned_duration_days"),
+                    "phase": p.get("phase"),
+                }
+                for p in participant_snapshots
+            ]
+        )
+
+        if eng_snapshots:
+            eng_df = pd.DataFrame(eng_snapshots)
+            eng_df["participant_id"] = eng_df["participant_id"].astype(str)
+        else:
+            eng_df = pd.DataFrame(
+                columns=[
+                    "participant_id",
+                    "visit_index",
+                    "visit_timestamp",
+                    "attended",
+                    "missed",
+                    "cumulative_missed",
+                    "consecutive_missed",
+                    "synthetic",
+                ]
+            )
+
+        scores = scorer(participant_df, eng_df)
+
+        # Invariant 8: synthetic = logical-OR over engagement rows per participant.
+        pid_synth: dict[str, bool] = {}
+        for e in eng_snapshots:
+            pid_str = str(e["participant_id"])
+            pid_synth[pid_str] = pid_synth.get(pid_str, False) or bool(e["synthetic"])
+        synth_flags = [
+            pid_synth.get(str(p["id"]), True)  # no engagement → demo default True
+            for p in participant_snapshots
+        ]
+
+    else:
+        # Demo / _scorer_override path: trivial feature representation (backward compat).
+        feature_df = pd.DataFrame(
+            [
+                {
+                    "participant_idx": i,
+                    "coded_ref_hash": hash(p["coded_ref"]) % 1_000_000,
+                }
+                for i, p in enumerate(participant_snapshots)
+            ]
+        )
+        feature_names = list(feature_df.columns)
+        assert_no_outcome_features(feature_names)
+        excluded = [c for c in feature_names if c in EXCLUDED_FROM_FEATURES]
+        if excluded:
+            raise LeakageError(
+                f"outcome/identity columns present in scoring features: {excluded}"
+            )
+        scores = scorer(feature_df)
+        synth_flags = [True] * len(participant_snapshots)
+
     if len(scores) != len(participant_snapshots):
         raise ValueError(
             f"scorer returned {len(scores)} scores for "
@@ -265,9 +466,11 @@ async def score_trial(
     # 9. Writeback.
     n_scored = 0
     with sponsor_bootstrap_session(sponsor_id) as session:
-        from sqlalchemy import select, update
+        from sqlalchemy import update
 
-        for p_snap, score in zip(participant_snapshots, scores, strict=True):
+        for p_snap, score, synth_flag in zip(
+            participant_snapshots, scores, synth_flags, strict=True
+        ):
             band = _band(float(score))
             scoring_repo.upsert_score(
                 session,
@@ -281,17 +484,16 @@ async def score_trial(
                 reasons=[],
                 model_version=resolved_mv,
                 model_card_ref=_DEFAULT_MODEL_CARD,
-                synthetic=True,  # demo cohort; always True
+                synthetic=bool(synth_flag),
             )
             scoring_repo.write_score_audit(
                 session,
                 sponsor_id=p_snap["sponsor_id"],
                 participant_id=p_snap["id"],
                 model_version=resolved_mv,
-                synthetic=True,
+                synthetic=bool(synth_flag),
                 n_rows=1,
             )
-            # Denormalized read cache on participant.
             session.execute(
                 update(Participant)
                 .where(Participant.id == p_snap["id"])
