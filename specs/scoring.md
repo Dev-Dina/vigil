@@ -184,6 +184,128 @@ class ScoringJobStatus(BaseModel):
 
 `JobAccepted` reuses the type already defined in `/specs/api.md`.
 
+## Engagement (visit trajectory) input
+
+### Engagement table (prose schema)
+
+The `engagement` table holds per-participant, per-visit trajectory rows that back the sequence
+model's input tensors. It is a **tenant-scoped operational table** — not `ref_`-prefixed, not
+RLS-exempt — and follows the same sponsor-boundary rules as `participant_score`.
+
+Columns:
+- `id` — UUID primary key
+- `sponsor_id` — UUID NOT NULL; the hard tenant key, FK to `sponsor`; present on every row
+  for RLS enforcement
+- `participant_id` — UUID NOT NULL; FK to `participant`; cascade delete on participant removal
+- `trial_id` — UUID NOT NULL; redundant denorm (FK to `trial`) carried for index efficiency on
+  the `(sponsor_id, trial_id)` hot-path query; consistent with the `participant_score` pattern
+- `site_id` — UUID NOT NULL; redundant denorm (FK to `site`); same rationale
+- `visit_index` — integer NOT NULL ≥ 0; zero-based position in the participant's scheduled visit
+  sequence; this is the sequence model's time axis
+- `visit_timestamp` — timestamptz NOT NULL; scheduled or actual visit date; required for
+  `assert_feature_time_before_t` leakage enforcement at scoring time
+- `attended` — bool NOT NULL; whether the participant attended this visit
+- `missed` — bool NOT NULL; inverse of `attended`; stored redundantly for read clarity
+- `cumulative_missed` — integer NOT NULL ≥ 0; running count of missed visits through and
+  including this visit
+- `consecutive_missed` — integer NOT NULL ≥ 0; length of the consecutive-miss run ending at or
+  before this visit; resets to zero on an attended visit
+- `synthetic` — bool NOT NULL DEFAULT false; `True` on every row originating from the demo
+  injection path or the synthetic T2D parquet; propagates to `participant_score.synthetic` for
+  any score derived from this engagement
+
+Unique key: `(participant_id, visit_index)` — exactly one row per participant per scheduled
+visit slot.
+
+**Static covariates home.** The LSTM's static context — `age_years`, `hba1c_pct`, `bmi`,
+`sex`, `phase`, `arm_type`, `n_sites`, `planned_duration_days` — is split between two sources.
+The per-participant fields (`age_years`, `hba1c_pct`, `bmi`, `sex`) live on the **`participant`
+table** (the enrollment record). `planned_duration_days` is **trial-level**: it is derived from
+`primary_completion_date − start_date` and lives on (or is read from) the `trial` record at
+feature-assembly time; it is NOT copied onto the participant row and carries no
+`*_baseline_imputed` flag. `phase`, `arm_type`, and `n_sites` are similarly trial/arm-level.
+Feature assembly reads per-participant covariates from `participant`, trial/arm context from
+`trial`, and trajectory from `engagement`; there is no fourth source. The single-feature-path
+principle requires all three reads to be gated by the same `ContractTransformer` fit artifact
+and leakage assertions as training. The `participant` table therefore requires additional columns
+(`age_years`, `hba1c_pct`, `bmi`, `sex`, and the associated `*_baseline_imputed` provenance
+flags for the imputed-capable subset) to be added in B2a-build alongside the engagement
+migration.
+
+**Covariate provenance invariant (hard).** Every imputed-capable covariate added to
+`participant` in B2a-build MUST have a companion boolean column `<col>_baseline_imputed` on the
+same row. `True` means the value was imputed (literature-prior or otherwise non-measured);
+`False` means it is a real measured value from the source record. A covariate value present
+without its companion provenance flag is a **spec violation**, not a nice-to-have: presenting an
+imputed placeholder as a measured patient value is the provenance collapse the entire platform
+guards against (per PHASE3_CARD: BMI ~80% imputed, HbA1c ~55% imputed on the synthetic cohort).
+
+The imputed-capable set is exactly these three participant columns:
+
+- `age_years` → companion `age_years_baseline_imputed`
+- `hba1c_pct` → companion `hba1c_pct_baseline_imputed`
+- `bmi` → companion `bmi_baseline_imputed`
+
+`sex` is always-real: it is a categorical demographic field (male/female/unknown) recorded
+directly from the enrollment form; it requires no companion flag. `planned_duration_days` is
+trial-level (NOT participant-level); it never lives on the participant row and carries no flag.
+B2a-build must create companion flags only for the three columns above, no more, no fewer.
+
+This provenance pairing is part of the single-feature-path contract. The `ContractTransformer`
+and feature-assembly code may consume the covariate value, but the `*_baseline_imputed` flag is
+**NEVER dropped silently**. The flag itself is provenance metadata — it is NOT a predictor fed
+to the model and NOT a leakage shortcut to the outcome. It must be excluded from the model's
+feature matrix via `EXCLUDED_FROM_FEATURES` (or the equivalent ContractTransformer exclusion
+list), consistent with the same discipline that excludes `synthetic` and all outcome columns.
+
+### Tenancy
+
+`engagement` holds per-sponsor participant data. It is **sponsor-RLS'd under the same guarantee
+as `participant_score`**: FORCE RLS, transaction-scoped GUC set before every query, fail-closed
+on null sponsor (query returns zero rows), no application-layer `WHERE sponsor_id = $1` as the
+hard guarantee — Postgres RLS is the only guarantee. `engagement` is **NOT** on the RLS-exempt
+list from `/specs/domain.md`. It is a member of `TENANT_TABLES` in the ORM and migration layer,
+alongside `trial`, `site`, `participant`, `intervention`, and `participant_score`.
+
+### Feature-time and leakage discipline
+
+`engagement` is the most leakage-prone surface in the system: it contains visit-timed
+observations, and the prediction horizon *t* changes per decision point. The following rules are
+non-negotiable for any feature built from engagement:
+
+1. **Future-exclusion**: features built for a prediction at horizon *t* use ONLY engagement rows
+   where `visit_index < t` (equivalently, `visit_timestamp < scheduled_time(t)`).
+   `assert_feature_time_before_t` fires before every inference call and enforces this.
+2. **Single feature path**: the live scoring path builds engagement features through the SAME
+   `ContractTransformer` fit artifact, `build_tensors`, and `_seq_feature_frame` as training.
+   There is no demo-only or scoring-only parallel feature path.
+3. **Leakage guard order**: `assert_feature_time_before_t` → `run_smoke` →
+   `assert_no_outcome_features` — in that exact order, before every inference call.
+4. **Forbidden engagement features**: `dropped`, `censored`, `dropout_visit_index`,
+   `dropout_reason` (outcome columns), and `miss_probability` (the generator's latent hazard)
+   are NEVER engagement features. `assert_no_outcome_features` enforces this.
+
+### Synthetic provenance
+
+Every engagement row from the demo injection path or the synthetic T2D parquet carries
+`synthetic = True`. Any score derived from synthetic engagement MUST write
+`participant_score.synthetic = True`. This propagation is end-to-end and non-optional: a
+participant whose entire engagement history is synthetic never produces a score labeled
+`synthetic = False`. The scoring worker reads `engagement.synthetic` across the trial's rows,
+takes the logical OR, and stamps the score output.
+
+### Seed / demo bridge (open question)
+
+Demo participants in the operational DB (UUID-keyed `coded_ref` strings such as `"A-0001"`) have
+no engagement rows and no mapping to the AACT-style `participant_id` values in
+`data/synthetic/t2d/engagement.parquet`. B2a-build must define an explicit bridge: either (a) a
+seed script that selects a representative subset of synthetic parquet rows and inserts them into
+the `engagement` table linked to the demo participants' UUIDs, or (b) a deterministic mapping
+function that assigns a synthetic parquet participant's trajectory to each demo DB participant by
+index or stable hash. **The shape of that bridge — which synthetic participants map to which demo
+UUIDs, and how — is an open question for the build author to resolve and document before
+committing B2a-build.** It must not be resolved silently.
+
 ## Demo-scope boundary
 
 ### Only one demo-scoped component
@@ -241,3 +363,51 @@ any mutating scoring call:
 
 An auditor MAY successfully call read-only endpoints (`GET /monitoring/*`, `GET /audit_log`).
 A test MUST assert both directions: the write rejection AND the read success.
+
+The following invariants are obligations for **B2a-build** (the engagement table migration and
+seed bridge). They extend the sacred leakage suite with the engagement-specific surface.
+
+### 6. Cross-tenant isolation on engagement rows
+The sacred cross-tenant test applied to `engagement`: create engagement rows under Sponsor A.
+Authenticate as Sponsor B. Assert:
+- A direct DB query under the Sponsor B session returns zero engagement rows for Sponsor A's
+  participants.
+- `GET /cohort` and `GET /participants/{id}/risk` return no data derived from Sponsor A's
+  engagement, even if Sponsor A and B share the same trial structure.
+
+### 7. Feature-time leakage assertion fires on post-horizon engagement
+Build a feature matrix that includes an engagement row with `visit_index ≥ t` (the prediction
+horizon). Assert that `assert_feature_time_before_t` raises rather than silently passing. The
+scorer MUST NOT produce a score from future-leaking inputs; this failure must be loud.
+
+### 8. Synthetic engagement propagates to synthetic-labeled scores
+Insert engagement rows with `synthetic = True` for a demo participant. Trigger scoring. Assert
+that the resulting `participant_score.synthetic` is `True`. Insert engagement rows with
+`synthetic = False` for a separate participant and assert the score is labeled `synthetic = False`.
+Both propagation directions are tested.
+
+### 9. Single-path: live scoring uses the training-time engagement feature assembly
+The scoring worker's feature assembly for engagement-backed participants must call `build_tensors`
+and `_seq_feature_frame` from `models/t2d/sequence.py` (or the equivalent committed
+ContractTransformer path), not a demo-only parallel path. A test that mocks the parallel path
+(bypassing the contract) MUST NOT exist; a test that asserts the training-contract functions are
+called during scoring MUST exist.
+
+### 10. Covariate provenance flags are mandatory and honest
+This invariant is a B2a-build obligation; the tests come in B2a-build (B2a-1).
+
+- A test MUST assert that for every imputed-capable participant covariate (`age_years`,
+  `hba1c_pct`, `bmi`) the companion `<col>_baseline_imputed` column is present in both the
+  Alembic migration DDL and the `Participant` ORM model. A covariate column present without its
+  companion flag fails the test.
+- A test MUST cover both flag directions: a synthetically-imputed value carries
+  `<col>_baseline_imputed = True` and a value from a real source record carries
+  `<col>_baseline_imputed = False`. Both directions must be exercised so the flag cannot
+  default-stamp every row one way.
+- The `*_baseline_imputed` flags MUST NOT appear in the model's feature matrix as predictors.
+  Each `*_baseline_imputed` column name must be present in `EXCLUDED_FROM_FEATURES` (or the
+  equivalent ContractTransformer exclusion list). This is consistent with, and an extension of,
+  the `assert_no_outcome_features` discipline that governs all non-predictor columns.
+- `planned_duration_days` is trial-level; it carries no companion flag and is never added to
+  the `participant` table. Any test checking for `planned_duration_days_baseline_imputed` on
+  `participant` MUST NOT exist.

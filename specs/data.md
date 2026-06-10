@@ -75,9 +75,13 @@ coerced or dropped. Cleaned output is Parquet under `data/clean/`. Three tables.
 
 **Naming rule (stated once, applies everywhere).** AACT-derived tables are prefixed **`ref_`** —
 they are **public clinical-trials reference data, RLS-exempt, contain no PHI**, and are distinct
-from the operational tenant-scoped entities (`trial`, `site`, `participant`, …) which are
-**sponsor-scoped with RLS on**. The `ref_` prefix is the visible marker of that boundary: a
-`ref_*` table is never sponsor-keyed and an operational table never lives in the AACT pipeline.
+from the operational tenant-scoped entities (`trial`, `site`, `participant`, `engagement`,
+`intervention`, `participant_score`, …) which are **sponsor-scoped with RLS on**. The `ref_`
+prefix is the visible marker of that boundary: a `ref_*` table is never sponsor-keyed and an
+operational table never lives in the AACT pipeline. The `engagement` table — per-participant
+visit trajectories backing the sequence model — is explicitly not RLS-exempt; its schema,
+tenancy contract, and leakage obligations are specified in
+`/specs/scoring.md ## Engagement (visit trajectory) input`.
 
 **Enum format (CTGOV2).** The pinned hosted-AACT snapshot serves ClinicalTrials.gov's **CTGOV2**
 enum codes — uppercased machine tokens (`INTERVENTIONAL`, `PHASE2`, `RANDOMIZED`, `ALL`,

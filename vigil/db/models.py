@@ -18,6 +18,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
+    DateTime,
     Float,
     ForeignKey,
     Integer,
@@ -37,6 +38,7 @@ TENANT_TABLES: tuple[str, ...] = (
     "trial",
     "site",
     "participant",
+    "engagement",
     "intervention",
     "participant_score",
 )
@@ -113,6 +115,21 @@ class Participant(Base):
     risk_band: Mapped[str] = mapped_column(String(8), nullable=False, default="low")
     enrolled_at: Mapped[datetime] = created_at()
     created_at: Mapped[datetime] = created_at()
+    # Clinical covariates added in B2a-1. Nullable: existing rows have no recorded values.
+    # Imputed-capable columns travel with their companion *_baseline_imputed flag.
+    # True = imputed (literature-prior); False = real measured value from source record.
+    # sex is always-real categorical; no companion flag (scoring.md § Static covariates home).
+    age_years: Mapped[float | None] = mapped_column(Float, nullable=True)
+    age_years_baseline_imputed: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+    hba1c_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hba1c_pct_baseline_imputed: Mapped[bool | None] = mapped_column(
+        Boolean, nullable=True
+    )
+    bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    bmi_baseline_imputed: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    sex: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
 
 class Intervention(Base):
@@ -266,6 +283,51 @@ class ParticipantScore(Base):
     model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     computed_at: Mapped[datetime] = created_at()
+
+
+# ---------------------------------------------------------------- engagement (B2a-1)
+class Engagement(Base):
+    """Per-participant visit trajectory rows backing the LSTM sequence model.
+
+    Tenant-scoped (sponsor_id on every row), RLS-enforced, NOT RLS-exempt.
+    Unique key: (participant_id, visit_index) — one row per participant per visit slot.
+    synthetic=True on rows from the demo injection path or synthetic T2D parquet.
+    See specs/scoring.md § Engagement (visit trajectory) input.
+    """
+
+    __tablename__ = "engagement"
+    __table_args__ = (
+        UniqueConstraint(
+            "participant_id", "visit_index", name="uq_engagement_participant_visit"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    sponsor_id: Mapped[uuid.UUID] = sponsor_fk()
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("participant.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    trial_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("trial.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    site_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("site.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    visit_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    visit_timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    attended: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    missed: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    cumulative_missed: Mapped[int] = mapped_column(Integer, nullable=False)
+    consecutive_missed: Mapped[int] = mapped_column(Integer, nullable=False)
+    synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 # ------------------------------------------------------ platform / global routing

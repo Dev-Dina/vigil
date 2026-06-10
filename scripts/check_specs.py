@@ -43,6 +43,7 @@ REQUIRED: dict[str, list[str]] = {
         "## Writeback",
         "## Tenancy",
         "## Execution model",
+        "## Engagement (visit trajectory) input",
         "## Demo-scope boundary",
         "## Leakage-test invariants",
     ],

@@ -62,6 +62,10 @@ EXCLUDED_FROM_FEATURES: frozenset[str] = frozenset(
         "study_type",
         "study_url",
         "synthetic",
+        # Covariate provenance flags (scoring.md § Inv 10): metadata, never predictors.
+        "age_years_baseline_imputed",
+        "hba1c_pct_baseline_imputed",
+        "bmi_baseline_imputed",
     }
 )
 

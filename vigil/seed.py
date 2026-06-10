@@ -20,14 +20,21 @@ local default — never a production secret, never logged.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pandas as pd
+from sqlalchemy import select
 
 from vigil.core.logging import configure_logging, get_logger
 from vigil.core.security import hash_password
 from vigil.db.models import (
     AssignmentGrant,
+    Engagement,
     Participant,
     RoutingState,
     Site,
@@ -43,6 +50,101 @@ log = get_logger("vigil.seed")
 
 # Demo password for every seeded user. Local-dev default; override via env.
 SEED_PASSWORD = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
+
+# Path to the synthetic T2D parquet files (build-time ingestion output, never live-fetched).
+_SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
+# Fixed reference epoch: all synthetic visit timestamps are deterministic offsets from this date.
+_REFERENCE_EPOCH = datetime(2023, 1, 1, tzinfo=timezone.utc)
+
+
+def _map_synthetic_pid(demo_uuid: uuid.UUID, n_participants: int) -> int:
+    """Deterministic mapping: demo participant UUID → synthetic parquet participant index.
+
+    Rule: little-endian uint32 of MD5(uuid.bytes + b"seed-bridge-v1") mod n_participants.
+    "seed-bridge-v1" is a versioned salt — change it only to intentionally rotate the mapping.
+    The same demo UUID always maps to the same synthetic trajectory regardless of parquet sort order.
+    """
+    digest = hashlib.md5(demo_uuid.bytes + b"seed-bridge-v1").digest()
+    return int.from_bytes(digest[:4], "little") % n_participants
+
+
+def _seed_engagement(
+    *,
+    sponsor_id: uuid.UUID,
+    participant_id: uuid.UUID,
+    trial_id: uuid.UUID,
+    site_id: uuid.UUID,
+    synthetic_pid: int,
+    eng_df: pd.DataFrame,
+    par_df: pd.DataFrame,
+) -> int:
+    """Copy a synthetic trajectory to a demo participant and set their clinical covariates.
+
+    Returns the number of engagement rows inserted (0 if all already exist — idempotent).
+    synthetic=True on every row (non-negotiable: specs/scoring.md § synthetic propagation).
+    Timestamps: _REFERENCE_EPOCH + enrollment_day + visit_index * spacing over planned_duration.
+    miss_probability is intentionally excluded (latent hazard; specs/scoring.md § inv 4).
+    *_baseline_imputed flags are read directly from the parquet — provenance is honest.
+    """
+    par_row = par_df.loc[par_df["participant_id"] == synthetic_pid].iloc[0]
+    traj = eng_df.loc[eng_df["participant_id"] == synthetic_pid].sort_values(
+        "visit_index"
+    )
+
+    n_visits = len(traj)
+    enrollment_day = int(par_row["enrollment_day"])
+    planned_duration_days = int(par_row["planned_duration_days"])
+    enrollment_date = _REFERENCE_EPOCH + timedelta(days=enrollment_day)
+    spacing_days = planned_duration_days / max(n_visits - 1, 1)
+
+    eng_rows = [
+        Engagement(
+            id=uuid.uuid4(),
+            sponsor_id=sponsor_id,
+            participant_id=participant_id,
+            trial_id=trial_id,
+            site_id=site_id,
+            visit_index=int(row["visit_index"]),
+            visit_timestamp=enrollment_date
+            + timedelta(days=int(row["visit_index"]) * spacing_days),
+            attended=bool(row["attended"]),
+            missed=bool(row["missed"]),
+            cumulative_missed=int(row["cumulative_missed"]),
+            consecutive_missed=int(row["consecutive_missed"]),
+            synthetic=True,
+        )
+        for _, row in traj.iterrows()
+    ]
+
+    with sponsor_bootstrap_session(str(sponsor_id)) as session:
+        p = session.get(Participant, participant_id)
+        assert p is not None, f"demo participant {participant_id} not found in seed"
+        p.age_years = (
+            float(par_row["age_years"]) if pd.notna(par_row["age_years"]) else None
+        )
+        p.age_years_baseline_imputed = bool(par_row["age_baseline_imputed"])
+        p.hba1c_pct = (
+            float(par_row["hba1c_pct"]) if pd.notna(par_row["hba1c_pct"]) else None
+        )
+        p.hba1c_pct_baseline_imputed = bool(par_row["hba1c_baseline_imputed"])
+        p.bmi = float(par_row["bmi"]) if pd.notna(par_row["bmi"]) else None
+        p.bmi_baseline_imputed = bool(par_row["bmi_baseline_imputed"])
+        p.sex = str(par_row["sex"]) if pd.notna(par_row["sex"]) else None
+        session.flush()
+
+        existing_indexes: set[int] = set(
+            session.scalars(
+                select(Engagement.visit_index).where(
+                    Engagement.participant_id == participant_id
+                )
+            ).all()
+        )
+        new_rows = [r for r in eng_rows if r.visit_index not in existing_indexes]
+        for r in new_rows:
+            session.add(r)
+        session.flush()
+
+    return len(new_rows)
 
 
 def _add_user(session, *, email, role, **kw) -> User:  # type: ignore[no-untyped-def]
@@ -216,7 +318,48 @@ def seed() -> dict[str, str]:
     _seed_score(sponsor_a_id, tenant_a, ids, "score_a")
     _seed_score(sponsor_b_id, tenant_b, ids, "score_b")
 
-    # 5) Routing state: champion row for the demo regime (t2d).
+    # 5) Seed bridge: copy synthetic T2D engagement trajectories to demo participants.
+    #    Mapping rule: synthetic_pid = uint32(MD5(uuid.bytes + b"seed-bridge-v1")[:4]) % n.
+    #    Reference epoch: 2023-01-01 UTC.  miss_probability withheld (latent hazard, inv 4).
+    #    Each demo UUID maps to exactly one synthetic trajectory; same UUID → same result always.
+    eng_df = pd.read_parquet(_SYNTH_DIR / "engagement.parquet")
+    par_df = pd.read_parquet(_SYNTH_DIR / "participants.parquet")
+    n_synth = len(par_df)
+    for demo_pid_str, _sponsor_id, _tenant in [
+        (ids["participant_a"], sponsor_a_id, tenant_a),
+        (ids["participant_b"], sponsor_b_id, tenant_b),
+    ]:
+        demo_uuid = uuid.UUID(demo_pid_str)
+        synthetic_pid = _map_synthetic_pid(demo_uuid, n_synth)
+        n_inserted = _seed_engagement(
+            sponsor_id=_sponsor_id,
+            participant_id=demo_uuid,
+            trial_id=_tenant["trial"],
+            site_id=_tenant["site"],
+            synthetic_pid=synthetic_pid,
+            eng_df=eng_df,
+            par_df=par_df,
+        )
+        log.info(
+            "seed.engagement",
+            extra={
+                "extra": {
+                    "participant": demo_pid_str,
+                    "synthetic_pid": synthetic_pid,
+                    "inserted": n_inserted,
+                }
+            },
+        )
+    ids.update(
+        seed_bridge_a_synthetic_pid=str(
+            _map_synthetic_pid(uuid.UUID(ids["participant_a"]), n_synth)
+        ),
+        seed_bridge_b_synthetic_pid=str(
+            _map_synthetic_pid(uuid.UUID(ids["participant_b"]), n_synth)
+        ),
+    )
+
+    # 6) Routing state: champion row for the demo regime (t2d).
     #    score_trial(model_version=None, regime='t2d') resolves through this row.
     #    model_version value must match _DEMO_MODEL_VERSION in vigil/workers/tasks.py.
     with platform_session() as session:

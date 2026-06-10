@@ -14,6 +14,10 @@ from ingestion.leakage import assert_group_disjoint as _assert_group_disjoint
 from models.features.contract import FeatureMatrix
 
 #: Base tokens that must never appear as a feature (outcome / identity / synthetic).
+# miss_probability: the synthetic generator's latent hazard — using it would trivially
+# recover the planted signal (specs/scoring.md § Leakage-test invariants, inv 4).
+# time_to_event / event_observed: TTE outcome columns shared across survival + sequence.
+# arm_real_dropout_rate: realized outcome from AACT; pure leakage if it reached a feature.
 _FORBIDDEN_TOKENS: frozenset[str] = frozenset(
     {
         "dropout_rate",
@@ -21,11 +25,15 @@ _FORBIDDEN_TOKENS: frozenset[str] = frozenset(
         "completed",
         "dropped",
         "time_to_event_days",
+        "time_to_event",
+        "event_observed",
         "censored",
         "synthetic",
         "nct_id",
         "arm_id",
         "study_url",
+        "miss_probability",
+        "arm_real_dropout_rate",
     }
 )
 
