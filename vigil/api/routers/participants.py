@@ -130,15 +130,31 @@ async def get_risk(
     participant_id: str,
     scope: Scope = ScopeDep,
 ) -> RiskExplanation:
-    """GET /participants/{participant_id}/risk — 403 for platform roles."""
+    """GET /participants/{participant_id}/risk — champion-only; 403 for platform roles.
+
+    Champion-only surfacing (specs/routing.md § Champion/challenger/shadow, layer 2):
+    the score is read through the champion allowlist filter, so a shadow/challenger row
+    can never be surfaced. Fails closed with 404 when no champion score exists — never a
+    non-champion fallback.
+    """
+    from vigil.services import risk_service
+
     _deny_platform(scope)
-    # TODO(phase5): wire real DB query via scoring repository (scoped session).
+    view = risk_service.get_participant_risk(scope, participant_id)
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="no champion risk score for participant",
+        )
     return RiskExplanation(
-        participant_id=participant_id,
-        risk_score=0.5,
+        participant_id=view.participant_id,
+        risk_score=view.risk_score,
         horizon_days=28,
-        factors=[],  # TODO(phase5): read from participant_score.reasons
-        model_version="stub-v0",
+        factors=[
+            FactorContribution(feature=f.feature, contribution=f.contribution)
+            for f in view.factors
+        ],
+        model_version=view.model_version,
     )
 
 

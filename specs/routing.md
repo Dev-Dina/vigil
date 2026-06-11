@@ -92,22 +92,35 @@ This is enforced in two layers:
 1. **Denorm-cache write (current guard):** only the champion scoring job writes
    `participant.risk_score` and `participant.risk_band`. Challenger/shadow jobs write
    `participant_score` rows only; they never touch `participant.*`.
-2. **Direct read guard (Phase 5, when cohort reads `participant_score` directly):** the
-   `list_cohort` query adds `WHERE model_version = <champion>` to any join against
-   `participant_score`.
+2. **Champion-allowlist read guard (implemented):** the per-participant clinical read
+   `GET /participants/{id}/risk` reads `participant_score` through
+   `scoring.get_surfaceable_score(..., champion_versions=routing.champion_model_versions())`,
+   which filters `model_version` to the champion allowlist by construction. A shadow/challenger
+   row can never be surfaced; with no champion row the read returns `None` and the endpoint
+   fails closed with `404` (never a non-champion fallback). When `list_cohort` later reads
+   `participant_score` directly (Phase 5), it MUST use the same champion-allowlist filter.
 
-### Storage open question
+### Storage open question — RESOLVED (shared table)
 
-**Recommendation:** challenger/shadow scores share the `participant_score` table, discriminated
-by `model_version`. Champion-only surfacing relies on the two-layer guard above.
+**Resolved design:** challenger/shadow scores share the `participant_score` table, discriminated
+by `model_version`. Champion-only surfacing is enforced by the two-layer guard above.
 
-**Fallback:** if the champion-only invariant in `## Leakage / isolation invariants` (i) cannot
-be satisfied under the shared-table design — i.e. an app-layer `model_version` filter is the
-only guard and is deemed too fragile — the design falls back to a separate `shadow_score` table
-(isolation-by-construction; +1 table, RLS policy, and migration). This is more expensive but
-eliminates any dependency on correct filter plumbing.
+**Verdict (verified under real Postgres, 2026-06-11):** the arbiter invariant (i) below —
+`tests/spine/test_b2c_scoring.py::test_invariant_i_champion_only_surfacing` plus the fail-closed
+guard `test_layer2_risk_fails_closed_on_shadow_only` — PASSES with an adversarial shadow row
+present. `GET /cohort` surfaces the champion denorm only; `GET /participants/{id}/risk` surfaces
+the champion `model_version` only (the shadow row is filtered out, not merely hidden by RLS); a
+direct sponsor-scoped query returns BOTH rows (suppression is app-layer, not RLS). The shared
+table is therefore retained; the separate-`shadow_score`-table fallback below is NOT triggered.
 
-**Arbiter:** the champion-only leakage invariant (i) below. Frame the decision against that
+**Fallback (NOT taken):** had the champion-only invariant (i) required an app-layer
+`model_version` filter judged too fragile, the design would have fallen back to a separate
+`shadow_score` table (isolation-by-construction; +1 table, RLS policy, migration). Because the
+champion-allowlist filter is applied inside the repository query — not asserted after a broad
+read — it is correct-by-construction, so the fallback is unnecessary. This paragraph is retained
+as the recorded rationale for the rejected alternative.
+
+**Arbiter:** the champion-only leakage invariant (i) below. The decision was framed against that
 test, not against preference.
 
 ## Drift-triggered fallback

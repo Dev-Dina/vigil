@@ -27,6 +27,7 @@ from sklearn.linear_model import LogisticRegression  # noqa: E402
 
 from models.config import MODEL_SEED, MODELS_ROOT  # noqa: E402
 from models.features.contract import (  # noqa: E402
+    ContractTransformer,
     FeatureMatrix,
     assemble_rows,
     build_matrices,
@@ -74,7 +75,8 @@ def train_real_baseline(
 
     # arm rows carry phase + arm_type already (both are contract feature columns).
     rows = assemble_rows(cohort.trials, cohort.arms)
-    matrices = build_matrices(rows, cohort.split)
+    contract = ContractTransformer()
+    matrices = build_matrices(rows, cohort.split, transformer=contract)
     run_smoke(matrices)  # fail loud BEFORE any fit
 
     train, val, test = matrices["train"], matrices["val"], matrices["test"]
@@ -140,6 +142,10 @@ def train_real_baseline(
     )
 
     metrics: dict[str, Any] = {
+        "_gbt": gbt,
+        "_transformer": contract,
+        "_threshold": threshold,
+        "_test_fm": matrices["test"],
         "data_source": "REAL_T2D",
         "task": "1a_real_structural_floor",
         "model_class": "HistGradientBoostingRegressor + LogisticRegression (train-median label)",
@@ -168,6 +174,55 @@ def train_real_baseline(
         "artifacts": plot_paths,
     }
     (out_root / "baseline_real.json").write_text(
-        json.dumps(metrics, indent=2), encoding="utf-8"
+        json.dumps(
+            {k: v for k, v in metrics.items() if not k.startswith("_")},
+            indent=2,
+        ),
+        encoding="utf-8",
     )
     return metrics
+
+
+def _persist_structural_artifact(
+    result: dict[str, Any],
+    out_root: Path = T2D_ROOT,
+) -> Path:
+    """Save the structural GBT to a scorer artifact and verify reload.
+
+    Artifact: <out_root>/structural_v1.0_t2d.pkl — contains gbt, transformer,
+    threshold, test_pr_auc. Matches the shadow model_version 'structural_v1.0:t2d'
+    (colon → underscore in file name per _load_scorer convention).
+
+    Pass the dict returned by train_real_baseline (it carries private _gbt,
+    _transformer, _threshold, and _test_fm keys).
+    """
+    import joblib
+
+    gbt = result["_gbt"]
+    transformer = result["_transformer"]
+    threshold = result["_threshold"]
+    test_fm = result["_test_fm"]  # FeatureMatrix for hold-out re-evaluation
+    test_pr_auc = float(result["test"]["gbt"]["pr_auc"])
+
+    artifact_path = Path(out_root) / "structural_v1.0_t2d.pkl"
+    artifact = {
+        "gbt": gbt,
+        "transformer": transformer,
+        "threshold": float(threshold),
+        "test_pr_auc": test_pr_auc,
+    }
+    joblib.dump(artifact, artifact_path)
+
+    # Verify reload reproduces PR-AUC within tolerance.
+    reloaded = joblib.load(artifact_path)
+    ck_gbt = reloaded["gbt"]
+    y_bin = (test_fm.y.to_numpy(dtype=float) > threshold).astype(int)
+    ck_prob = clip01(ck_gbt.predict(test_fm.X))
+    ck_auc = float(classifier_panel(y_bin, ck_prob)["pr_auc"])
+    delta = abs(ck_auc - test_pr_auc)
+    if delta > 0.001:
+        raise ValueError(
+            f"Structural artifact reload PR-AUC {ck_auc:.4f} deviates {delta:.4f} "
+            f"from trained {test_pr_auc:.4f} (tolerance 0.001) — artifact not trustworthy"
+        )
+    return artifact_path

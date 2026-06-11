@@ -123,6 +123,70 @@ class LSTMScorer:
 
 
 # ---------------------------------------------------------------------------
+# Structural GBT scorer — wraps the loaded structural_v1.0_t2d.pkl artifact.
+# Sklearn-based; no torch. Used as the shadow model alongside the LSTM champion.
+# ---------------------------------------------------------------------------
+
+
+class StructuralScorer:
+    """Wraps a loaded structural_v1.0_t2d.pkl artifact for live shadow inference.
+
+    Converts per-participant records to arm-like rows via the training-time
+    ContractTransformer, then runs HistGradientBoostingRegressor.predict().
+    Only arm_type, phase, n_sites, planned_duration_days are populated from
+    the operational DB; all other arm-contract features are NaN (GBT-safe).
+    """
+
+    def __init__(self, artifact: dict) -> None:
+        self._gbt = artifact["gbt"]
+        self._transformer = artifact["transformer"]
+        self._threshold = artifact["threshold"]
+
+    def feature_names_for(self, participant_df: Any) -> list[str]:
+        """Return the feature names produced by the ContractTransformer for leakage checks."""
+        rows = self._build_arm_rows(participant_df)
+        _, names = self._transformer.transform(rows)
+        return names
+
+    def _build_arm_rows(self, participant_df: Any) -> Any:
+        """Map participant records to arm-like rows with available fields; rest NaN."""
+        import numpy as np
+        import pandas as pd
+
+        from models.features.contract import (
+            BOOLEAN_FEATURES,
+            CATEGORICAL_FEATURES,
+            NUMERIC_FEATURES,
+        )
+
+        n = len(participant_df)
+        data: dict[str, list] = {col: [None] * n for col in CATEGORICAL_FEATURES}
+        data.update({col: [np.nan] * n for col in NUMERIC_FEATURES})
+        data.update({col: [None] * n for col in BOOLEAN_FEATURES})
+
+        for i, (_, p) in enumerate(participant_df.iterrows()):
+            if "phase" in participant_df.columns:
+                data["phase"][i] = p.get("phase")
+            if "arm_type" in participant_df.columns:
+                data["arm_type"][i] = p.get("arm_type")
+            if "n_sites" in participant_df.columns and pd.notna(p.get("n_sites")):
+                data["n_sites"][i] = float(p["n_sites"])
+            if "planned_duration_days" in participant_df.columns and pd.notna(
+                p.get("planned_duration_days")
+            ):
+                data["planned_duration_days"][i] = float(p["planned_duration_days"])
+
+        return pd.DataFrame(data)
+
+    def __call__(self, participant_df: Any) -> list[float]:
+        """Score participants; returns dropout-risk probabilities clipped to [0, 1]."""
+        rows = self._build_arm_rows(participant_df)
+        X, _ = self._transformer.transform(rows)
+        raw_preds = self._gbt.predict(X)
+        return [float(max(0.0, min(1.0, v))) for v in raw_preds]
+
+
+# ---------------------------------------------------------------------------
 # Demo / stub scorer (random scores, fixed seed — no-artifact fallback only)
 # ---------------------------------------------------------------------------
 
@@ -227,6 +291,37 @@ def _load_scorer(
         f"No model artifact found for version {mv!r} at data/models/t2d/. "
         "Set VIGIL_DEMO_MODE=true to use the demo scorer (method demo only)."
     )
+
+
+def _load_shadow_scorer(regime: str) -> tuple[Any, str] | None:
+    """Return (StructuralScorer, model_version) for the registered shadow, or None.
+
+    Shadow is always loaded from its persisted .pkl artifact; there is no override
+    path — only the real artifact is admitted (specs/routing.md § Champion/challenger/shadow).
+    Returns None if no shadow row is registered or artifact is missing (non-fatal: champion
+    scoring continues; log warning so ops can act).
+    """
+    from vigil.repositories import routing as routing_repo
+    from vigil.repositories.session import platform_session
+
+    with platform_session() as session:
+        row = routing_repo.get_shadow(session, regime=regime)
+    if row is None:
+        return None
+
+    mv = row.model_version
+    artifact_path = Path("data/models/t2d") / f"{mv.replace(':', '_')}.pkl"
+    if not artifact_path.exists():
+        log.warning(
+            "score_trial.shadow_artifact_missing",
+            extra={"extra": {"model_version": mv, "path": str(artifact_path)}},
+        )
+        return None
+
+    import joblib  # deferred; sklearn/joblib not loaded at module level
+
+    raw = joblib.load(artifact_path)
+    return StructuralScorer(raw), mv
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +595,93 @@ async def score_trial(
                 .values(risk_score=float(score), risk_band=band)
             )
             n_scored += 1
+
+    # 10. Shadow scoring (B2c): structural GBT runs alongside champion if registered.
+    #     Shadow writes participant_score rows ONLY — never touches participant denorm cache.
+    #     Invariant (ii): assert_no_outcome_features fires on shadow feature names.
+    if regime is not None and participant_snapshots:
+        shadow_result = _load_shadow_scorer(regime)
+        if shadow_result is not None:
+            shadow_scorer_inst, shadow_mv = shadow_result
+            shadow_participant_df = pd.DataFrame(
+                [
+                    {
+                        "participant_id": str(p["id"]),
+                        "age_years": p.get("age_years"),
+                        "hba1c_pct": p.get("hba1c_pct"),
+                        "bmi": p.get("bmi"),
+                        "sex": p.get("sex"),
+                        "arm_type": p.get("arm_type"),
+                        "n_sites": p.get("n_sites"),
+                        "planned_duration_days": p.get("planned_duration_days"),
+                        "phase": p.get("phase"),
+                    }
+                    for p in participant_snapshots
+                ]
+            )
+
+            # Invariant (ii): leakage check fires for shadow, identical to champion path.
+            shadow_feature_names = shadow_scorer_inst.feature_names_for(
+                shadow_participant_df
+            )
+            assert_no_outcome_features(shadow_feature_names)
+            shadow_excluded = [
+                c for c in shadow_feature_names if c in EXCLUDED_FROM_FEATURES
+            ]
+            if shadow_excluded:
+                raise LeakageError(
+                    f"excluded columns in shadow feature matrix: {shadow_excluded}"
+                )
+
+            shadow_scores = shadow_scorer_inst(shadow_participant_df)
+
+            # Shadow synthetic flag: same logical-OR over engagement rows as champion (inv 8).
+            shadow_pid_synth: dict[str, bool] = {}
+            for e in eng_snapshots:
+                pid_str = str(e["participant_id"])
+                shadow_pid_synth[pid_str] = shadow_pid_synth.get(
+                    pid_str, False
+                ) or bool(e["synthetic"])
+
+            with sponsor_bootstrap_session(sponsor_id) as session:
+                for p_snap, sh_score in zip(
+                    participant_snapshots, shadow_scores, strict=True
+                ):
+                    sh_synth = shadow_pid_synth.get(str(p_snap["id"]), True)
+                    scoring_repo.upsert_score(
+                        session,
+                        participant_id=p_snap["id"],
+                        sponsor_id=p_snap["sponsor_id"],
+                        trial_id=p_snap["trial_id"],
+                        site_id=p_snap["site_id"],
+                        risk_score=float(sh_score),
+                        risk_band=_band(float(sh_score)),
+                        top_factors=[],
+                        reasons=[],
+                        model_version=shadow_mv,
+                        model_card_ref="data/models/t2d/model_card_structural.md",
+                        synthetic=bool(sh_synth),
+                    )
+                    scoring_repo.write_score_audit(
+                        session,
+                        sponsor_id=p_snap["sponsor_id"],
+                        participant_id=p_snap["id"],
+                        model_version=shadow_mv,
+                        synthetic=bool(sh_synth),
+                    )
+                    # Explicitly NO participant denorm update — shadow never writes
+                    # participant.risk_score / participant.risk_band (champion-only guard).
+
+            log.info(
+                "score_trial.shadow_complete",
+                extra={
+                    "extra": {
+                        "trial_id": trial_id,
+                        "shadow_mv": shadow_mv,
+                        "n_shadow_scored": len(shadow_scores),
+                    }
+                },
+            )
 
     log.info(
         "score_trial.complete",

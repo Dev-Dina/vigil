@@ -116,7 +116,7 @@ class CohortSummary(BaseModel):
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
 | `GET /participants/{participant_id}` | path | `ParticipantDetail` | 403 if id outside scope; identities only for site roles (PI/CRC) |
-| `GET /participants/{participant_id}/risk` | path | `RiskExplanation` | per-feature contributions behind the flag |
+| `GET /participants/{participant_id}/risk` | path | `RiskExplanation` | per-feature contributions behind the flag; champion-only (`model_version` is always the champion — shadow/challenger rows are filtered out per routing.md § (i)); `404` if no champion score (fail-closed, never a non-champion fallback) |
 | `POST /participants/{participant_id}/interventions` | `InterventionIn` | `InterventionOut` | logs a triage action; audited |
 | `GET /participants/{participant_id}/interventions` | path | `Page[InterventionOut]` | history for this participant |
 

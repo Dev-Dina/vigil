@@ -8,6 +8,7 @@ never adds a WHERE sponsor_id clause to compensate (RLS is the hard guarantee).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Collection
 from typing import Any
 
 from sqlalchemy import select
@@ -80,6 +81,33 @@ def get_score(
             ParticipantScore.participant_id == participant_id,
             ParticipantScore.model_version == model_version,
         )
+    ).scalar_one_or_none()
+
+
+def get_surfaceable_score(
+    session: Session,
+    participant_id: uuid.UUID,
+    *,
+    champion_versions: Collection[str],
+) -> ParticipantScore | None:
+    """Champion-only read for clinical surfaces (``GET /participants/{id}/risk``).
+
+    Filters ``model_version`` to the champion allowlist BY CONSTRUCTION — a
+    challenger/shadow row can never be returned because its version is not in
+    ``champion_versions``. An empty allowlist returns ``None`` (fail closed): with no
+    known champion, nothing is surfaceable rather than defaulting to an arbitrary row.
+    Runs under the caller's RLS-scoped session, so tenant isolation still applies.
+    """
+    if not champion_versions:
+        return None
+    return session.execute(
+        select(ParticipantScore)
+        .where(
+            ParticipantScore.participant_id == participant_id,
+            ParticipantScore.model_version.in_(list(champion_versions)),
+        )
+        .order_by(ParticipantScore.computed_at.desc())
+        .limit(1)
     ).scalar_one_or_none()
 
 

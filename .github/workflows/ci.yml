@@ -69,3 +69,12 @@ jobs:
 
       - name: Spine suite (auth, RLS, worker, API)
         run: uv run pytest tests/spine -q
+
+      # The live model-isolation invariants (B2b 7/8/9 score_trial end-to-end, B2c
+      # champion/shadow) are `slow`-marked (torch) and excluded by the default
+      # `-m "not slow"` addopts. They are sacred isolation tests, not optional: run the
+      # FULL spine suite — slow included — against the Postgres service. Committed model
+      # artifacts make this ~10s; the heavy 18k-cohort regeneration slow tests live
+      # outside tests/spine and are NOT pulled in here.
+      - name: Sacred live invariants (spine, slow included — Postgres-backed)
+        run: uv run pytest tests/spine -m "slow or not slow" -q

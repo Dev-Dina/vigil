@@ -246,27 +246,40 @@ def test_invariant_9_single_feature_builder(migrated_db: dict[str, str]) -> None
 
 
 def test_invariant_7_temporal_guard_live(migrated_db: dict[str, str]) -> None:
-    """Inv 7: score_trial raises LeakageError when a future-visit engagement exists."""
+    """Inv 7: score_trial raises LeakageError when a future-visit engagement exists.
+
+    Uses a fresh dedicated trial (never shared with other tests) so this assertion
+    is order-independent: no other test can see or corrupt this trial's engagement rows.
+    """
     from datetime import datetime, timezone
 
     from ingestion.errors import LeakageError
-    from vigil.db.models import Engagement, Participant
+    from vigil.db.models import Engagement, Participant, Trial
     from vigil.repositories.session import sponsor_bootstrap_session
     from vigil.workers.tasks import score_trial
 
     ids = migrated_db
     sponsor_id = uuid.UUID(ids["sponsor_a"])
-    trial_id = uuid.UUID(ids["trial_a"])
     site_id = uuid.UUID(ids["site_a"])
 
-    # Create a fresh participant with a future-dated engagement row.
-    future_pid = uuid.uuid4()
+    # Fresh trial owned by sponsor_a — not shared with any other test.
+    fresh_trial_id = uuid.uuid4()
+    fresh_participant_id = uuid.uuid4()
+
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
         session.add(
-            Participant(
-                id=future_pid,
+            Trial(
+                id=fresh_trial_id,
                 sponsor_id=sponsor_id,
-                trial_id=trial_id,
+                name="inv7-guard-probe-trial",
+            )
+        )
+        session.flush()
+        session.add(
+            Participant(
+                id=fresh_participant_id,
+                sponsor_id=sponsor_id,
+                trial_id=fresh_trial_id,
                 site_id=site_id,
                 coded_ref="inv7-future-guard-probe",
             )
@@ -276,8 +289,8 @@ def test_invariant_7_temporal_guard_live(migrated_db: dict[str, str]) -> None:
             Engagement(
                 id=uuid.uuid4(),
                 sponsor_id=sponsor_id,
-                participant_id=future_pid,
-                trial_id=trial_id,
+                participant_id=fresh_participant_id,
+                trial_id=fresh_trial_id,
                 site_id=site_id,
                 visit_index=9999,
                 visit_timestamp=datetime(2099, 1, 1, tzinfo=timezone.utc),
@@ -294,8 +307,8 @@ def test_invariant_7_temporal_guard_live(migrated_db: dict[str, str]) -> None:
         asyncio.get_event_loop().run_until_complete(
             score_trial(
                 {"job_try": 0},
-                trial_id=ids["trial_a"],
-                sponsor_id=ids["sponsor_a"],
+                trial_id=str(fresh_trial_id),
+                sponsor_id=str(sponsor_id),
                 model_version=None,
                 regime="t2d",
             )

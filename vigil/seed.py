@@ -369,9 +369,9 @@ def seed() -> dict[str, str]:
         ),
     )
 
-    # 6) Routing state: champion row for the demo regime (t2d).
-    #    score_trial(model_version=None, regime='t2d') resolves through this row.
-    #    model_version value must match _DEMO_MODEL_VERSION in vigil/workers/tasks.py.
+    # 6) Routing state: champion + shadow rows for the demo regime (t2d).
+    #    Champion: sequence LSTM (B2b); shadow: structural GBT (B2c).
+    #    UNIQUE(regime, role) — one champion + one shadow per regime at a time.
     with platform_session() as session:
         session.add(
             RoutingState(
@@ -381,8 +381,17 @@ def seed() -> dict[str, str]:
                 model_card_ref="data/models/t2d/model_card.md",
             )
         )
+        session.add(
+            RoutingState(
+                regime="t2d",
+                role="shadow",
+                model_version="structural_v1.0:t2d",
+                model_card_ref="data/models/t2d/model_card_structural.md",
+            )
+        )
         session.flush()
     ids["routing_t2d_champion"] = "sequence_v1.0:demo"
+    ids["routing_t2d_shadow"] = "structural_v1.0:t2d"
 
     log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
     return ids
