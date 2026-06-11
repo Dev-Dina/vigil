@@ -53,8 +53,14 @@ SEED_PASSWORD = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
 
 # Path to the synthetic T2D parquet files (build-time ingestion output, never live-fetched).
 _SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
-# Fixed reference epoch: all synthetic visit timestamps are deterministic offsets from this date.
-_REFERENCE_EPOCH = datetime(2023, 1, 1, tzinfo=timezone.utc)
+# Synthetic visit timestamps are anchored to wall-clock now() (not a fixed calendar epoch):
+# the operational DB must never hold a visit dated in the FUTURE — the feature-time leakage
+# guard (models/leakage_check.assert_feature_time_before_t) correctly rejects any visit at or
+# after the decision time (now()). A fixed epoch drifts past now() for longer trajectories as
+# time passes; anchoring each trajectory so its LAST visit lands this margin (days) before now()
+# keeps every seeded visit strictly in the past, while a uniform shift preserves every
+# inter-visit gap (the relative structure the sequence model consumes).
+_SEED_FUTURE_MARGIN_DAYS = 1
 
 
 def _map_synthetic_pid(demo_uuid: uuid.UUID, n_participants: int) -> int:
@@ -82,7 +88,9 @@ def _seed_engagement(
 
     Returns the number of engagement rows inserted (0 if all already exist — idempotent).
     synthetic=True on every row (non-negotiable: specs/scoring.md § synthetic propagation).
-    Timestamps: _REFERENCE_EPOCH + enrollment_day + visit_index * spacing over planned_duration.
+    Timestamps: anchored so the LAST visit is _SEED_FUTURE_MARGIN_DAYS before now(), with
+    enrollment_day stagger + visit_index * spacing preserving the trajectory's relative shape
+    (so no seeded visit is future-dated relative to the scoring decision time).
     miss_probability is intentionally excluded (latent hazard; specs/scoring.md § inv 4).
     *_baseline_imputed flags are read directly from the parquet — provenance is honest.
     """
@@ -94,8 +102,22 @@ def _seed_engagement(
     n_visits = len(traj)
     enrollment_day = int(par_row["enrollment_day"])
     planned_duration_days = int(par_row["planned_duration_days"])
-    enrollment_date = _REFERENCE_EPOCH + timedelta(days=enrollment_day)
     spacing_days = planned_duration_days / max(n_visits - 1, 1)
+
+    # Anchor the trajectory to wall-clock now() so its last visit lands a safe margin in the
+    # past (see _SEED_FUTURE_MARGIN_DAYS). last-visit offset from the anchor is
+    # enrollment_day + max_visit_index * spacing; setting anchor = now_floor - that offset -
+    # margin puts the last visit at now_floor - margin. now() is floored to the day so a
+    # single seed run is internally consistent.
+    max_visit_index = int(traj["visit_index"].max()) if n_visits else 0
+    last_visit_offset_days = enrollment_day + max_visit_index * spacing_days
+    now_floor = datetime.now(tz=timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    reference_epoch = now_floor - timedelta(
+        days=last_visit_offset_days + _SEED_FUTURE_MARGIN_DAYS
+    )
+    enrollment_date = reference_epoch + timedelta(days=enrollment_day)
 
     eng_rows = [
         Engagement(
@@ -330,7 +352,8 @@ def seed() -> dict[str, str]:
 
     # 5) Seed bridge: copy synthetic T2D engagement trajectories to demo participants.
     #    Mapping rule: synthetic_pid = uint32(MD5(uuid.bytes + b"seed-bridge-v1")[:4]) % n.
-    #    Reference epoch: 2023-01-01 UTC.  miss_probability withheld (latent hazard, inv 4).
+    #    Timestamps anchored so the last visit precedes now() (no future-dated visits);
+    #    miss_probability withheld (latent hazard, inv 4).
     #    Each demo UUID maps to exactly one synthetic trajectory; same UUID → same result always.
     eng_df = pd.read_parquet(_SYNTH_DIR / "engagement.parquet")
     par_df = pd.read_parquet(_SYNTH_DIR / "participants.parquet")
