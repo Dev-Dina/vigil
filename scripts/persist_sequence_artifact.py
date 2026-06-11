@@ -55,6 +55,11 @@ def main() -> None:
         "seq_dim": int(test_t.seq.shape[2]),
         "static_dim": int(test_t.static.shape[1]),
         "test_pr_auc": float(seq_pr_auc),
+        # Frozen eval fold: the test-set NCT ids the artifact was scored on. Public
+        # ClinicalTrials.gov identifiers (no PHI). Carried so the fidelity check can
+        # reproduce the test PR-AUC HERMETICALLY from the committed synthetic parquet,
+        # without rebuilding the cohort split from gitignored raw AACT.
+        "test_nct_ids": sorted(split.test_ids),
     }
     torch.save(artifact, _ARTIFACT_PATH)
     print(f"  saved: {_ARTIFACT_PATH}")

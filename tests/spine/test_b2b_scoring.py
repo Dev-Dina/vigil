@@ -45,10 +45,15 @@ def test_artifact_file_exists() -> None:
 
 
 def test_fidelity_reloaded_pr_auc() -> None:
-    """Reloaded .pt artifact reproduces the trained test PR-AUC within 0.001."""
+    """Reloaded .pt artifact reproduces the trained test PR-AUC within 0.001.
+
+    HERMETIC: the test fold is the artifact's own frozen ``test_nct_ids`` (public NCT
+    identifiers, no PHI) scored against the COMMITTED synthetic parquet — it does NOT
+    rebuild the cohort split from gitignored raw AACT. This proves the reloaded weights
+    are the actual trained network (reproduces ~0.339 PR-AUC), not a re-init.
+    """
     import torch
 
-    from models.t2d.cohort import load_t2d_cohort
     from models.t2d.metrics import classifier_panel
     from models.t2d.sequence import (
         LSTMClassifier,
@@ -59,17 +64,20 @@ def test_fidelity_reloaded_pr_auc() -> None:
     from models.t2d.synthetic_data import load_synthetic_t2d
 
     artifact = torch.load(str(_ARTIFACT_PATH), weights_only=False)
+    assert "test_nct_ids" in artifact, (
+        "artifact missing frozen test_nct_ids — regenerate via "
+        "`uv run python -m scripts.persist_sequence_artifact`"
+    )
 
     model = LSTMClassifier(artifact["seq_dim"], artifact["static_dim"], artifact["cfg"])
     model.load_state_dict(artifact["state_dict"])
     model.eval()
 
-    cohort = load_t2d_cohort()
     synth = load_synthetic_t2d()
     test_t = build_tensors(
         synth,
         artifact["static_enc"],
-        cohort.split.test_ids,
+        frozenset(artifact["test_nct_ids"]),
         cfg=artifact["cfg"],
         seq_means=artifact["seq_means"],
         seq_stds=artifact["seq_stds"],
