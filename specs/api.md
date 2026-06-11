@@ -183,6 +183,7 @@ class AssistantTurn(BaseModel):
 | `GET /monitoring/drift` | `DriftQuery` | `Page[DriftPoint]` | drift signals over time |
 | `GET /monitoring/cost` | `CostQuery` | `CostReport` | token/cost rollups |
 | `GET /monitoring/messages` | `MessageQuery` | `Page[MessageEventOut]` | redacted `message_events` (admin observability page) |
+| `POST /monitoring/models/promote` | `ModelPromoteIn` | `ModelPromoteOut` | manual champion promotion, **platform_admin only** (403 otherwise); audited (`model_promote`, non-null actor); honesty-hooked `eval_provenance` (synthetic → `architecture_validation`); non-null `model_card_ref` (specs/routing.md § Audited promotion) |
 
 ```python
 class ModelStatus(BaseModel):

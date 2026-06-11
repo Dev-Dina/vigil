@@ -135,6 +135,11 @@ event, direct call from the observability worker) is an **open question** to be 
 `specs/observability.md` is extended to cover drift storage. Routing defines only what it
 consumes; observability defines how the signal is produced.
 
+**Implemented (B3):** the reaction is a callable — `routing_service.handle_breach(BreachSignal)`
+(`BreachSignal = (regime, model_version, breached)`). It consumes the opaque signal and performs
+the fallback transition; it does NOT compute, store, or poll for drift. The signal SOURCE/delivery
+remains deferred to the observability phase.
+
 ### Fallback rule
 
 If the breach signal indicates `breached = True` for the current champion in a regime:
