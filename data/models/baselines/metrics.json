@@ -74,7 +74,10 @@
         "logit_recall_at_p50": 0.3392857142857143,
         "logit_brier": 0.24145303542858562
       }
-    }
+    },
+    "positive_prevalence": 0.4740178053028837,
+    "n_positives": 9797,
+    "n_total": 20668
   },
   "val": {
     "gbt": {
@@ -124,7 +127,10 @@
         "logit_recall_at_p50": 0.9876543209876543,
         "logit_brier": 0.25990159123580253
       }
-    }
+    },
+    "positive_prevalence": 0.49717926271763446,
+    "n_positives": 10223,
+    "n_total": 20562
   },
   "shap_global_importance_top": {
     "therapeutic_area_ONCOLOGY": 0.043281652282643586,

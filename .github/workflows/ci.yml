@@ -78,3 +78,22 @@ jobs:
       # outside tests/spine and are NOT pulled in here.
       - name: Sacred live invariants (spine, slow included — Postgres-backed)
         run: uv run pytest tests/spine -m "slow or not slow" -q
+
+      # Frontend typecheck: `next build` historically had ignoreBuildErrors (now removed) and
+      # `next lint` was dropped in Next 16, so frontend type errors went uncaught. tsc --noEmit
+      # is the real gate. (eslint is deferred: the project has no eslint config/install yet —
+      # a fresh flat config is out of scope for this gate; tracked in ROADMAP.)
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Frontend typecheck (tsc --noEmit)
+        run: npx tsc --noEmit
+        working-directory: frontend

@@ -111,6 +111,36 @@ def get_surfaceable_score(
     ).scalar_one_or_none()
 
 
+def champion_scores_by_participant(
+    session: Session,
+    participant_ids: Collection[uuid.UUID],
+    *,
+    champion_versions: Collection[str],
+) -> dict[uuid.UUID, ParticipantScore]:
+    """Latest champion ``participant_score`` row per participant — the BATCH champion-only
+    read for the cohort surface (same allowlist guard as ``get_surfaceable_score``).
+
+    Filters ``model_version`` to the champion allowlist BY CONSTRUCTION, so shadow/challenger
+    rows can never be surfaced. Empty allowlist or no champion row → participant simply absent
+    from the returned map (caller treats it as "no champion score yet", fail-closed). Runs
+    under the caller's RLS-scoped session, so tenant isolation still applies.
+    """
+    if not champion_versions or not participant_ids:
+        return {}
+    rows = session.execute(
+        select(ParticipantScore)
+        .where(
+            ParticipantScore.participant_id.in_(list(participant_ids)),
+            ParticipantScore.model_version.in_(list(champion_versions)),
+        )
+        .order_by(ParticipantScore.computed_at.desc())
+    ).scalars()
+    latest: dict[uuid.UUID, ParticipantScore] = {}
+    for row in rows:  # rows are newest-first; keep the first seen per participant
+        latest.setdefault(row.participant_id, row)
+    return latest
+
+
 def list_scores_for_participant(
     session: Session, participant_id: uuid.UUID
 ) -> list[ParticipantScore]:

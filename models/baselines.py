@@ -387,10 +387,19 @@ def train_baselines_from_frames(
         "lead_time_gain": "N/A (no per-participant time series in the aggregate baseline)",
         "test": {
             **_overall_block(test_eval),
+            # Base rate: a PR-AUC is only readable against chance with its positive
+            # prevalence (PR-AUC of a random ranker == prevalence). Recorded so the test
+            # block is self-contained (Finding 2).
+            "positive_prevalence": float(test_eval["_y_bin"].mean()),
+            "n_positives": int(test_eval["_y_bin"].sum()),
+            "n_total": int(len(test_eval["_y_bin"])),
             "per_sponsor_class": test_eval["per_sponsor_class"],
         },
         "val": {
             **_overall_block(val_eval),
+            "positive_prevalence": float(val_eval["_y_bin"].mean()),
+            "n_positives": int(val_eval["_y_bin"].sum()),
+            "n_total": int(len(val_eval["_y_bin"])),
             "per_sponsor_class": val_eval["per_sponsor_class"],
         },
         "shap_global_importance_top": dict(list(shap_importance.items())[:20]),
