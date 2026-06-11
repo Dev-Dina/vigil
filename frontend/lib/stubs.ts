@@ -5,8 +5,6 @@
 
 import type {
   AssistantTurn,
-  CohortRow,
-  CohortSummary,
   ConversationOut,
   DriftPoint,
   InterventionIn,
@@ -27,82 +25,9 @@ const ISO = (d: string) => new Date(d).toISOString()
 // participant, monitoring, and assistant stubs below stay until Wire-2/3.
 
 // ---- cohort ----
-const COHORT_ROWS: CohortRow[] = [
-  {
-    participant_id: "PT-1001",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.82,
-    risk_band: "high",
-    top_factors: ["missed_visits", "symptom_burden", "travel_distance"],
-    updated_at: ISO("2026-06-04T09:15:00Z"),
-    synthetic: true,
-  },
-  {
-    participant_id: "PT-1002",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.74,
-    risk_band: "high",
-    top_factors: ["adverse_event", "non_compliance"],
-    updated_at: ISO("2026-06-04T08:40:00Z"),
-    synthetic: true,
-  },
-  {
-    participant_id: "PT-1003",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.56,
-    risk_band: "medium",
-    top_factors: ["work_schedule", "side_effect_concerns"],
-    updated_at: ISO("2026-06-03T14:05:00Z"),
-    synthetic: true,
-  },
-  {
-    participant_id: "PT-1004",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.45,
-    risk_band: "medium",
-    top_factors: ["distance_to_site"],
-    updated_at: ISO("2026-06-03T11:20:00Z"),
-    synthetic: true,
-  },
-  {
-    participant_id: "PT-1005",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.31,
-    risk_band: "low",
-    top_factors: ["family_obligations"],
-    updated_at: ISO("2026-06-02T16:42:00Z"),
-    synthetic: true,
-  },
-  {
-    participant_id: "PT-1006",
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    risk_score: 0.24,
-    risk_band: "low",
-    top_factors: ["loss_of_interest"],
-    updated_at: ISO("2026-06-02T10:30:00Z"),
-    synthetic: true,
-  },
-]
-
-// TODO(phase4/5): wire to GET /cohort
-export async function getCohort(): Promise<Page<CohortRow>> {
-  return { items: COHORT_ROWS, next_cursor: null, total: COHORT_ROWS.length }
-}
-
-// TODO(phase4/5): wire to GET /cohort/summary
-export async function getCohortSummary(): Promise<CohortSummary> {
-  return {
-    total: 847,
-    by_band: { high: 12, medium: 53, low: 782 },
-    mean_risk: 0.47,
-  }
-}
+// Cohort is wired to the real scoped backend (Wire-2): GET /cohort + GET /cohort/summary
+// via lib/api.ts. No cohort stub remains here. Participant/intervention/monitoring/
+// assistant stubs below stay until Wire-3 / later.
 
 // ---- participants ----
 // TODO(phase4/5): wire to GET /participants/{participant_id}

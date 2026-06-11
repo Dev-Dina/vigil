@@ -11,7 +11,7 @@ import {
   type TriageParticipant,
 } from "@/components/vigil"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { getCohort, getCohortSummary } from "@/lib/stubs"
+import { getCohort, getCohortSummary, ApiError } from "@/lib/api"
 import type { CohortRow, CohortSummary } from "@/lib/types"
 
 function humanizeFactor(tag: string): string {
@@ -34,19 +34,35 @@ export default function DashboardPage() {
   const router = useRouter()
   const [rows, setRows] = useState<CohortRow[]>([])
   const [summary, setSummary] = useState<CohortSummary | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    // TODO(phase4/5): wire to GET /cohort and GET /cohort/summary
-    getCohort().then((page) => setRows(page.items))
-    getCohortSummary().then(setSummary)
+    // Real GET /cohort + GET /cohort/summary — RLS-scoped server-side to the caller's
+    // token; the frontend adds NO sponsor filter. Honest error state on failure (403 for a
+    // platform role, or transport error) — never stale/fabricated rows.
+    setError(null)
+    Promise.all([getCohort(), getCohortSummary()])
+      .then(([page, sum]) => {
+        setRows(page.items)
+        setSummary(sum)
+      })
+      .catch((e) => {
+        setRows([])
+        setSummary(null)
+        if (e instanceof ApiError && e.status === 403) {
+          setError("This view is not available for your role.")
+        } else {
+          setError("Could not load the cohort. Please try again.")
+        }
+      })
+      .finally(() => setLoaded(true))
   }, [])
 
-  const topRows = useMemo(
-    () =>
-      [...rows]
-        .sort((a, b) => b.risk_score - a.risk_score)
-        .slice(0, 5)
-        .map(toRow),
+  // /cohort is already ranked server-side; cap the dashboard to the top 5.
+  const topRows = useMemo(() => rows.slice(0, 5).map(toRow), [rows])
+  const syntheticIds = useMemo(
+    () => new Set(rows.filter((r) => r.synthetic).map((r) => r.participant_id)),
     [rows],
   )
 
@@ -141,10 +157,21 @@ export default function DashboardPage() {
               View All
             </button>
           </div>
-          <TriageTable
-            participants={topRows}
-            onCallParticipant={(id) => router.push(`/participant/${id}`)}
-          />
+          {error ? (
+            <p className="py-8 text-center text-sm text-muted-foreground" role="alert">
+              {error}
+            </p>
+          ) : loaded && topRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No participants in your scoped cohort.
+            </p>
+          ) : (
+            <TriageTable
+              participants={topRows}
+              onCallParticipant={(id) => router.push(`/participant/${id}`)}
+              syntheticIds={syntheticIds}
+            />
+          )}
         </div>
       </main>
     </div>
