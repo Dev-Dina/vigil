@@ -46,7 +46,7 @@ def test_score_row_invisible_to_other_sponsor(migrated_db: dict[str, str]) -> No
 
     # Write a score under Sponsor A.
     with sponsor_bootstrap_session(str(sponsor_a_id)) as session:
-        row = scoring_repo.upsert_score(
+        row = scoring_repo.append_score(
             session,
             participant_id=pid_a,
             sponsor_id=sponsor_a_id,
@@ -163,7 +163,7 @@ def test_synthetic_flag_propagates(migrated_db: dict[str, str]) -> None:
     site_id = uuid.UUID(ids["site_a"])
 
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        row = scoring_repo.upsert_score(
+        row = scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,

@@ -428,7 +428,7 @@ def _seed_score(
 ) -> None:
     """Write a demo ParticipantScore row under the sponsor-bound session."""
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        row = scoring_repo.upsert_score(
+        row = scoring_repo.append_score(
             session,
             participant_id=tenant["participant"],
             sponsor_id=sponsor_id,

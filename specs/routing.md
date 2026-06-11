@@ -87,8 +87,11 @@ spec creates.
 | challenger | No | No | Yes (stored for evaluation; invisible to clinical reads) |
 | shadow | No | No | Yes (stored for monitoring; invisible to clinical reads) |
 
-**Invariant:** `GET /cohort` and `GET /participants/{id}/risk` MUST return champion-only scores.
-This is enforced in two layers:
+**Invariant:** `GET /cohort` and `GET /participants/{id}/risk` MUST return champion-only scores —
+specifically the **NEWEST champion row per participant** (`participant_score` now APPENDS
+timestamped history per `specs/scoring.md § Writeback`; the champion-allowlist read orders by
+`computed_at DESC` and takes the latest). Older champion history rows and all shadow/challenger
+rows never surface to clinical reads. This is enforced in two layers:
 1. **Denorm-cache write (current guard):** only the champion scoring job writes
    `participant.risk_score` and `participant.risk_band`. Challenger/shadow jobs write
    `participant_score` rows only; they never touch `participant.*`.

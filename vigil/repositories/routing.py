@@ -12,9 +12,10 @@ back to (the permitted history query per specs/routing.md § Decisions).
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 
-from sqlalchemy import desc, select
+from sqlalchemy import asc, desc, select
 from sqlalchemy.orm import Session
 
 from vigil.db.models import AuditLog, RoutingState
@@ -58,6 +59,62 @@ def champion_model_versions(session: Session) -> set[str]:
             select(RoutingState.model_version).where(RoutingState.role == "champion")
         ).scalars()
     )
+
+
+def champion_version_intervals(
+    session: Session,
+) -> dict[str, list[tuple[datetime | None, datetime | None]]]:
+    """Per ``model_version``, the time intervals during which it was the CHAMPION-OF-RECORD.
+
+    Reconstructs the champion timeline per regime from ``audit_log`` routing transitions
+    (`model_promote`/`model_fallback`, ordered by `created_at`) plus the current
+    ``routing_state`` champion — the PERMITTED audit-history query (specs/routing.md §
+    Decisions: reading history to know which version was champion WHEN, not sourcing the
+    current champion). Used by the risk-history endpoint to select the row that was champion
+    at each point in time (semantic (b)).
+
+    A version that was never a champion (shadow/challenger, or a version that never held the
+    role) simply never appears as a key, so it can never be a champion point. Bounds are
+    ``None`` for open (-inf / +inf). A `to_version == None` transition (suspend) caps the
+    prior champion's interval without opening a new one.
+    """
+    intervals: dict[str, list[tuple[datetime | None, datetime | None]]] = defaultdict(
+        list
+    )
+    champ_rows = (
+        session.execute(select(RoutingState).where(RoutingState.role == "champion"))
+        .scalars()
+        .all()
+    )
+    for champ in champ_rows:
+        trans = (
+            session.execute(
+                select(AuditLog)
+                .where(
+                    AuditLog.action.in_(("model_promote", "model_fallback")),
+                    AuditLog.detail["regime"].astext == champ.regime,
+                )
+                .order_by(asc(AuditLog.created_at))
+            )
+            .scalars()
+            .all()
+        )
+        events: list[tuple[str | None, datetime | None]] = []
+        if trans:
+            first_from = trans[0].detail.get("from_version")
+            if first_from:
+                events.append(
+                    (first_from, None)
+                )  # champion before the first transition
+            for t in trans:
+                events.append((t.detail.get("to_version"), t.created_at))
+        else:
+            events.append((champ.model_version, None))  # single champion the whole time
+        for i, (ver, start) in enumerate(events):
+            end = events[i + 1][1] if i + 1 < len(events) else None
+            if ver:  # skip None (suspend) markers — they only cap the prior interval
+                intervals[ver].append((start, end))
+    return dict(intervals)
 
 
 def last_known_good_champion(

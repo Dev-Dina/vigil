@@ -10,16 +10,20 @@ modelling phases, temporal split). Source: `data/models/baselines/metrics.json`.
 
 ### Per-indication decomposition
 
-| Indication | n_arms | Within-indication PR-AUC | Split |
-|---|---|---|---|
-| T2D | 2,666 | 0.3809 | temporal |
-| PSO | 1,407 | 0.6474 | temporal |
-| IBD | 1,207 | 0.4975 | temporal |
-| ALZ | 927 | 0.7747 | temporal |
-| MDD | 791 | 0.3206 | temporal |
-| MS | 719 | 0.6201 | temporal |
-| HF | 548 | 0.5829 | temporal |
-| RA | 9 | N/A | small-N random |
+PR-AUC is computed on the **TEST fold** — read each score against `n_test_arms` (the n it was
+actually computed on), not the total `n_arms`. Single temporal split, point estimates, **no
+confidence intervals** (deferred to the hardening track).
+
+| Indication | n_arms (total) | **n_test_arms** | Within-indication PR-AUC (on test fold) | Split |
+|---|---|---|---|---|
+| T2D | 2,666 | 516 | 0.3809 | temporal |
+| PSO | 1,407 | 240 | 0.6474 | temporal |
+| IBD | 1,207 | 229 | 0.4975 | temporal |
+| ALZ | 927 | 172 | 0.7747 | temporal |
+| MDD | 791 | 152 | 0.3206 | temporal |
+| MS | 719 | 142 | 0.6201 | temporal |
+| HF | 548 | 107 | 0.5829 | temporal |
+| RA | 9 | 1 | N/A | small-N random |
 
 Source: `data/models/decomposition/indication_pr_auc.json`.
 
@@ -39,8 +43,11 @@ the breakdown), AND it has the weakest within-indication structural signal (0.38
 0.70). That combination — maximum data, minimum covariate signal — makes it the correct and
 hardest test for whether adding visit-trajectory features produces a real lift.
 
-ALZ (within-indication 0.77) already captures substantial dropout structure from covariates
-alone. Trajectory may not be the discriminative gap there. T2D is the stress test.
+ALZ's within-indication PR-AUC (0.7747) is **DIRECTIONAL only**: it rests on **172 test arms,
+a single temporal split, with no confidence interval**, so it must not be over-read as a ranked
+"strong-signal" indication — at this n the estimate is wide and could overlap PSO (0.65). Read
+it as a hint that covariates may carry more ALZ dropout structure, not as an established result.
+T2D is the stress test (largest n, weakest covariate signal).
 
 ---
 

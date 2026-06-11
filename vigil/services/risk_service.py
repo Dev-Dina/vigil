@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from datetime import datetime
 
 from vigil.core.scope import Scope
+from vigil.db.models import Participant
 from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories.session import platform_session, scoped_session
@@ -32,6 +34,26 @@ class RiskView:
     risk_score: float
     factors: list[FactorView]
     model_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class RiskHistoryPointView:
+    risk_score: float
+    risk_band: str
+    model_version: str
+    model_card_ref: str
+    synthetic: bool
+    computed_at: datetime
+
+
+def _in_intervals(
+    ts: datetime, intervals: list[tuple[datetime | None, datetime | None]]
+) -> bool:
+    """True if ``ts`` falls in any [start, end) interval (None bounds = open -inf/+inf)."""
+    for start, end in intervals:
+        if (start is None or start <= ts) and (end is None or ts < end):
+            return True
+    return False
 
 
 def _factors_from_reasons(reasons: object) -> list[FactorView]:
@@ -94,3 +116,51 @@ def get_participant_risk(scope: Scope, participant_id: str) -> RiskView | None:
         factors=_factors_from_reasons(row.reasons),
         model_version=row.model_version,
     )
+
+
+def get_participant_risk_history(
+    scope: Scope, participant_id: str
+) -> list[RiskHistoryPointView] | None:
+    """Promotion-aware champion risk trajectory for a participant (H2b, semantic (b)).
+
+    Returns the rows that were CHAMPION-OF-RECORD at their own ``computed_at`` — the row whose
+    ``model_version`` held the champion role at that timestamp, reconstructed from the B3
+    promotion/fallback timeline (``routing.champion_version_intervals``). A version change
+    across the series stays VISIBLE via each point's real ``model_version`` (no smoothing).
+    Shadow/challenger rows, and rows of a version outside its champion tenure, are EXCLUDED.
+
+    Visibility vs emptiness (the 404↔empty-200 distinction the router uses):
+    - ``None`` → the participant is NOT visible to the caller (out of scope / not found / bad
+      id): a SECURITY fail-closed case → router 404.
+    - ``[]`` (or a populated list) → the participant IS in scope: a normal DATA state → router
+      200, even when there are no champion points yet.
+    """
+    try:
+        pid = uuid.UUID(participant_id)
+    except (ValueError, AttributeError):
+        return None
+
+    # Champion-of-record timeline from the platform routing tables (audit + routing_state).
+    with platform_session() as session:
+        intervals = routing_repo.champion_version_intervals(session)
+
+    with scoped_session(scope) as session:
+        participant = session.get(Participant, pid)
+        if participant is None:
+            return None  # RLS-hidden or nonexistent → out-of-scope fail-closed (404)
+        rows = scoring_repo.history_rows_for_participant(session, pid)
+
+    points: list[RiskHistoryPointView] = []
+    for r in rows:
+        if _in_intervals(r.computed_at, intervals.get(r.model_version, [])):
+            points.append(
+                RiskHistoryPointView(
+                    risk_score=r.risk_score,
+                    risk_band=r.risk_band,
+                    model_version=r.model_version,
+                    model_card_ref=r.model_card_ref,
+                    synthetic=r.synthetic,
+                    computed_at=r.computed_at,
+                )
+            )
+    return points

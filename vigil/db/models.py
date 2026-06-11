@@ -21,6 +21,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -254,14 +255,20 @@ class AuditLog(Base):
 class ParticipantScore(Base):
     """Scoring writeback — tenant-scoped, RLS on sponsor_id (no platform bypass).
 
-    Unique key: (participant_id, model_version) — upsert-safe.
+    APPENDED history: one row per (participant_id, model_version, scoring run). Identity is
+    the surrogate ``id`` PK; rows are ordered by ``computed_at`` (no UNIQUE on
+    participant_id+model_version — that forced upsert-overwrite). Clinical reads surface the
+    NEWEST champion row (see specs/scoring.md § Writeback, routing.md § (i)).
     synthetic=True on every row from the demo/synthetic cohort.
     """
 
     __tablename__ = "participant_score"
     __table_args__ = (
-        UniqueConstraint(
-            "participant_id", "model_version", name="uq_participant_score"
+        Index(
+            "ix_ps_participant_version_time",
+            "participant_id",
+            "model_version",
+            "computed_at",
         ),
     )
 

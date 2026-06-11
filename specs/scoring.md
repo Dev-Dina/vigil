@@ -58,8 +58,15 @@ populates them from the model's temporal attribution at scoring time.
 
 ## Writeback
 
-### `participant_score` table
-Every writeback upserts into `participant_score` (unique key: `participant_id + model_version`).
+### `participant_score` table — APPENDED history (not upsert-over-current)
+Every scoring run **APPENDS** a new timestamped row to `participant_score`: one row per
+`(participant_id, model_version, run)`, retaining all prior rows as risk **history** (the
+substrate the risk-history endpoint and the sparkline read). Row **identity is the surrogate
+`id` PK**; history is **ordered by `computed_at`**. There is **no** `UNIQUE(participant_id,
+model_version)` — that constraint forced upsert-overwrite and is REPLACED by a composite index
+`(participant_id, model_version, computed_at DESC)` serving the newest-row and history-range
+queries. (Surrogate-id + index chosen over `UNIQUE(participant_id, model_version, computed_at)`
+so two rows sharing a `computed_at` never raise — the run, not the timestamp, is the identity.)
 The table carries `sponsor_id` and is protected by the default sponsor RLS policy
 (`/specs/domain.md`). Schema:
 
@@ -77,24 +84,34 @@ CREATE TABLE participant_score (
     model_version  text        NOT NULL,
     model_card_ref text        NOT NULL,
     synthetic      bool        NOT NULL DEFAULT false,
-    computed_at    timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (participant_id, model_version)
+    computed_at    timestamptz NOT NULL DEFAULT now()
+    -- NO UNIQUE(participant_id, model_version): rows APPEND as history.
 );
--- RLS: standard sponsor-scoped policy (same as every operational table).
+-- RLS: standard sponsor-scoped policy (same as every operational table). UNCHANGED.
 -- Index on (sponsor_id, trial_id) for the cohort query hot path.
 -- Index on (sponsor_id, risk_band) for band-filtered triage views.
+-- Index on (participant_id, model_version, computed_at DESC) for newest-row + history range.
 ```
 
 Relation to API: `GET /cohort` reads `risk_score`, `risk_band`, `top_factors` from this table
 (via the scoped repository). `GET /participants/{id}/risk` reads the full `reasons` list.
 
+### Champion-only **+ latest** surfacing
+Clinical reads (`GET /cohort`, `GET /participants/{id}/risk`) surface the **NEWEST champion row
+per participant** — the champion-only allowlist rule (`/specs/routing.md § (i)`) AND `max(
+computed_at)`. Older champion history rows, and all shadow/challenger rows, **never** surface to
+clinical reads. The denorm cache (`participant.risk_score`/`risk_band`) is still written ONLY by
+the champion run and reflects the latest champion score.
+
 ### Audit log on every write
-Every writeback (insert or upsert) appends a row to the existing `audit_log` table:
+Every writeback (each appended row) appends a row to the existing `audit_log` table:
 - `action: "score_writeback"`
 - `actor_id:` the Arq job id (not a human user; scores are computed)
 - `resource_type: "participant_score"`, `resource_id: participant_id`
 - `sponsor_id:` the scoped tenant
-- `payload: {model_version, synthetic, n_rows_written}` — no PII, no risk values in the log
+- `payload: {model_version, synthetic, n_rows_written}` — no PII, no risk values in the log.
+  Append semantics: a re-run does NOT overwrite — it appends a new point, so each run records
+  `n_rows_written` rows (1 per participant per run) rather than mutating a prior row in place.
 
 ## Tenancy
 
@@ -152,8 +169,11 @@ established in `/specs/domain.md`.
 - `model_version=None` resolves to the registered champion at job time.
 - Full job sequence: resolve scope → load cohort → build features → `run_smoke` →
   sequence-model inference → compute attributions → writeback → audit log.
-- On failure: exponential backoff + jitter (`/specs/infra.md` resilience rules). Idempotent
-  (upsert on unique key); safe to retry.
+- On failure: exponential backoff + jitter (`/specs/infra.md` resilience rules). The writeback
+  APPENDS a timestamped history row (no unique key — see § Writeback), so a retry APPENDS a new
+  point rather than overwriting; it is NOT upsert-idempotent. Retry is safe for correctness
+  (each row is independent, RLS-scoped, audited) but may leave a duplicate near-coincident
+  history point — a cosmetic artifact, never a cross-tenant or non-champion leak.
 - The request path NEVER blocks on scoring. `POST /scoring/trigger` enqueues and returns
   `202 Accepted`.
 

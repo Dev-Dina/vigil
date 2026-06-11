@@ -4,12 +4,13 @@ Scope-guarded: platform roles (PLATFORM_ADMIN, AUDITOR) receive 403 on all
 participant-level routes — scope:[] carries no participant access
 (domain.md, specs/dashboard.md § Role-scoped rendering).
 
-Repository calls are stubs; real DB wiring is Phase 5.
+Wired to real scoped services (Wire-3): detail + /risk (champion-only) + /risk/history
+(champion-at-each-point) + interventions (real, audited). Out-of-scope → 404 fail-closed.
 """
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
@@ -17,7 +18,7 @@ from pydantic import BaseModel, Field
 from vigil.api.deps import ScopeDep
 from vigil.core.schemas import Page
 from vigil.core.scope import Scope
-from vigil.domain import IDENTITY_ROLES, PLATFORM_ROLES, InterventionKind
+from vigil.domain import PLATFORM_ROLES, InterventionKind
 
 router = APIRouter(prefix="/participants", tags=["participants"])
 
@@ -55,6 +56,20 @@ class RiskExplanation(BaseModel):
     horizon_days: int = 28
     factors: list[FactorContribution]
     model_version: str
+
+
+class RiskHistoryPoint(BaseModel):
+    risk_score: float = Field(ge=0, le=1)
+    risk_band: str
+    model_version: str  # the champion-of-record model that produced THIS point
+    model_card_ref: str
+    synthetic: bool  # per-point provenance (B4); never smoothed away
+    computed_at: datetime
+
+
+class RiskHistory(BaseModel):
+    participant_id: str
+    points: list[RiskHistoryPoint]  # champion-only, ordered by computed_at ASC
 
 
 class InterventionIn(BaseModel):
@@ -106,21 +121,33 @@ async def get_participant(
     participant_id: str,
     scope: Scope = ScopeDep,
 ) -> ParticipantDetail:
-    """GET /participants/{participant_id} — 403 for platform roles."""
+    """GET /participants/{participant_id} — real, scope-filtered; 403 for platform roles.
+
+    404 (fail closed) when the participant is out of scope / not found (RLS-hidden). Identity
+    (coded_ref) is surfaced ONLY for site roles. ``synthetic`` comes from the champion score.
+    """
+    from vigil.services import participant_service
+
     _deny_platform(scope)
-    # TODO(phase5): wire real DB query via participant repository (scoped session).
-    # Populate identity only for site roles.
-    identity: ParticipantIdentity | None = None
-    if scope.role in IDENTITY_ROLES:
-        identity = ParticipantIdentity(coded_ref=participant_id)
+    view = participant_service.get_detail(scope, participant_id)
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="participant not found in scope",
+        )
+    identity: ParticipantIdentity | None = (
+        ParticipantIdentity(coded_ref=view.coded_ref)
+        if view.coded_ref is not None
+        else None
+    )
     return ParticipantDetail(
-        participant_id=participant_id,
-        trial_id="trl_stub",
-        site_id="sit_stub",
-        status="active",
-        risk_score=0.5,
-        enrolled_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-        synthetic=True,  # TODO(phase5): read from participant_score.synthetic
+        participant_id=view.participant_id,
+        trial_id=view.trial_id,
+        site_id=view.site_id,
+        status=view.status,
+        risk_score=view.risk_score,
+        enrolled_at=view.enrolled_at,
+        synthetic=view.synthetic,
         identity=identity,
     )
 
@@ -158,6 +185,46 @@ async def get_risk(
     )
 
 
+@router.get("/{participant_id}/risk/history", response_model=RiskHistory)
+async def get_risk_history(
+    participant_id: str,
+    scope: Scope = ScopeDep,
+) -> RiskHistory:
+    """GET /participants/{participant_id}/risk/history — champion risk trajectory (H2b).
+
+    Promotion-aware semantic (b): each point is the row that was CHAMPION-OF-RECORD at its
+    ``computed_at`` (reconstructed from the B3 promotion timeline), ordered ASC. A version
+    change across the series is VISIBLE via each point's real ``model_version`` (not smoothed);
+    shadow/challenger rows never appear. 403 for platform roles. Distinguishes security from
+    data state: out-of-scope / not-found (RLS-hidden) → 404 fail-closed; an in-scope
+    participant with no champion points yet → 200 with an empty ``points`` list.
+    """
+    from vigil.services import risk_service
+
+    _deny_platform(scope)
+    points = risk_service.get_participant_risk_history(scope, participant_id)
+    if points is None:
+        # Participant not visible to the caller (out of scope / not found) — fail closed.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="participant not found in scope",
+        )
+    return RiskHistory(
+        participant_id=participant_id,
+        points=[
+            RiskHistoryPoint(
+                risk_score=p.risk_score,
+                risk_band=p.risk_band,
+                model_version=p.model_version,
+                model_card_ref=p.model_card_ref,
+                synthetic=p.synthetic,
+                computed_at=p.computed_at,
+            )
+            for p in points
+        ],
+    )
+
+
 @router.post(
     "/{participant_id}/interventions",
     status_code=201,
@@ -168,17 +235,29 @@ async def log_intervention(
     body: InterventionIn,
     scope: Scope = ScopeDep,
 ) -> InterventionOut:
-    """POST interventions — 403 for platform roles and auditor (write)."""
+    """POST interventions — real + audited; actor is the authenticated user (server-side).
+
+    403 for platform roles and auditor (write); 404 if the participant is out of scope.
+    """
+    from vigil.services import participant_service
+
     _deny_platform(scope)
     _deny_auditor_write(scope)
-    # TODO(phase5): wire to intervention repository; write audit log row.
+    view = participant_service.log_intervention(
+        scope, participant_id, kind=body.kind, note=body.note
+    )
+    if view is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="participant not found in scope",
+        )
     return InterventionOut(
-        id="iv_stub",
-        participant_id=participant_id,
-        kind=body.kind,
-        note=body.note,
-        actor_user_id=scope.user_id,
-        created_at=datetime.now(tz=timezone.utc),
+        id=view.id,
+        participant_id=view.participant_id,
+        kind=view.kind,
+        note=view.note,
+        actor_user_id=view.actor_user_id,
+        created_at=view.created_at,
     )
 
 
@@ -187,7 +266,25 @@ async def list_interventions(
     participant_id: str,
     scope: Scope = ScopeDep,
 ) -> Page:
-    """GET /participants/{participant_id}/interventions — 403 for platform roles."""
+    """GET /participants/{participant_id}/interventions — real, scope-filtered; 403 platform."""
+    from vigil.services import participant_service
+
     _deny_platform(scope)
-    # TODO(phase5): wire to intervention repository (scoped session).
-    return Page(items=[], next_cursor=None, total=0)
+    views = participant_service.list_interventions(scope, participant_id)
+    if views is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="participant not found in scope",
+        )
+    items = [
+        InterventionOut(
+            id=v.id,
+            participant_id=v.participant_id,
+            kind=v.kind,
+            note=v.note,
+            actor_user_id=v.actor_user_id,
+            created_at=v.created_at,
+        ).model_dump()
+        for v in views
+    ]
+    return Page(items=items, next_cursor=None, total=len(items))

@@ -20,6 +20,7 @@ import type {
   Page,
   ParticipantDetail,
   RiskExplanation,
+  RiskHistory,
 } from "./types"
 
 const API_BASE =
@@ -123,6 +124,17 @@ export async function getParticipant(participantId: string): Promise<Participant
 export async function getParticipantRisk(participantId: string): Promise<RiskExplanation> {
   return apiFetch<RiskExplanation>(
     `/api/v1/participants/${encodeURIComponent(participantId)}/risk`,
+  )
+}
+
+export async function getParticipantRiskHistory(
+  participantId: string,
+): Promise<RiskHistory> {
+  // Champion-at-each-point trajectory (H2b). 200 with empty points = in-scope, no history;
+  // 404 = out-of-scope/not-found (ApiError). Per-point model_version preserved for the
+  // version-boundary rendering — do NOT flatten away the model identity.
+  return apiFetch<RiskHistory>(
+    `/api/v1/participants/${encodeURIComponent(participantId)}/risk/history`,
   )
 }
 

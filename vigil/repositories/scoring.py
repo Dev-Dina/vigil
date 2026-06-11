@@ -12,13 +12,12 @@ from collections.abc import Collection
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from vigil.db.models import AuditLog, ParticipantScore
 
 
-def upsert_score(
+def append_score(
     session: Session,
     *,
     participant_id: uuid.UUID,
@@ -33,42 +32,27 @@ def upsert_score(
     model_card_ref: str,
     synthetic: bool,
 ) -> ParticipantScore:
-    """INSERT ... ON CONFLICT (participant_id, model_version) DO UPDATE SET ...
+    """APPEND a new timestamped participant_score row (history; H1).
 
-    Idempotent by the unique key; safe to retry.
+    Plain INSERT — does NOT overwrite a prior row. Each scoring run adds a new point
+    (new ``computed_at``); prior rows for the same (participant, model_version) remain as
+    history. Re-running appends rather than mutating in place (idempotency change per
+    specs/scoring.md § Writeback). Runs under the caller's RLS-scoped session.
     """
-    stmt = (
-        insert(ParticipantScore)
-        .values(
-            participant_id=participant_id,
-            sponsor_id=sponsor_id,
-            trial_id=trial_id,
-            site_id=site_id,
-            risk_score=risk_score,
-            risk_band=risk_band,
-            top_factors=top_factors,
-            reasons=reasons,
-            model_version=model_version,
-            model_card_ref=model_card_ref,
-            synthetic=synthetic,
-        )
-        .on_conflict_do_update(
-            constraint="uq_participant_score",
-            set_={
-                "sponsor_id": sponsor_id,
-                "trial_id": trial_id,
-                "site_id": site_id,
-                "risk_score": risk_score,
-                "risk_band": risk_band,
-                "top_factors": top_factors,
-                "reasons": reasons,
-                "model_card_ref": model_card_ref,
-                "synthetic": synthetic,
-            },
-        )
-        .returning(ParticipantScore)
+    row = ParticipantScore(
+        participant_id=participant_id,
+        sponsor_id=sponsor_id,
+        trial_id=trial_id,
+        site_id=site_id,
+        risk_score=risk_score,
+        risk_band=risk_band,
+        top_factors=top_factors,
+        reasons=reasons,
+        model_version=model_version,
+        model_card_ref=model_card_ref,
+        synthetic=synthetic,
     )
-    row = session.execute(stmt).scalar_one()
+    session.add(row)
     session.flush()
     return row
 
@@ -76,11 +60,19 @@ def upsert_score(
 def get_score(
     session: Session, participant_id: uuid.UUID, model_version: str
 ) -> ParticipantScore | None:
+    """Newest participant_score row for a (participant, model_version) — history-safe.
+
+    With appended history multiple rows can share a (participant_id, model_version); this
+    returns the latest by ``computed_at`` rather than raising on multiple matches.
+    """
     return session.execute(
-        select(ParticipantScore).where(
+        select(ParticipantScore)
+        .where(
             ParticipantScore.participant_id == participant_id,
             ParticipantScore.model_version == model_version,
         )
+        .order_by(ParticipantScore.computed_at.desc())
+        .limit(1)
     ).scalar_one_or_none()
 
 
@@ -139,6 +131,26 @@ def champion_scores_by_participant(
     for row in rows:  # rows are newest-first; keep the first seen per participant
         latest.setdefault(row.participant_id, row)
     return latest
+
+
+def history_rows_for_participant(
+    session: Session, participant_id: uuid.UUID
+) -> list[ParticipantScore]:
+    """ALL participant_score rows for a participant, oldest-first (every model_version).
+
+    The champion-at-each-point filter (semantic (b)) is applied by the caller against the
+    champion timeline (``routing.champion_version_intervals``); this returns the raw rows
+    under the caller's RLS-scoped session (tenant isolation still applies). Shadow/challenger
+    rows are returned here and EXCLUDED by the caller's timeline filter — they are never a
+    champion-of-record at their own timestamp.
+    """
+    return list(
+        session.execute(
+            select(ParticipantScore)
+            .where(ParticipantScore.participant_id == participant_id)
+            .order_by(ParticipantScore.computed_at.asc())
+        ).scalars()
+    )
 
 
 def list_scores_for_participant(

@@ -66,7 +66,7 @@ def _write_score(
     from vigil.repositories.session import sponsor_bootstrap_session
 
     with sponsor_bootstrap_session(ids["sponsor_a"]) as session:
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=uuid.UUID(ids["sponsor_a"]),

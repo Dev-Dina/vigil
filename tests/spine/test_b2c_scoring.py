@@ -70,7 +70,7 @@ def test_invariant_i_champion_only_surfacing(migrated_db: dict[str, str]) -> Non
 
     # Write champion participant_score row + set denorm on participant.
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,
@@ -94,7 +94,7 @@ def test_invariant_i_champion_only_surfacing(migrated_db: dict[str, str]) -> Non
 
     # Write shadow participant_score row (no denorm update — shadow never writes it).
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,
@@ -221,7 +221,7 @@ def test_layer2_risk_fails_closed_on_shadow_only(migrated_db: dict[str, str]) ->
 
     # Write ONLY a shadow row for this participant (no champion participant_score row).
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,
@@ -362,7 +362,7 @@ def test_tenant_isolation_shadow_rows(migrated_db: dict[str, str]) -> None:
 
     # Write a shadow row for Sponsor A's participant.
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,

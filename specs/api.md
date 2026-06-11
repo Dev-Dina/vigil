@@ -117,6 +117,7 @@ class CohortSummary(BaseModel):
 |---|---|---|---|
 | `GET /participants/{participant_id}` | path | `ParticipantDetail` | 403 if id outside scope; identities only for site roles (PI/CRC) |
 | `GET /participants/{participant_id}/risk` | path | `RiskExplanation` | per-feature contributions behind the flag; champion-only (`model_version` is always the champion — shadow/challenger rows are filtered out per routing.md § (i)); `404` if no champion score (fail-closed, never a non-champion fallback) |
+| `GET /participants/{participant_id}/risk/history` | path | `RiskHistory` | champion risk **trajectory** over time (H1 appended history), ordered by `computed_at` ASC. **Semantic (b) — champion-at-each-point:** each point is the row whose `model_version` was the CHAMPION-OF-RECORD at its `computed_at` (reconstructed from the B3 promotion/fallback timeline); the trajectory spans version changes and each point carries its real `model_version`/`model_card_ref`/`synthetic` (B4) — a cross-version trajectory is honestly labeled, never smoothed. Shadow/challenger rows, and rows outside their version's champion tenure, NEVER appear. **Visibility vs emptiness:** out-of-scope / not-found (RLS-hidden) → `404`; platform role → `403`; an in-scope participant with no champion points yet → `200` with `points: []` (a normal data state, not an error). |
 | `POST /participants/{participant_id}/interventions` | `InterventionIn` | `InterventionOut` | logs a triage action; audited |
 | `GET /participants/{participant_id}/interventions` | path | `Page[InterventionOut]` | history for this participant |
 
@@ -136,6 +137,16 @@ class RiskExplanation(BaseModel):
     horizon_days: int = 28
     factors: list[FactorContribution]       # signed feature contributions, sorted by |impact|
     model_version: str
+class RiskHistoryPoint(BaseModel):
+    risk_score: float
+    risk_band: Literal["high", "medium", "low"]
+    model_version: str                      # champion-of-record model that produced THIS point
+    model_card_ref: str                      # provenance — the card for THIS point's model
+    synthetic: bool                          # provenance per point (B4) — never smoothed away
+    computed_at: datetime
+class RiskHistory(BaseModel):
+    participant_id: str
+    points: list[RiskHistoryPoint]          # champion-at-each-point, ordered by computed_at ASC
 class InterventionIn(BaseModel):
     kind: Literal["call", "visit_reschedule", "reminder", "note"]
     note: str = Field(max_length=2000)

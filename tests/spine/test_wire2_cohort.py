@@ -59,7 +59,7 @@ def _make_participant_with_score(
             )
         )
         session.flush()
-        scoring_repo.upsert_score(
+        scoring_repo.append_score(
             session,
             participant_id=pid,
             sponsor_id=sponsor_id,

@@ -118,3 +118,16 @@ def add_intervention(
     session.add(row)
     session.flush()
     return row
+
+
+def list_interventions(
+    session: Session, participant_id: uuid.UUID
+) -> list[Intervention]:
+    """Intervention history for a participant, newest-first (RLS-scoped)."""
+    return list(
+        session.execute(
+            select(Intervention)
+            .where(Intervention.participant_id == participant_id)
+            .order_by(Intervention.created_at.desc())
+        ).scalars()
+    )

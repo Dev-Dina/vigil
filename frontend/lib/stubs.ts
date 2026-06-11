@@ -7,14 +7,10 @@ import type {
   AssistantTurn,
   ConversationOut,
   DriftPoint,
-  InterventionIn,
-  InterventionOut,
   JobAccepted,
   JobPending,
   ModelStatus,
   Page,
-  ParticipantDetail,
-  RiskExplanation,
 } from "./types"
 
 const ISO = (d: string) => new Date(d).toISOString()
@@ -26,55 +22,9 @@ const ISO = (d: string) => new Date(d).toISOString()
 
 // ---- cohort ----
 // Cohort is wired to the real scoped backend (Wire-2): GET /cohort + GET /cohort/summary
-// via lib/api.ts. No cohort stub remains here. Participant/intervention/monitoring/
-// assistant stubs below stay until Wire-3 / later.
-
-// ---- participants ----
-// TODO(phase4/5): wire to GET /participants/{participant_id}
-export async function getParticipant(participantId: string): Promise<ParticipantDetail> {
-  return {
-    participant_id: participantId,
-    trial_id: "trl_22",
-    site_id: "sit_07",
-    status: "active",
-    risk_score: 0.78,
-    enrolled_at: ISO("2026-01-15T00:00:00Z"),
-    synthetic: true, // all seed data is synthetic
-    identity: null, // populated ONLY for site roles; null otherwise
-  }
-}
-
-// TODO(phase4/5): wire to GET /participants/{participant_id}/risk
-export async function getParticipantRisk(participantId: string): Promise<RiskExplanation> {
-  return {
-    participant_id: participantId,
-    risk_score: 0.78,
-    horizon_days: 28,
-    factors: [
-      { feature: "missed_appointments", contribution: 0.85 },
-      { feature: "symptom_burden", contribution: 0.72 },
-      { feature: "travel_distance", contribution: 0.58 },
-      { feature: "employment_status", contribution: 0.41 },
-      { feature: "social_support", contribution: -0.28 },
-    ],
-    model_version: "retention-v3.2.1",
-  }
-}
-
-// TODO(phase4/5): wire to POST /participants/{participant_id}/interventions
-export async function logIntervention(
-  participantId: string,
-  body: InterventionIn,
-): Promise<InterventionOut> {
-  return {
-    id: "iv_" + Math.random().toString(36).slice(2, 10),
-    participant_id: participantId,
-    kind: body.kind,
-    note: body.note,
-    actor_user_id: "usr_stub", // intervention stub stays until Wire-3 (real actor from scope)
-    created_at: new Date().toISOString(),
-  }
-}
+// via lib/api.ts. No cohort stub remains here. Participant detail + /risk + /risk/history +
+// interventions are wired to the real scoped backend (Wire-3) via lib/api.ts — no participant
+// or intervention stub remains here. Monitoring/assistant stubs below stay until later gates.
 
 // ---- monitoring ----
 // TODO(phase4/5): wire to GET /monitoring/models

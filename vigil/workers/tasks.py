@@ -1,8 +1,14 @@
-"""Task functions. Jobs are idempotent and carry the scope context they need explicitly.
+"""Task functions. Jobs carry the scope context they need explicitly.
+
+score_trial's writeback APPENDS a timestamped history row (no unique key; see
+specs/scoring.md § Writeback), so it is NOT upsert-idempotent: a retry APPENDS a new point
+rather than overwriting. Retry stays safe for correctness (each row is independent,
+RLS-scoped, audited) but may leave a duplicate near-coincident history point — cosmetic, never
+a cross-tenant or non-champion leak.
 
 score_trial runs the full scoring pipeline:
   resolve scope -> load cohort + engagement -> temporal guard -> feature guards
-  -> inference (LSTM or demo) -> compute risk_band -> writeback (upsert + audit)
+  -> inference (LSTM or demo) -> compute risk_band -> writeback (append + audit)
   -> denorm update on participant
 Every path fires assert_feature_time_before_t (when engagement exists) +
 assert_no_outcome_features before inference; these cannot be skipped.
@@ -339,7 +345,7 @@ async def score_trial(
     """Score all participants in a trial and write back risk scores.
 
     Job sequence (exact per specs/scoring.md):
-    1. Jitter (idempotent retry safety)
+    1. Jitter (backoff spread across retries; writeback appends, so retry is NOT idempotent)
     2. Resolve scorer + model version (fail loud if no artifact in prod)
     3. Load participants + trial metadata + all engagement for the trial
     4. assert_feature_time_before_t (temporal guard; fires when engagement exists)
@@ -347,11 +353,12 @@ async def score_trial(
     6. EXCLUDED_FROM_FEATURES check (same features)
     7. Score (LSTMScorer or _demo_scorer)
     8. Compute risk_band thresholds (>0.6 high, >0.3 medium, else low)
-    9. Writeback: upsert_score + write_score_audit + denorm Participant
+    9. Writeback: append_score + write_score_audit + denorm Participant
        synthetic flag = logical-OR over participant's engagement rows (inv 8)
     10. Return summary dict (no PII, no risk values in log)
     """
-    # 1. Jitter — exponential backoff safety across retries.
+    # 1. Jitter — exponential backoff spread across retries (NOT idempotency: the writeback
+    #    appends, so a retry adds a new history point — see module docstring).
     job_try = ctx.get("job_try", 0)
     await asyncio.sleep(random.uniform(0, 2**job_try))  # noqa: S311
 
@@ -567,7 +574,7 @@ async def score_trial(
             participant_snapshots, scores, synth_flags, strict=True
         ):
             band = _band(float(score))
-            scoring_repo.upsert_score(
+            scoring_repo.append_score(
                 session,
                 participant_id=p_snap["id"],
                 sponsor_id=p_snap["sponsor_id"],
@@ -648,7 +655,7 @@ async def score_trial(
                     participant_snapshots, shadow_scores, strict=True
                 ):
                     sh_synth = shadow_pid_synth.get(str(p_snap["id"]), True)
-                    scoring_repo.upsert_score(
+                    scoring_repo.append_score(
                         session,
                         participant_id=p_snap["id"],
                         sponsor_id=p_snap["sponsor_id"],

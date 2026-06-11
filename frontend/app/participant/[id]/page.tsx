@@ -9,11 +9,24 @@ import {
   PulseDivider,
   ContributingFactors,
   ExplanationCard,
+  RiskTrajectory,
 } from "@/components/vigil"
-import { getParticipant, getParticipantRisk, logIntervention, ApiError } from "@/lib/api"
+import {
+  getParticipant,
+  getParticipantRisk,
+  getParticipantRiskHistory,
+  logIntervention,
+  getInterventions,
+  ApiError,
+} from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES, CAN_LOG_INTERVENTIONS } from "@/lib/role-gates"
-import type { ParticipantDetail, RiskExplanation } from "@/lib/types"
+import type {
+  ParticipantDetail,
+  RiskExplanation,
+  RiskHistoryPoint,
+  InterventionOut,
+} from "@/lib/types"
 
 function humanizeFactor(tag: string): string {
   return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -30,6 +43,8 @@ export default function ParticipantDetailPage() {
 
   const [detail, setDetail] = useState<ParticipantDetail | null>(null)
   const [risk, setRisk] = useState<RiskExplanation | null>(null)
+  const [history, setHistory] = useState<RiskHistoryPoint[]>([])
+  const [interventions, setInterventions] = useState<InterventionOut[]>([])
   const [scopeDenied, setScopeDenied] = useState(false)
 
   const isPlatformRole = me?.role != null && (PLATFORM_ROLES as string[]).includes(me.role)
@@ -39,16 +54,25 @@ export default function ParticipantDetailPage() {
   useEffect(() => {
     if (!id || isPlatformRole) return
     setScopeDenied(false)
-    Promise.all([getParticipant(id), getParticipantRisk(id)])
-      .then(([d, r]) => {
-        setDetail(d)
-        setRisk(r)
-      })
+    // Real scoped reads. Detail is the security gate: 403/404 on it → access-denied state.
+    // /risk 404 (no champion score) and /risk/history 404 are tolerated as "no data yet".
+    getParticipant(id)
+      .then((d) => setDetail(d))
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 403) {
+        // 403 (platform) or 404 (out-of-scope / not found) → access denied, no fabricated data.
+        if (e instanceof ApiError && (e.status === 403 || e.status === 404)) {
           setScopeDenied(true)
         }
       })
+    getParticipantRisk(id)
+      .then((r) => setRisk(r))
+      .catch(() => setRisk(null)) // no champion score yet → leave null (UI shows —)
+    getParticipantRiskHistory(id)
+      .then((h) => setHistory(h.points))
+      .catch(() => setHistory([])) // 404/empty → honest empty sparkline
+    getInterventions(id)
+      .then((page) => setInterventions(page.items))
+      .catch(() => setInterventions([]))
   }, [id, isPlatformRole])
 
   // Role gate: platform roles see a message, not participant data.
@@ -80,6 +104,13 @@ export default function ParticipantDetailPage() {
   const handleSchedule = async () => {
     if (!id) return
     await logIntervention(id, { kind: "call", note: "Scheduled outreach from triage." })
+    // Refresh the real, server-audited history (actor is the authenticated user server-side).
+    try {
+      const page = await getInterventions(id)
+      setInterventions(page.items)
+    } catch {
+      // leave existing list; the POST itself succeeded
+    }
   }
 
   // RiskExplanation has factors but no prose; the assistant produces prose.
@@ -172,17 +203,14 @@ export default function ParticipantDetailPage() {
           </Card>
         </div>
 
-        {/* Visit trend sparkline: RiskExplanation has no history field.
-            TODO(phase5): risk history endpoint needed for trend sparkline */}
+        {/* Champion risk trajectory (H2b): cross-version, version boundaries VISIBLE.
+            RiskTrajectory breaks the line + labels each model change; synthetic points are
+            drawn distinctly. Empty (in-scope, no history) → honest empty state. */}
         <div className="mb-4 rounded border border-border bg-card px-4 py-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">Risk Score (current)</p>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-2xl font-semibold text-foreground">{riskPct}%</span>
-            <span className="text-xs text-muted-foreground">
-              {/* TODO(phase5): risk history endpoint needed for trend sparkline */}
-              Single-point — trend requires history endpoint
-            </span>
-          </div>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">
+            Risk Trajectory (champion-of-record over time)
+          </p>
+          <RiskTrajectory points={history} />
         </div>
 
         <PulseDivider />
@@ -198,10 +226,32 @@ export default function ParticipantDetailPage() {
 
         <PulseDivider />
 
+        {/* Real intervention history (audited server-side; actor = authenticated user). */}
+        <div className="mb-4">
+          <h3 className="mb-2 text-sm font-semibold text-foreground">Interventions</h3>
+          {interventions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No interventions logged yet.</p>
+          ) : (
+            <ul className="space-y-1">
+              {interventions.map((iv) => (
+                <li
+                  key={iv.id}
+                  className="flex items-center justify-between rounded border border-border bg-card px-3 py-2 text-sm"
+                >
+                  <span className="font-mono capitalize text-foreground">
+                    {iv.kind.replace(/_/g, " ")}
+                  </span>
+                  <span className="truncate px-3 text-muted-foreground">{iv.note}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {iv.created_at.slice(0, 16).replace("T", " ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div className="flex items-center justify-end gap-4">
-          <button className="px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
-            View Full History
-          </button>
           {canLogIntervention && (
             <button
               onClick={handleSchedule}

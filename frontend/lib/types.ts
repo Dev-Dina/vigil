@@ -107,6 +107,22 @@ export interface RiskExplanation {
   model_version: string
 }
 
+// Champion risk trajectory (H2b semantic b) — champion-at-each-point, cross-version.
+// Each point carries its own model_version so a promotion boundary stays visible.
+export interface RiskHistoryPoint {
+  risk_score: number
+  risk_band: RiskBand
+  model_version: string // champion-of-record model that produced THIS point
+  model_card_ref: string
+  synthetic: boolean // per-point provenance; never smoothed away
+  computed_at: string // ISO datetime
+}
+
+export interface RiskHistory {
+  participant_id: string
+  points: RiskHistoryPoint[] // ordered by computed_at ASC; may be empty (in-scope, no history)
+}
+
 export type InterventionKind = "call" | "visit_reschedule" | "reminder" | "note"
 
 export interface InterventionIn {
