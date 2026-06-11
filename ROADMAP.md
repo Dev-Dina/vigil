@@ -111,7 +111,7 @@ Synced from `TODO(...)` comments in the tree + decisions. (file:line · note)
 
 ### Frontend wiring register (Phase 4/5) — endpoint → screen/boundary
 Stub data layer is `frontend/lib/stubs.ts` (typed to `specs/api.md` via `frontend/lib/types.ts`). Each `// TODO(phase4/5)` below is unwired.
-- [ ] `POST /auth/login` + `GET /auth/me` → login + auth context (`app/login/page.tsx`, `lib/auth-context.tsx:26,32`, `lib/stubs.ts:26`)
+- [x] **Wire-1 (2026-06-11): `POST /auth/login` + `GET /auth/me` wired to the scoped layer** — login page calls real `/auth/login` (honest error state on bad creds, no silent pass), auth context (`lib/auth-context.tsx`) hydrates `me` from real `/auth/me` (role/scope from the VERIFIED token), logout revokes `jti`; fake auth removed (`STUB_ME` deleted from `stubs.ts`, login-page stub framing gone). Backend `MeOut` shape matches `types.ts` exactly — no drift. **Real-JWT role string ↔ frontend PLATFORM_ROLES gate verified end-to-end for the first time** via real `/auth/me` (`tests/spine/test_role_strings.py`): platform_admin `MeOut.role` is admitted by the parsed gate, coordinator is NOT; bad credentials → 401. `tsc --noEmit` clean. Refresh rotation left as `TODO(wire-later)` (stale token → /me clears it → re-login). Cohort/participant/monitoring/assistant stay stubbed (Wire-2/3).
 - [ ] `GET /cohort` + `GET /cohort/summary` → Dashboard + Triage (`app/page.tsx:39`, `app/triage/page.tsx:45`, `lib/stubs.ts:93,98`)
 - [ ] `GET /participants/{id}` + `/risk` → Participant detail (`app/participant/[id]/page.tsx:33,35`, `lib/stubs.ts:108,121`)
 - [ ] `POST /participants/{id}/interventions` → triage Call + detail "Schedule Intervention" (`app/triage/page.tsx:63`, `app/participant/[id]/page.tsx:54`, `lib/stubs.ts:138`)

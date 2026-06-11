@@ -1,12 +1,14 @@
 "use client"
 
-// Auth context wired to real backend (Phase 4).
+// Auth context wired to real backend (Wire-1).
 // POST /auth/login → store access_token in memory + localStorage for persistence.
-// GET /auth/me on mount (if token exists) → hydrate `me`.
-// POST /auth/logout → clear token.
+// GET /auth/me on mount (if token exists) → hydrate `me` (role/scope from the REAL token).
+// POST /auth/logout → revoke jti + clear token.
+// TODO(wire-later): POST /auth/refresh rotation (RefreshIn → TokenOut) is not wired yet;
+// on a stale/revoked token /me returns non-OK and the token is cleared (re-login required).
 
 import * as React from "react"
-import type { LoginIn, MeOut } from "./types"
+import type { LoginIn, MeOut, TokenOut } from "./types"
 
 const API_BASE =
   typeof window !== "undefined"
@@ -57,24 +59,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const login = React.useCallback(async (creds: LoginIn): Promise<boolean> => {
-    const r = await fetch(`${API_BASE}/api/v1/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: creds.email, password: creds.password }),
-    })
-    if (!r.ok) return false
-    const tokenOut = (await r.json()) as { access_token: string }
-    const accessToken = tokenOut.access_token
-    localStorage.setItem(TOKEN_KEY, accessToken)
-    setToken(accessToken)
+    // Fail closed: bad credentials (401) AND network/transport errors both return
+    // false so the caller can surface an honest error state — never a silent pass.
+    try {
+      const r = await fetch(`${API_BASE}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: creds.email, password: creds.password }),
+      })
+      if (!r.ok) return false
+      const tokenOut = (await r.json()) as TokenOut
+      const accessToken = tokenOut.access_token
+      localStorage.setItem(TOKEN_KEY, accessToken)
+      setToken(accessToken)
 
-    const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-    if (meRes.ok) {
-      setMe((await meRes.json()) as MeOut)
+      const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (meRes.ok) {
+        setMe((await meRes.json()) as MeOut)
+      }
+      return true
+    } catch {
+      return false
     }
-    return true
   }, [])
 
   const logout = React.useCallback(() => {

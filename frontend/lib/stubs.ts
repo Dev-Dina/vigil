@@ -13,7 +13,6 @@ import type {
   InterventionOut,
   JobAccepted,
   JobPending,
-  MeOut,
   ModelStatus,
   Page,
   ParticipantDetail,
@@ -23,14 +22,9 @@ import type {
 const ISO = (d: string) => new Date(d).toISOString()
 
 // ---- auth ----
-// TODO(phase4): wire to GET /auth/me
-export const STUB_ME: MeOut = {
-  user_id: "usr_0a1b2c3d",
-  role: "coordinator",
-  home_sponsor_id: "spn_1234",
-  home_cro_id: null,
-  scope: [{ sponsor_id: "spn_1234", trial_id: "trl_22", site_id: "sit_07" }],
-}
+// Auth is wired to the real backend (Wire-1): POST /auth/login + GET /auth/me +
+// POST /auth/logout via lib/auth-context.tsx. No auth stub remains here. Cohort,
+// participant, monitoring, and assistant stubs below stay until Wire-2/3.
 
 // ---- cohort ----
 const COHORT_ROWS: CohortRow[] = [
@@ -152,7 +146,7 @@ export async function logIntervention(
     participant_id: participantId,
     kind: body.kind,
     note: body.note,
-    actor_user_id: STUB_ME.user_id,
+    actor_user_id: "usr_stub", // intervention stub stays until Wire-3 (real actor from scope)
     created_at: new Date().toISOString(),
   }
 }

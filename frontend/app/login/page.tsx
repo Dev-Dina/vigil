@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from "@/lib/auth-context"
 import type { LoginIn } from "@/lib/types"
 
-// STUBBED login — no real auth, no token logic, no crypto.
-// TODO(phase4): wire to scoped auth client (POST /auth/login -> TokenOut,
-// then GET /auth/me -> MeOut to resolve scope).
+// Real login: POST /auth/login -> TokenOut, then GET /auth/me -> MeOut resolves
+// scope into the auth context (see lib/auth-context.tsx). Bad credentials surface an
+// honest error state — never a silent pass.
 
 export default function LoginPage() {
   const router = useRouter()
@@ -17,14 +17,20 @@ export default function LoginPage() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [submitting, setSubmitting] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setError(null)
     const creds: LoginIn = { email, password }
-    const ok = await login(creds) // stub: ignores creds, sets fake session
+    const ok = await login(creds)
     setSubmitting(false)
-    if (ok) router.push("/")
+    if (ok) {
+      router.push("/")
+    } else {
+      setError("Invalid email or password.")
+    }
   }
 
   return (
@@ -98,13 +104,23 @@ export default function LoginPage() {
             />
           </div>
 
+          {error && (
+            <p
+              role="alert"
+              className="text-center text-sm text-destructive"
+              data-testid="login-error"
+            >
+              {error}
+            </p>
+          )}
+
           <Button type="submit" disabled={submitting} className="w-full">
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-[11px] text-muted-foreground">
-          Stubbed sign-in for the local technical app. No credentials are verified.
+          Local technical app. Credentials are verified against the scoped backend.
         </p>
       </div>
     </div>

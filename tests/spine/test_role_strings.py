@@ -134,3 +134,85 @@ def test_emitted_platform_roles_in_frontend_set(migrated_db: dict[str, str]) -> 
         f"not in frontend PLATFORM_ROLES {platform_roles!r} "
         f"(parsed from frontend/lib/role-gates.ts)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Wire-1: real GET /auth/me (MeOut) role ↔ frontend PLATFORM_ROLES gate, e2e
+# ---------------------------------------------------------------------------
+
+
+def _login_and_me(email: str) -> dict[str, object]:
+    """Real flow: POST /auth/login → access_token → GET /auth/me → MeOut dict.
+
+    Exercises the SAME endpoints the frontend auth context calls, so the role the
+    frontend gates on is the role this returns.
+    """
+    import os
+
+    from fastapi.testclient import TestClient
+
+    from vigil.api.app import create_app
+
+    pw = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    login_resp = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": pw}
+    )
+    assert login_resp.status_code == 200, login_resp.text
+    token = login_resp.json()["access_token"]
+    me_resp = client.get(
+        "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert me_resp.status_code == 200, me_resp.text
+    return me_resp.json()
+
+
+def test_me_role_admits_platform_admin_in_frontend_gate(
+    migrated_db: dict[str, str],
+) -> None:
+    """A real platform_admin /me response carries a role the frontend PLATFORM_ROLES admits.
+
+    First end-to-end exercise of the reconciled role string against a REAL token via the
+    actual /auth/me shape (MeOut), not just the raw JWT claim.
+    """
+    platform_roles = _parse_frontend_platform_roles()
+    me = _login_and_me("admin@vigil.example")
+    # MeOut shape (api.md): the keys the frontend MeOut type consumes.
+    for key in ("user_id", "role", "home_sponsor_id", "home_cro_id", "scope"):
+        assert key in me, f"MeOut missing {key!r} — frontend/backend shape drift: {me}"
+    assert me["role"] == "platform_admin", (
+        f"/auth/me role {me['role']!r} != 'platform_admin' (canonical)"
+    )
+    assert me["role"] in platform_roles, (
+        f"real platform_admin /me role {me['role']!r} NOT admitted by frontend "
+        f"PLATFORM_ROLES {platform_roles!r} — the role gate would silently fail to fire"
+    )
+
+
+def test_me_role_does_not_platform_gate_coordinator(
+    migrated_db: dict[str, str],
+) -> None:
+    """A real coordinator /me role is NOT in the frontend PLATFORM_ROLES gate."""
+    platform_roles = _parse_frontend_platform_roles()
+    me = _login_and_me("coord.a@vigil.example")
+    assert me["role"] == "coordinator", f"unexpected coordinator role {me['role']!r}"
+    assert me["role"] not in platform_roles, (
+        f"coordinator role {me['role']!r} is in frontend PLATFORM_ROLES {platform_roles!r} "
+        "— a sponsor/site role must NOT receive platform gating"
+    )
+
+
+def test_login_bad_credentials_rejected(migrated_db: dict[str, str]) -> None:
+    """Bad credentials → 401 (the backend failure the login page surfaces as an error)."""
+    from fastapi.testclient import TestClient
+
+    from vigil.api.app import create_app
+
+    client = TestClient(create_app(), raise_server_exceptions=False)
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@vigil.example", "password": "wrong-password"},
+    )
+    assert resp.status_code == 401, (
+        f"bad credentials returned {resp.status_code}, expected 401 (silent-pass risk): {resp.text}"
+    )
