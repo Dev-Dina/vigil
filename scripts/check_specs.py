@@ -30,7 +30,17 @@ REQUIRED: dict[str, list[str]] = {
     ],
     "domain.md": ["## Decisions (fixed)", "## Roles", "## Tenancy rules"],
     "api.md": ["## Decisions (fixed)", "## JWT claim shape", "## Endpoints"],
-    "rag.md": ["## Decisions (fixed)", "## Grounding rules", "## Guardrails"],
+    "rag.md": [
+        "## Decisions (fixed)",
+        "## Agents",
+        "## Router",
+        "## Grounding rules",
+        "## Retrieval stack",
+        "## Scope propagation",
+        "## Guardrails",
+        "## Evaluation set",
+        "## Done-when",
+    ],
     "infra.md": ["## Decisions (fixed)", "## Topology"],
     "observability.md": [
         "## Decisions (fixed)",

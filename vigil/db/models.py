@@ -23,6 +23,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -370,3 +371,60 @@ class RoutingState(Base):
         ForeignKey("user.id", ondelete="SET NULL"),
         nullable=True,
     )
+
+
+# ------------------------------------------------- observability (message_events, Phase 5)
+class MessageEvent(Base):
+    """One row per chatbot/assistant turn on BOTH surfaces (specs/observability.md).
+
+    Cross-tenant BY ROLE — same class as ``audit_log`` (domain.md "Cross-tenant by design"):
+    a CRO spans sponsors and the auditor/admin read across, so no single-sponsor predicate
+    fits. ``sponsor_id`` is NULLABLE — Guide/platform turns are null-sponsor, visible only to
+    platform/auditor (the audit_scope-style policy in migration 0007), never to a sponsor
+    session. NOT in TENANT_TABLES (it does not get the default sponsor-only policy).
+
+    WRITE-PATH CONTRACT (Phase 5, Gate 5.1): content arrives ALREADY REDACTED — the redaction
+    LOGIC (fail-loud, before the LLM) is Gate 5.2. This model stores only the redacted columns;
+    there is no raw-content column, so raw text cannot be persisted by construction. The
+    admin/inspect surface (GET /monitoring/messages) is Phase 6.
+    """
+
+    __tablename__ = "message_events"
+    __table_args__ = (
+        Index("ix_msg_conversation_ts", "conversation_id", "ts"),
+        Index("ix_msg_sponsor_ts", "sponsor_id", "ts"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    conversation_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), nullable=False
+    )
+    request_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # NULL = Guide/platform turn (cross-tenant-by-role, like audit_log). FK SET NULL on delete.
+    sponsor_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("sponsor.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    role_or_guest_scope: Mapped[str] = mapped_column(String(64), nullable=False)
+    surface: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # local_assistant|public_guide
+    route_or_agent: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    guardrail_decision: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # allowed|blocked
+    retrieved_chunks: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    llm_provider_model: Mapped[str] = mapped_column(
+        String(128), nullable=False, default=""
+    )
+    latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    token_cost_estimate: Mapped[float] = mapped_column(
+        Numeric(12, 6), nullable=False, default=0
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)  # ok|refused|error
+    redacted_user_msg: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    redacted_assistant_msg: Mapped[str] = mapped_column(
+        Text, nullable=False, default=""
+    )
+    ts: Mapped[datetime] = created_at()
