@@ -28,11 +28,17 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from vigil.db.base import Base, created_at, pk, sponsor_fk
+
+# Embedding dimension for DocumentChunk.embedding — kept in sync with
+# vigil.agents.embeddings.EMBED_DIM (matches all-MiniLM-L6-v2 / bge-small-en-v1.5). Declared
+# here (not imported) so the ORM does not depend on the agent layer.
+_EMBED_DIM = 384
 
 # Tenant tables that MUST carry sponsor_id + the default RLS policy. The migration reads
 # this list; adding a tenant table here without RLS is impossible by construction.
@@ -428,3 +434,43 @@ class MessageEvent(Base):
         Text, nullable=False, default=""
     )
     ts: Mapped[datetime] = created_at()
+
+
+# --------------------------------------------------- RAG vector corpus (document_chunk, Phase 5)
+class DocumentChunk(Base):
+    """A retrievable, embedded chunk of a grounding document (specs/rag.md § Retrieval stack).
+
+    Corpus-scope decision (a) — GLOBAL-OR-SPONSOR, RLS-ready (flagged for ratification):
+    ``sponsor_id`` is NULLABLE. A NULL row is a GLOBAL project doc (the model cards + PHASE3_CARD,
+    the Phase-5 doc-grounding corpus) readable by every caller's agent. A non-null row is
+    sponsor-scoped (the DEFERRED protocol/SOP docs) and follows the strict ``participant_score``
+    pattern — fail-closed, no cross-tenant read. The single policy (migration 0008) admits
+    ``sponsor_id IS NULL OR sponsor_id = current_sponsor OR is_platform``, so adding sponsor-scoped
+    docs later needs NO RLS re-architecture.
+
+    ``embedding`` is a LOCAL embedding (vigil.agents.embeddings, hashing default / ST optional),
+    dim ``EMBED_DIM`` (384) — backend-swappable with no migration. The pgvector ``Vector`` type
+    is a light pure-Python import (no torch); the HEAVY ``sentence_transformers`` backend is what
+    stays lazy/out of the light/golden import path (vigil.agents.embeddings).
+    """
+
+    __tablename__ = "document_chunk"
+    __table_args__ = (
+        Index("ix_docchunk_source", "source_ref", "chunk_index"),
+        Index("ix_docchunk_sponsor", "sponsor_id"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    # NULL = global project doc (cards); set = sponsor-scoped (deferred protocol/SOP docs).
+    sponsor_id: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("sponsor.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    source_ref: Mapped[str] = mapped_column(
+        String(512), nullable=False
+    )  # card/file path
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
+    embedding: Mapped[list[float]] = mapped_column(Vector(_EMBED_DIM), nullable=False)
+    created_at: Mapped[datetime] = created_at()

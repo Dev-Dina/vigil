@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
     llm_cost_per_1k_tokens: float = 0.0
 
+    # --- embeddings (Phase 5) — LOCAL only, no embedding API ---
+    # 'hashing' = hermetic, offline, deterministic default (CI/tests). 'sentence_transformers'
+    # = real semantic model on local/demo (lazy import; fetches weights → not hermetic).
+    embedding_backend: str = "hashing"
+    embedding_model: str = "bge-small-en-v1.5"
+    embedding_dim: int = 384
+
     @cached_property
     def _secrets(self) -> SecretsProvider:
         return build_secrets_provider()
