@@ -1,31 +1,34 @@
 """LOCAL embedding pipeline for vector retrieval (specs/rag.md § Retrieval stack).
 
-Embeddings are computed LOCALLY — no embedding API, no OpenRouter. Two backends behind one
-``Embedder`` protocol:
+ONE real embedder, used EVERYWHERE (CI, tests, demo): ``SentenceTransformerEmbedder`` over the
+**vendored** all-MiniLM-L6-v2 weights (dim 384). Decision (B): drop the lexical hashing default —
+retrieval is semantic by construction, with NO lexical fallback that could be silently selected.
 
-- ``HashingEmbedder`` (DEFAULT, hermetic): a deterministic, dependency-free, fully-offline
-  hashing embedding. No model download, no network — so CI/tests embed for real and the same
-  text always yields the same vector. This is what runs everywhere today.
-- ``SentenceTransformerEmbedder`` (lazy, optional): the real semantic model
-  (`bge-small-en-v1.5` / `all-MiniLM-L6-v2`, dim 384) for local/demo runs. ``sentence_transformers``
-  is imported lazily INSIDE the class so it never touches the light/golden import paths (like
-  torch). NOTE: it fetches model weights on first use (a network/cache step) → NOT hermetic;
-  that is why the hashing backend is the default for CI.
+HERMETIC BY CONSTRUCTION — NO RUNTIME NETWORK:
+- The model weights live IN-REPO under ``data/models/embeddings/all-MiniLM-L6-v2`` (tracked, like
+  the ``.pt``/``.pkl`` model artifacts). The embedder loads from that LOCAL DIRECTORY PATH, never
+  a hub id.
+- ``HF_HUB_OFFLINE`` / ``TRANSFORMERS_OFFLINE`` are forced on before the model loads, so even the
+  transformers/hub machinery makes no HEAD/download call. A test run with no network still
+  produces real ST embeddings (proven in tests by blocking sockets during load+embed).
 
-Both produce ``EMBED_DIM``-length L2-normalised float vectors, so the DB column (`vector(384)`)
-and any stored vectors are dimension-compatible across a future backend swap with NO migration.
+``sentence_transformers`` (and torch) are imported LAZILY inside the class so this module — and
+the light/golden/check_specs import paths — do not drag the heavy stack in.
+
+Determinism: the model runs in eval mode on CPU with L2-normalised output; the same text yields
+the same vector run-to-run (asserted within ``atol=1e-6`` to guard against minor float drift).
 """
 
 from __future__ import annotations
 
-import hashlib
-import math
+import os
+from functools import lru_cache
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from vigil.core.config import get_settings
 
-#: Vector dimension — matches all-MiniLM-L6-v2 / bge-small-en-v1.5 so the real ST model drops in
-#: with no schema migration.
+#: Embedding dimension — all-MiniLM-L6-v2 is 384 (matches the document_chunk vector(384) column).
 EMBED_DIM = 384
 
 
@@ -38,71 +41,73 @@ class Embedder(Protocol):
     def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
 
 
-def _l2_normalise(vec: list[float]) -> list[float]:
-    norm = math.sqrt(sum(v * v for v in vec))
-    if norm == 0.0:
-        return vec
-    return [v / norm for v in vec]
+def _project_root() -> Path:
+    # vigil/agents/embeddings.py -> repo root is three parents up.
+    return Path(__file__).resolve().parents[2]
 
 
-class HashingEmbedder:
-    """Deterministic, offline hashing embedding (the hermetic default).
-
-    Token → stable bucket via blake2b; bucket counts form the vector, then L2-normalised so
-    cosine distance is meaningful. No randomness, no network, no model file. Same text → same
-    vector on every machine and run.
-    """
-
-    def __init__(self, dim: int = EMBED_DIM) -> None:
-        self.dim = dim
-
-    def _tokens(self, text: str) -> list[str]:
-        return [t for t in text.lower().split() if t]
-
-    def embed(self, text: str) -> list[float]:
-        vec = [0.0] * self.dim
-        for tok in self._tokens(text):
-            h = hashlib.blake2b(tok.encode("utf-8"), digest_size=8).digest()
-            bucket = int.from_bytes(h, "big") % self.dim
-            # sign bit from the next hash byte keeps it from being all-positive.
-            sign = 1.0 if (h[0] & 1) == 0 else -1.0
-            vec[bucket] += sign
-        return _l2_normalise(vec)
-
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        return [self.embed(t) for t in texts]
+def resolve_model_path(path: str | None = None) -> Path:
+    """Resolve the vendored-model path; relative paths bind to the repo root (not cwd)."""
+    raw = Path(path or get_settings().embedding_model_path)
+    return raw if raw.is_absolute() else _project_root() / raw
 
 
 class SentenceTransformerEmbedder:
-    """Real semantic embedder (lazy ``sentence_transformers`` import; local/demo only).
+    """The single real embedder — vendored all-MiniLM-L6-v2, loaded OFFLINE (no network).
 
-    Imported lazily so this module stays out of the light/golden import path. Requires the model
-    weights (fetched/cached on first use) → not hermetic; selected only when configured.
+    Forces offline mode and loads from a LOCAL directory, so neither load nor encode reaches the
+    network. ``sentence_transformers`` is imported lazily (heavy: torch + transformers).
     """
 
-    def __init__(self, model_name: str, dim: int = EMBED_DIM) -> None:
-        from sentence_transformers import SentenceTransformer  # deferred, optional dep
+    def __init__(
+        self, model_path: str | Path | None = None, dim: int = EMBED_DIM
+    ) -> None:
+        # Force offline BEFORE the transformers/hub machinery is imported/used.
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+        os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 
-        self._model = SentenceTransformer(model_name)
+        resolved = (
+            Path(model_path)
+            if model_path is not None and Path(model_path).is_absolute()
+            else resolve_model_path(str(model_path) if model_path is not None else None)
+        )
+        if not (resolved / "config.json").exists():
+            raise FileNotFoundError(
+                f"vendored embedding model not found at {resolved} — the all-MiniLM-L6-v2 "
+                "weights must be present in-repo (run scripts/vendor_embedding_model.py). "
+                "The embedder NEVER downloads at runtime (hermetic)."
+            )
+
+        from sentence_transformers import (
+            SentenceTransformer,
+        )  # deferred — heavy (torch)
+
+        self._model = SentenceTransformer(str(resolved), device="cpu")
+        self._model.eval()
         self.dim = dim
 
     def embed(self, text: str) -> list[float]:
         return self.embed_batch([text])[0]
 
     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        vecs = self._model.encode(texts, normalize_embeddings=True)
+        vecs = self._model.encode(
+            texts,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
         return [list(map(float, v)) for v in vecs]
 
 
+@lru_cache(maxsize=1)
 def get_embedder() -> Embedder:
-    """Return the active embedder: hermetic ``hashing`` default, or ``sentence_transformers``.
+    """Return the process-wide embedder (loaded once). Always the real, offline ST embedder.
 
-    Explicit (not a silent fallback): ``VIGIL_EMBEDDING_BACKEND=sentence_transformers`` selects
-    the real model on local/demo; the default ``hashing`` keeps CI/tests offline + deterministic.
+    No backend switch and no lexical fallback — retrieval is semantic by construction; there is
+    no way to silently default to a non-semantic embedder.
     """
     settings = get_settings()
-    if settings.embedding_backend == "sentence_transformers":
-        return SentenceTransformerEmbedder(
-            settings.embedding_model, dim=settings.embedding_dim
-        )
-    return HashingEmbedder(dim=settings.embedding_dim)
+    return SentenceTransformerEmbedder(
+        settings.embedding_model_path, dim=settings.embedding_dim
+    )

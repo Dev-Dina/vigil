@@ -64,11 +64,10 @@ class Settings(BaseSettings):
     # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
     llm_cost_per_1k_tokens: float = 0.0
 
-    # --- embeddings (Phase 5) — LOCAL only, no embedding API ---
-    # 'hashing' = hermetic, offline, deterministic default (CI/tests). 'sentence_transformers'
-    # = real semantic model on local/demo (lazy import; fetches weights → not hermetic).
-    embedding_backend: str = "hashing"
-    embedding_model: str = "bge-small-en-v1.5"
+    # --- embeddings (Phase 5) — LOCAL, vendored, OFFLINE (no embedding API, no runtime fetch) ---
+    # The single real embedder is sentence-transformers all-MiniLM-L6-v2 (dim 384), loaded from
+    # the VENDORED weights in-repo. Relative path binds to the repo root. No lexical fallback.
+    embedding_model_path: str = "data/models/embeddings/all-MiniLM-L6-v2"
     embedding_dim: int = 384
 
     @cached_property

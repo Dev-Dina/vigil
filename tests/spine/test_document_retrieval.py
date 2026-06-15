@@ -12,11 +12,13 @@ from __future__ import annotations
 import uuid
 
 from vigil.agents.corpus import ingest_card_corpus
-from vigil.agents.embeddings import HashingEmbedder
+from vigil.agents.embeddings import get_embedder
 from vigil.repositories import documents as doc_repo
 from vigil.repositories.session import platform_session, sponsor_bootstrap_session
 
-_EMB = HashingEmbedder()
+_EMB = (
+    get_embedder()
+)  # the single real (vendored, offline) sentence-transformers embedder
 
 
 def _add_sponsor_chunk(sponsor_id: str, text: str) -> str:
@@ -33,11 +35,15 @@ def _add_sponsor_chunk(sponsor_id: str, text: str) -> str:
 
 
 def _add_global_chunk(text: str) -> str:
+    return _add_global_chunk_text(text, idx=999)
+
+
+def _add_global_chunk_text(text: str, *, idx: int) -> str:
     with platform_session() as session:
         row = doc_repo.add_chunk(
             session,
             source_ref="data/models/PHASE3_CARD.md",
-            chunk_index=999,
+            chunk_index=idx,
             chunk_text=text,
             embedding=_EMB.embed(text),
             sponsor_id=None,
@@ -107,7 +113,30 @@ def test_card_corpus_retrieval_returns_citable_chunks(
 
 
 # ---------------------------------------------------------------------------
-# 3. Extension present
+# 3. Semantic ranking (proves real semantic retrieval, not lexical)
+# ---------------------------------------------------------------------------
+
+
+def test_semantic_query_ranks_related_chunk_first(migrated_db: dict[str, str]) -> None:
+    related = (
+        "Participants who miss consecutive study visits are at higher dropout risk."
+    )
+    unrelated = "The cafeteria serves lunch between noon and two o'clock on weekdays."
+    id_related = _add_global_chunk_text(related, idx=101)
+    _add_global_chunk_text(unrelated, idx=102)
+
+    # A query with LOW lexical overlap but HIGH semantic relation to the related chunk.
+    q = _EMB.embed("why does skipping appointments make a subject likely to withdraw")
+    with sponsor_bootstrap_session(migrated_db["sponsor_a"]) as session:
+        hits = doc_repo.search_chunks(session, query_embedding=q, k=2)
+    assert hits, "no chunks retrieved"
+    assert hits[0].id == id_related, (
+        "semantically related chunk should rank first (semantic, not lexical, retrieval)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4. Extension present
 # ---------------------------------------------------------------------------
 
 
