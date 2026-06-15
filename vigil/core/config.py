@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     # validated against the demo_mode_key in POST /scoring/inject_events
     demo_secret: str = "vigil-demo-secret"
 
+    # --- llm / agent layer (Phase 5) ---
+    # Generation via OpenRouter; embeddings are LOCAL (specs/rag.md § Decisions). Egress is
+    # allow-listed to the OpenRouter base URL ONLY (first outbound LLM egress; deny-by-default).
+    # CI is hermetic: VIGIL_LLM_STUB=true selects the recorded/fake client (no network, no key).
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    llm_stub: bool = False
+    llm_timeout_seconds: float = 30.0
+    llm_max_tokens: int = 1024
+    # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
+    llm_cost_per_1k_tokens: float = 0.0
+
     @cached_property
     def _secrets(self) -> SecretsProvider:
         return build_secrets_provider()

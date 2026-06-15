@@ -26,6 +26,7 @@ dependencies = [
     "shap>=0.52.0",
     "torch>=2.12.0",
     "lifelines>=0.30.0",
+    "httpx>=0.27.0",
 ]
 
 [dependency-groups]
