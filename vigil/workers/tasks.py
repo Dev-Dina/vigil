@@ -745,6 +745,8 @@ async def run_assistant_turn(
     import uuid as _uuid
     from datetime import datetime, timezone
 
+    from vigil.agents import operations as operations_mod
+    from vigil.agents import report as report_mod
     from vigil.agents import retention as retention_mod
     from vigil.agents import router as router_mod
     from vigil.agents.guardrails import guard_inbound
@@ -752,6 +754,13 @@ async def run_assistant_turn(
     from vigil.agents.redaction import redact
     from vigil.agents.tools import agent_tool_context
     from vigil.repositories import observability as obs_repo
+
+    # Router intent → agent (all three on the same spine; 5.6). Keys match router.AGENT_DEFINITIONS.
+    _AGENTS = {
+        "retention": retention_mod.answer,
+        "report": report_mod.answer,
+        "operations": operations_mod.answer,
+    }
 
     llm = ctx.get("_llm_override") or get_llm_client()
     model_name = get_settings().llm_model
@@ -830,30 +839,31 @@ async def run_assistant_turn(
             )
             return _turn(refusal, "blocked", "refused", [])
 
-        # 3. Dispatch. Only the Retention agent is wired (5.5); Report/Operations are deferred.
-        if decision.agent == "retention":
-            ans = retention_mod.answer(
-                tctx, llm, guard.redacted_text, participant_id=participant_id
-            )
-            redacted_answer = redact(ans.content)
+        # 3. Dispatch to the classified agent (5.6: all three wired on the same spine). Each runs
+        #    under the same tctx (dual-axis scoped) + champion-only facts + doc-grounding.
+        agent_fn = _AGENTS.get(decision.agent)
+        if (
+            agent_fn is None
+        ):  # unknown agent id → fail closed (router should never return this)
+            refusal = "I can't help with that request."
             _write(
-                decision="allowed",
-                status=ans.status,
+                decision="blocked",
+                status="refused",
                 redacted_user=guard.redacted_text,
-                redacted_assistant=redacted_answer,
-                route_or_agent="agent:retention",
-                citations=ans.citations,
+                redacted_assistant=redact(refusal),
+                route_or_agent="router:unknown_agent",
+                citations=[],
             )
-            return _turn(redacted_answer, "allowed", ans.status, ans.citations)
+            return _turn(refusal, "blocked", "refused", [])
 
-        # Report / Operations: defined but not yet available (NOT an error).
-        deferred = f"The {decision.agent} agent is not yet available."
+        ans = agent_fn(tctx, llm, guard.redacted_text, participant_id=participant_id)
+        redacted_answer = redact(ans.content)
         _write(
             decision="allowed",
-            status="refused",
+            status=ans.status,
             redacted_user=guard.redacted_text,
-            redacted_assistant=redact(deferred),
-            route_or_agent=f"agent:{decision.agent}:deferred",
-            citations=[],
+            redacted_assistant=redacted_answer,
+            route_or_agent=f"agent:{decision.agent}",
+            citations=ans.citations,
         )
-        return _turn(deferred, "allowed", "refused", [])
+        return _turn(redacted_answer, "allowed", ans.status, ans.citations)
