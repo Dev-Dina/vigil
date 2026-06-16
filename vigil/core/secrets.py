@@ -23,7 +23,8 @@ from typing import Protocol, runtime_checkable
 # Logical secret paths. Application code refers to secrets by these names ONLY.
 JWT_SIGNING_KEY = "vigil/auth/jwt_signing_key"
 DB_DSN = "vigil/db/dsn"
-LLM_API_KEY = "vigil/llm/api_key"
+LLM_API_KEY = "vigil/llm/api_key"  # OpenRouter (fallback provider)
+ANTHROPIC_API_KEY = "vigil/llm/anthropic_api_key"  # Anthropic (primary provider)
 
 
 class SecretNotFoundError(RuntimeError):
@@ -47,6 +48,7 @@ class EnvSecrets:
         JWT_SIGNING_KEY: "VIGIL_JWT_SIGNING_KEY",
         DB_DSN: "VIGIL_DB_DSN",
         LLM_API_KEY: "VIGIL_LLM_API_KEY",
+        ANTHROPIC_API_KEY: "VIGIL_ANTHROPIC_API_KEY",
     }
 
     def get(self, name: str) -> str:

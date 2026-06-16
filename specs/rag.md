@@ -10,15 +10,20 @@
   `/specs/api.md`). They are NOT the public Guide — the Guide is a separate, fully-isolated
   Phase-7 service (`/specs/isolation.md`). This spec's § Agents / § Router / § Scope propagation
   govern the in-app agents only; the Guide's allow/deny contract lives in isolation.md.
-- **Generation via OpenRouter (a free model); embeddings are LOCAL.** Vector retrieval uses a
-  local embedding model (e.g. `bge-small-en-v1.5` / `all-MiniLM-L6-v2`) — no embedding API,
-  hermetic. Text generation (router classification + agent answers) calls OpenRouter. The agent
-  layer is the project's FIRST outbound LLM egress: egress is **allow-listed to OpenRouter only**,
-  consistent with the deny-by-default posture (`/specs/isolation.md`).
-- **CI is hermetic — fake/recorded LLM responses.** Both the router classification call and the
-  agent generation call use stubbed/recorded responses in CI: deterministic, no network, no key.
-  Real OpenRouter is reached only on local/demo runs. The eval set (§ Evaluation set) scores
-  against recorded fixtures so it is reproducible.
+- **Generation: Anthropic PRIMARY (`claude-haiku-4-5`), OpenRouter FALLBACK; embeddings are
+  LOCAL.** Vector retrieval uses a local embedding model (e.g. `bge-small-en-v1.5` /
+  `all-MiniLM-L6-v2`) — no embedding API, hermetic. Text generation (router classification + agent
+  answers) calls **Anthropic** first; on a **transient** error (HTTP 429 / 5xx / timeout /
+  transport) it **fails over to OpenRouter**. On a NON-transient error (401 auth / 400 bad
+  request) it does NOT fail over — a primary misconfig surfaces loudly rather than being masked.
+  The agent layer is the project's FIRST outbound LLM egress: egress is **allow-listed to
+  `api.anthropic.com` + `openrouter.ai` ONLY**, consistent with the deny-by-default posture
+  (`/specs/isolation.md`). Provider keys come from Vault, never inlined.
+- **CI is hermetic — fake/recorded LLM responses for BOTH providers.** Router classification and
+  agent generation use the stubbed client in CI (`VIGIL_LLM_STUB=true` → `StubLLMClient`, selected
+  BEFORE any real client is constructed): deterministic, no network, no key for Anthropic OR
+  OpenRouter. Real providers are reached only on local/demo runs. The eval set (§ Evaluation set)
+  scores against recorded fixtures so it is reproducible.
 
 ## Agents
 Three dedicated in-app agents, each **scope-bound to the caller** (it can only ever see what the

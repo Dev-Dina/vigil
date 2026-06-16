@@ -53,14 +53,24 @@ class Settings(BaseSettings):
     demo_secret: str = "vigil-demo-secret"
 
     # --- llm / agent layer (Phase 5) ---
-    # Generation via OpenRouter; embeddings are LOCAL (specs/rag.md § Decisions). Egress is
-    # allow-listed to the OpenRouter base URL ONLY (first outbound LLM egress; deny-by-default).
-    # CI is hermetic: VIGIL_LLM_STUB=true selects the recorded/fake client (no network, no key).
-    llm_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    # Anthropic PRIMARY (claude-haiku-4-5) + OpenRouter FALLBACK on transient error (specs/rag.md
+    # § Decisions). Egress allow-listed to api.anthropic.com + openrouter.ai ONLY (first outbound
+    # LLM egress; deny-by-default). CI is hermetic: VIGIL_LLM_STUB=true selects the fake client
+    # (no network, no key) BEFORE any real client is built — covers BOTH providers.
     llm_stub: bool = False
     llm_timeout_seconds: float = 30.0
     llm_max_tokens: int = 1024
+
+    # Anthropic (PRIMARY). anthropic_enabled defaults true (it's the primary now); if enabled but
+    # its key is missing the factory fails loud (no silent downgrade to OpenRouter-only).
+    anthropic_enabled: bool = True
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_model: str = "claude-haiku-4-5"
+    anthropic_cost_per_1k_tokens: float = 0.0
+
+    # OpenRouter (FALLBACK). Kept as the llm_* names (no rename); free model, cost ~0.
+    llm_base_url: str = "https://openrouter.ai/api/v1"
+    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
     # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
     llm_cost_per_1k_tokens: float = 0.0
 
@@ -85,7 +95,13 @@ class Settings(BaseSettings):
 
     @cached_property
     def llm_api_key(self) -> str:
+        """OpenRouter (fallback) key."""
         return self._secrets.get(secret_paths.LLM_API_KEY)
+
+    @cached_property
+    def anthropic_api_key(self) -> str:
+        """Anthropic (primary) key. Read only when the Anthropic client is built."""
+        return self._secrets.get(secret_paths.ANTHROPIC_API_KEY)
 
 
 @lru_cache(maxsize=1)
