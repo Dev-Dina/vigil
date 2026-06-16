@@ -9,10 +9,25 @@ Exit 0 = conformant; exit 1 = a required spec or section is missing.
 """
 
 from __future__ import annotations
+
+import json
 import sys
 from pathlib import Path
 
-SPECS = Path(__file__).resolve().parent.parent / "specs"
+_ROOT = Path(__file__).resolve().parent.parent
+SPECS = _ROOT / "specs"
+
+# Evaluation contract (specs/data.md): a RAG phase REQUIRES an eval set (eval set = RAG). Once
+# rag.md is present, the named local-assistant eval-set artifact must exist + carry labelled cases
+# covering every required dimension. (Gate 5.7 enforcement.)
+_RAG_EVAL_SET = _ROOT / "tests" / "eval" / "local_assistant_eval.json"
+_RAG_EVAL_DIMENSIONS = {
+    "faithfulness",
+    "citation",
+    "answerable_vs_unanswerable",
+    "scope_faithfulness",
+    "metric_grounding",
+}
 
 # spec file -> required section headings
 REQUIRED: dict[str, list[str]] = {
@@ -88,7 +103,32 @@ def check() -> list[str]:
             # match on the heading prefix so trailing words are allowed
             if not any(line.strip().startswith(heading) for line in text.splitlines()):
                 problems.append(f"specs/{fname}: missing section '{heading}'")
+
+    problems.extend(_check_rag_eval_set())
     return problems
+
+
+def _check_rag_eval_set() -> list[str]:
+    """Evaluation contract: a RAG phase (rag.md present) REQUIRES a labelled eval set artifact."""
+    if not (SPECS / "rag.md").exists():
+        return []  # no RAG phase yet → nothing to require
+    if not _RAG_EVAL_SET.exists():
+        return [
+            "RAG eval set missing: tests/eval/local_assistant_eval.json "
+            "(specs/data.md Evaluation contract: eval set = RAG; specs/rag.md § Evaluation set)"
+        ]
+    try:
+        spec = json.loads(_RAG_EVAL_SET.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"RAG eval set unreadable: {exc}"]
+    cases = spec.get("cases") or []
+    if not cases:
+        return ["RAG eval set has no cases (tests/eval/local_assistant_eval.json)"]
+    dims = {c.get("dimension") for c in cases}
+    missing = _RAG_EVAL_DIMENSIONS - dims
+    if missing:
+        return [f"RAG eval set missing required dimensions: {sorted(missing)}"]
+    return []
 
 
 def main() -> int:

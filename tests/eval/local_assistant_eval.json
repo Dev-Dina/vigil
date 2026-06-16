@@ -1,0 +1,71 @@
+{
+  "version": "2026-06-16",
+  "surface": "local_assistant",
+  "description": "Versioned, labelled local-assistant RAG eval set (specs/rag.md § Evaluation set; data.md Evaluation contract: eval set = RAG). Each case is a question + expected-grounding label. Scored deterministically by tests/spine/test_rag_eval.py against the REAL sentence-transformers embedder (semantic retrieval, offline/vendored) with a stubbed LLM for reproducible generation. Release gate: all cases must pass. Symbolic participant refs (participant_a/participant_b/other_site/none) are resolved against the seeded fixture at run time.",
+  "scoring": {
+    "faithfulness": "Pipeline-level + deterministic: an ANSWERED turn must carry >=1 grounding citation; a turn with no retrievable grounding must REFUSE (status=refused). The system never emits an ungrounded answer. (LLM-judged sentence-level entailment needs a judge model and is non-deterministic -> deferred; this proxy verifies grounding presence, which is the faithfulness contract at the boundary.)",
+    "citation_precision": "Every citation references an actually-retrieved source (citations are built from retrieval, not from LLM text) -> structurally no fabricated citations.",
+    "citation_recall": "For metric/answerable cases, the expected source class (card .md for metrics) is present among citations.",
+    "answerable_vs_unanswerable": "An answerable in-corpus question is answered+cited; an unanswerable question with no retrievable grounding yields a grounded refusal (status=refused).",
+    "scope_faithfulness": "An answer never cites a participant the caller cannot see (cross-tenant or cross-site) -> no structured citation for an out-of-scope participant.",
+    "metric_grounding": "A model-performance number is answered ONLY with a card-corpus document citation; a metric answer with no card citation is a FAILURE (never inlined)."
+  },
+  "cases": [
+    {
+      "id": "metric-pr-auc",
+      "dimension": "metric_grounding",
+      "route_to": "retention",
+      "question": "What is the sequence model PR-AUC and its lift over the structural baseline?",
+      "participant": "none",
+      "expect": "card_cited"
+    },
+    {
+      "id": "answerable-participant-flag",
+      "dimension": "faithfulness",
+      "route_to": "retention",
+      "question": "Why is this participant flagged as high risk?",
+      "participant": "participant_a",
+      "expect": "answered_cited"
+    },
+    {
+      "id": "answerable-method",
+      "dimension": "citation",
+      "route_to": "retention",
+      "question": "How does the retention method use visit attendance to estimate dropout risk?",
+      "participant": "none",
+      "expect": "answered_cited"
+    },
+    {
+      "id": "report-cohort-aggregate",
+      "dimension": "citation",
+      "route_to": "report",
+      "question": "Summarise the high-risk picture for the cohort.",
+      "participant": "participant_a",
+      "expect": "answered_cited"
+    },
+    {
+      "id": "unanswerable-out-of-corpus",
+      "dimension": "answerable_vs_unanswerable",
+      "route_to": "retention",
+      "question": "What is the capital of France and the price of tea?",
+      "participant": "none",
+      "expect": "refused_when_ungrounded"
+    },
+    {
+      "id": "scope-cross-tenant",
+      "dimension": "scope_faithfulness",
+      "route_to": "report",
+      "question": "Report on this participant's risk.",
+      "participant": "participant_b",
+      "expect": "no_participant_citation"
+    },
+    {
+      "id": "scope-cross-site",
+      "dimension": "scope_faithfulness",
+      "route_to": "operations",
+      "question": "Operational status for this participant.",
+      "participant": "other_site",
+      "expect": "no_participant_citation"
+    }
+  ]
+}
