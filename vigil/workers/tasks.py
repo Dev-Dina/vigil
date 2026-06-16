@@ -717,3 +717,143 @@ async def ping(ctx: dict[str, Any], note: str = "pong") -> dict[str, str]:
     """Trivial job proving the async path end-to-end (enqueue -> worker -> result)."""
     log.info("worker.ping", extra={"extra": {"note": note}})
     return {"status": "ok", "note": note}
+
+
+# ---------------------------------------------------------------------------
+# run_assistant_turn — the Phase-5 assistant turn (router -> Retention agent)
+# ---------------------------------------------------------------------------
+
+
+async def run_assistant_turn(
+    ctx: dict[str, Any],
+    *,
+    conversation_id: str,
+    user_id: str,
+    content: str,
+    participant_id: str | None = None,
+    sponsor_id: str | None = None,
+    request_id: str = "",
+) -> dict[str, Any]:
+    """Run one assistant turn: redact+guardrail -> router classify -> Retention agent -> event.
+
+    Scope is RE-RESOLVED from ``user_id`` (5.4 ``agent_tool_context`` — never a serialized scope,
+    never ``sponsor_bootstrap_session``), so the agent's data reach is dual-axis isolated. The LLM
+    is stubbed in CI (``ctx['_llm_override']`` or ``VIGIL_LLM_STUB``). EVERY outcome (guardrail
+    block, router refusal, deferred agent, answer, grounded refusal) writes ONE redacted
+    ``message_events`` row (raw text never persisted). Returns the assistant turn dict.
+    """
+    import uuid as _uuid
+    from datetime import datetime, timezone
+
+    from vigil.agents import retention as retention_mod
+    from vigil.agents import router as router_mod
+    from vigil.agents.guardrails import guard_inbound
+    from vigil.agents.llm import get_llm_client
+    from vigil.agents.redaction import redact
+    from vigil.agents.tools import agent_tool_context
+    from vigil.repositories import observability as obs_repo
+
+    llm = ctx.get("_llm_override") or get_llm_client()
+    model_name = get_settings().llm_model
+    created_at = datetime.now(tz=timezone.utc)
+
+    def _turn(
+        text: str, decision: str, status: str, citations: list[Any]
+    ) -> dict[str, Any]:
+        return {
+            "conversation_id": conversation_id,
+            "role": "assistant",
+            "content": text,
+            "guardrail_decision": decision,
+            "status": status,
+            "citations": citations,
+            "created_at": created_at.isoformat(),
+        }
+
+    with agent_tool_context(user_id, requested_sponsor=sponsor_id) as tctx:
+        scope = tctx.scope
+        bound = None if scope.is_platform else scope.rls_sponsor_id(sponsor_id)
+        bound_uuid = _uuid.UUID(bound) if bound else None
+
+        def _write(
+            *,
+            decision: str,
+            status: str,
+            redacted_user: str,
+            redacted_assistant: str,
+            route_or_agent: str,
+            citations: list[Any],
+        ) -> None:
+            obs_repo.write_message_event(
+                tctx.session,
+                conversation_id=_uuid.UUID(conversation_id),
+                request_id=request_id or "assistant-turn",
+                sponsor_id=bound_uuid,
+                role_or_guest_scope=scope.role.value,
+                surface="local_assistant",
+                guardrail_decision=decision,
+                status=status,
+                redacted_user_msg=redacted_user,
+                redacted_assistant_msg=redacted_assistant,
+                route_or_agent=route_or_agent,
+                retrieved_chunks=citations,
+                llm_provider_model=model_name,
+            )
+
+        # 1. Redact BEFORE the LLM + content guardrails (5.2). Fail-loud: a redaction error blocks.
+        guard = guard_inbound(content)
+        if guard.result.decision == "blocked":
+            refusal = (
+                "This request can't be handled (it was blocked by a safety guardrail)."
+            )
+            _write(
+                decision="blocked",
+                status="refused",
+                redacted_user=guard.redacted_text,
+                redacted_assistant=redact(refusal),
+                route_or_agent=f"guardrail:{guard.result.category}",
+                citations=[],
+            )
+            return _turn(refusal, "blocked", "refused", [])
+
+        # 2. Router classify (LLM, stubbed in CI). Refuse-at-router → blocked outcome, no dispatch.
+        decision = router_mod.classify(llm, guard.redacted_text)
+        if decision.refused:
+            refusal = "I can't help with that request."
+            _write(
+                decision="blocked",
+                status="refused",
+                redacted_user=guard.redacted_text,
+                redacted_assistant=redact(refusal),
+                route_or_agent="router:refuse",
+                citations=[],
+            )
+            return _turn(refusal, "blocked", "refused", [])
+
+        # 3. Dispatch. Only the Retention agent is wired (5.5); Report/Operations are deferred.
+        if decision.agent == "retention":
+            ans = retention_mod.answer(
+                tctx, llm, guard.redacted_text, participant_id=participant_id
+            )
+            redacted_answer = redact(ans.content)
+            _write(
+                decision="allowed",
+                status=ans.status,
+                redacted_user=guard.redacted_text,
+                redacted_assistant=redacted_answer,
+                route_or_agent="agent:retention",
+                citations=ans.citations,
+            )
+            return _turn(redacted_answer, "allowed", ans.status, ans.citations)
+
+        # Report / Operations: defined but not yet available (NOT an error).
+        deferred = f"The {decision.agent} agent is not yet available."
+        _write(
+            decision="allowed",
+            status="refused",
+            redacted_user=guard.redacted_text,
+            redacted_assistant=redact(deferred),
+            route_or_agent=f"agent:{decision.agent}:deferred",
+            citations=[],
+        )
+        return _turn(deferred, "allowed", "refused", [])

@@ -64,6 +64,7 @@ class RiskFacts:
 @dataclass(frozen=True, slots=True)
 class DocHit:
     source_ref: str
+    chunk_index: int
     chunk_text: str
     distance: float
 
@@ -171,6 +172,11 @@ def search_documents(ctx: ToolContext, query: str, *, k: int = 5) -> list[DocHit
     query_embedding = get_embedder().embed(query)
     hits = doc_repo.search_chunks(ctx.session, query_embedding=query_embedding, k=k)
     return [
-        DocHit(source_ref=h.source_ref, chunk_text=h.chunk_text, distance=h.distance)
+        DocHit(
+            source_ref=h.source_ref,
+            chunk_index=h.chunk_index,
+            chunk_text=h.chunk_text,
+            distance=h.distance,
+        )
         for h in hits
     ]

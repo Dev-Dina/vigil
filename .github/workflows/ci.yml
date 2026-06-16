@@ -37,6 +37,9 @@ jobs:
       VIGIL_SECRETS_BACKEND: env
       VIGIL_JWT_SIGNING_KEY: ci-signing-key-not-a-secret-32bytes!
       VIGIL_LLM_API_KEY: ci-llm-key
+      # Hermetic LLM: force the StubLLMClient so the assistant turn pipeline makes NO live
+      # OpenRouter call (no provider key needed in CI). Real OpenRouter is local/demo only.
+      VIGIL_LLM_STUB: "true"
       # Admin (superuser) DSN runs migrations; the app connects as the least-privilege
       # vigil_app role created by the test harness so RLS actually binds.
       VIGIL_DB_ADMIN_DSN: postgresql+psycopg://vigil:vigil@localhost:55432/vigil
