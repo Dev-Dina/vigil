@@ -9,3 +9,10 @@ __pycache__/
 # Golden-set clean scratch (the committed oracle is tests/golden/{raw,expected}).
 tests/golden/_clean_tmp/
 .vscode/
+
+# Vault dev persistence — NEVER commit data or unseal material (unseal keys / root token).
+# The compose data volume is a named Docker volume (outside the repo); these cover any local
+# bind-mounted data dir or init-output file a developer might create.
+infra/vault/data/
+infra/vault/*.local
+infra/vault/init.json
