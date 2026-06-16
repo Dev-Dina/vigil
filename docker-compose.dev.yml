@@ -33,7 +33,15 @@ services:
   # use the shim (VIGIL_SECRETS_BACKEND=env). Config in infra/vault/vault.hcl (no secrets there).
   vault:
     image: hashicorp/vault:1.17
-    command: server -config=/vault/config/vault.hcl
+    # Run as the NON-ROOT vault user (uid 100, gid 1000 in the image). We bypass the image's
+    # docker-entrypoint.sh (entrypoint: ["vault"]) and invoke vault directly with our single
+    # file config — that wrapper, on the `server` branch, injects `-config=/vault/config` +
+    # `-dev-listen-address=0.0.0.0:8200`, which double-binds 8200 (crash). Bypassing it gives a
+    # single 8200 listener; `user:` runs the process non-root. disable_mlock=true → no setcap.
+    # The vault-data volume must be owned by 100:1000 (see README "volume permissions").
+    entrypoint: ["vault"]
+    command: ["server", "-config=/vault/config/vault.hcl"]
+    user: "100:1000"
     cap_add:
       - IPC_LOCK
     environment:
