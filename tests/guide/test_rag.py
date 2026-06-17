@@ -13,27 +13,11 @@ Threshold tuned from measured similarities: on-topic project questions score ~0.
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 from guide.embeddings import GuideEmbedder, get_embedder
 from guide.llm import StubGuideLLMClient, get_guide_llm_client
 from guide.rag import _REFUSAL, answer_question
-from guide.retrieval import build_index, load_index
 
-_REPO = Path(__file__).resolve().parents[2]
-_DOCS = _REPO / "guide" / "approved_docs"
-
-
-@pytest.fixture(scope="session")
-def guide_index():  # type: ignore[no-untyped-def]
-    out = Path(__file__).resolve().parent / "_built_index.json"
-    n = build_index(_DOCS, out, get_embedder())
-    assert n > 0, "expected chunks from the approved docs"
-    idx = load_index(out)
-    yield idx
-    out.unlink(missing_ok=True)
+# guide_index fixture is shared via tests/guide/conftest.py.
 
 
 def test_ci_uses_stub_llm() -> None:
