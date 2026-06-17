@@ -1,6 +1,9 @@
-# Local-dev datastores for the backend spine (infra.md app side).
+# Local-dev datastores for the backend spine (infra.md app side) + the isolated Guide.
 # Secrets come from Vault dev (or the env shim); never from this file.
-# The Guide surface is intentionally NOT here — it shares no datastore with the app side.
+# The Guide shares NO datastore with the app side: it sits on its OWN network (guide-net) with no
+# route to postgres/redis/vault (those are on the compose default network). This is the dev-layer
+# of the isolation boundary; the full NetworkPolicy denial + positive control is the Phase-8
+# kind/minikube integration job (specs/isolation.md §3, infra.md).
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -52,5 +55,25 @@ services:
       - ./infra/vault/vault.hcl:/vault/config/vault.hcl:ro
       - vault-data:/vault/file # encrypted persistent storage (Docker-managed; not in the repo)
 
+  # Public Guide (isolated). On its OWN network only (guide-net) — NO route to postgres/redis/
+  # vault, which live on the compose default network. Builds the guide/ package alone (no vigil/).
+  # Its secret set is just its own LLM key (unused in 7.1); no DB DSN, no Vault token, no Redis.
+  guide:
+    build:
+      context: .
+      dockerfile: guide/Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - guide-net
+    environment:
+      VIGIL_GUIDE_LOG_LEVEL: INFO
+
 volumes:
   vault-data:
+
+networks:
+  # Dedicated network for the Guide so it cannot resolve/reach the app datastores (which use the
+  # implicit default network). The hard, asserted denial is the Phase-8 NetworkPolicy job.
+  guide-net:
+    driver: bridge
