@@ -26,6 +26,7 @@ import type {
   RiskExplanation,
   RiskHistoryPoint,
   InterventionOut,
+  InterventionKind,
 } from "@/lib/types"
 
 function humanizeFactor(tag: string): string {
@@ -119,7 +120,28 @@ export default function ParticipantDetailPage() {
     ? `Risk score ${riskPct}% over a ${risk.horizon_days}-day horizon (model ${risk.model_version}). Top drivers are listed at left; review with site staff before acting.`
     : "Loading risk explanation…"
 
-  const isSynthetic = detail?.synthetic ?? false
+  // Non-dismissible synthetic disclosure (dashboard.md): flag-driven, never a toggle. Shown when
+  // EITHER the detail OR the risk explanation (reasons/actions) is synthetic-derived (structural).
+  const isSynthetic = (detail?.synthetic ?? false) || (risk?.synthetic ?? false)
+
+  // Recommended protocol actions (Gate 9.3) are SUGGESTIONS — acting logs the existing audited
+  // intervention (kind pre-filled from the suggestion); nothing is auto-logged.
+  const handleSuggested = async (action: {
+    action: string
+    intervention_kind: string
+  }) => {
+    if (!id) return
+    await logIntervention(id, {
+      kind: action.intervention_kind as InterventionKind,
+      note: `Suggested action: ${action.action}`,
+    })
+    try {
+      const page = await getInterventions(id)
+      setInterventions(page.items)
+    } catch {
+      // POST succeeded; leave existing list
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,6 +245,47 @@ export default function ParticipantDetailPage() {
             explanation={explanation}
           />
         </div>
+
+        {/* Recommended protocol actions (Gate 9.3): operational coordinator next-steps mapped
+            from the risk band + the model's own attribution factors — SUGGESTIONS, not clinical
+            advice. Acting logs the existing audited intervention (kind pre-filled). */}
+        {risk && risk.recommended_actions.length > 0 && (
+          <>
+            <PulseDivider />
+            <div className="mb-4">
+              <h3 className="mb-1 text-sm font-semibold text-foreground">
+                Suggested coordinator actions
+              </h3>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Operational next-steps — not clinical advice. Logging an action records an audited
+                intervention.
+              </p>
+              <ul className="space-y-2">
+                {risk.recommended_actions.map((a, i) => (
+                  <li
+                    key={`${a.intervention_kind}-${i}`}
+                    className="flex items-center justify-between rounded border border-border bg-card px-3 py-2 text-sm"
+                  >
+                    <span className="text-foreground">{a.action}</span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-xs capitalize text-muted-foreground">
+                        {a.intervention_kind.replace(/_/g, " ")}
+                      </span>
+                      {canLogIntervention && (
+                        <button
+                          onClick={() => handleSuggested(a)}
+                          className="rounded border border-border px-3 py-1 text-xs text-foreground transition-colors hover:bg-muted"
+                        >
+                          Log
+                        </button>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        )}
 
         <PulseDivider />
 

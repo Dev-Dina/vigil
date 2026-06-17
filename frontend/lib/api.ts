@@ -94,12 +94,19 @@ async function apiFetch<T>(
 // ---------------------------------------------------------------------------
 
 export async function getCohort(
-  params?: { trial_id?: string; site_id?: string; risk_band?: string; limit?: number },
+  params?: {
+    trial_id?: string
+    site_id?: string
+    risk_band?: string
+    sort?: "risk_desc" | "risk_asc"
+    limit?: number
+  },
 ): Promise<Page<CohortRow>> {
   const qs = new URLSearchParams()
   if (params?.trial_id) qs.set("trial_id", params.trial_id)
   if (params?.site_id) qs.set("site_id", params.site_id)
   if (params?.risk_band) qs.set("risk_band", params.risk_band)
+  if (params?.sort) qs.set("sort", params.sort)
   if (params?.limit != null) qs.set("limit", String(params.limit))
   const query = qs.toString() ? `?${qs.toString()}` : ""
   return apiFetch<Page<CohortRow>>(`/api/v1/cohort${query}`)

@@ -12,6 +12,7 @@ import { PLATFORM_ROLES } from "@/lib/role-gates"
 const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/triage", label: "Triage" },
+  { href: "/at-risk", label: "At-Risk" },
   { href: "/monitoring", label: "Monitoring", platformOnly: true },
   { href: "/costs", label: "Costs", platformOnly: true },
   { href: "/observability", label: "Observability", platformOnly: true },

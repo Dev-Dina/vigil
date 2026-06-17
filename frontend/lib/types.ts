@@ -99,12 +99,22 @@ export interface FactorContribution {
   contribution: number // signed; sign encodes direction
 }
 
+// Operational coordinator next-step (Gate 9.3) — NOT clinical advice. A suggestion only:
+// acting goes through the audited POST /interventions; intervention_kind pre-fills that log.
+export interface SuggestedAction {
+  action: string
+  intervention_kind: InterventionKind | string
+  factor: string | null // the attribution driver it responds to (null = baseline)
+}
+
 export interface RiskExplanation {
   participant_id: string
   risk_score: number
   horizon_days: number // default 28
   factors: FactorContribution[]
   model_version: string
+  recommended_actions: SuggestedAction[] // Phase-9: operational next-steps (suggestions only)
+  synthetic: boolean // actions labelled synthetic where the risk is synthetic
 }
 
 // Champion risk trajectory (H2b semantic b) — champion-at-each-point, cross-version.
