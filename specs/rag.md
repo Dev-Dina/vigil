@@ -104,7 +104,13 @@ both reached only through MCP tools the agent is explicitly granted:
 store ONLY** (`/specs/isolation.md`): brief, architecture notes, model card, safety policy,
 deployment notes. Its registered toolset is exactly `{approved-document vector search}` — no DB
 tool, no structured source, no path to anything tenant-scoped. If the approved docs don't answer,
-it refuses; it never falls back to open generation or another source.
+it refuses; it never falls back to open generation or another source. **Phase 7 build form
+(ratified, `/specs/isolation.md § Phase 7 ratified decisions`):** that store is a **file-backed
+local index the Guide owns** (NOT the app's pgvector `document_chunk`), and the Guide carries its
+**own copy** of the redaction/guardrail code (imports nothing from `vigil.*`). **Relevance-
+threshold refusal:** the Guide refuses not only on zero retrieval but when the best match is
+below a relevance threshold — a public surface must not answer under-grounded (asserted in the
+Gate 7.4 eval/red-team suite, not only the zero-retrieval case).
 
 ### Champion-allowlist binding (HARD RULE)
 Agents read risk facts ONLY through the committed risk services — the **champion-allowlist

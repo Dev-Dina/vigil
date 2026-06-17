@@ -66,3 +66,57 @@ expressed concretely as a `host:port` / Service name per environment.
 Layers 1–2 run in CI on every PR; layer 3 runs in the kind-based integration job (no paid
 cluster, per `/specs/infra.md`). The whole suite is part of the `release` agent's checks — a
 single failure blocks shipping the Guide.
+
+## Phase 7 ratified decisions (build contract)
+The decisions below are FIXED before any Guide code (Gate 7.0). They make the isolation claim
+maximally provable: the Guide is a standalone service that imports nothing from the real app.
+
+1. **Safety code — the Guide OWNS ITS OWN COPY.** The Guide does NOT import redaction or
+   guardrail logic from `vigil.agents` (or any `vigil.*` module). It carries its OWN copy of the
+   redaction + guardrail code. Rationale: "the Guide imports nothing from the real app" is a
+   stronger and simpler-to-prove claim than "shares only pure code" — the §1 import-graph test
+   asserts ZERO imports from `vigil.*`. The small pure-code duplication is accepted in exchange
+   for the clean structural proof. (The app's `vigil/agents/redaction.py` + `guardrails.py` are
+   the reference the Guide copy is derived from; they are NOT imported.)
+2. **Vector store — FILE-BACKED LOCAL INDEX the Guide owns.** The Guide's approved-doc store is a
+   file-backed local index built and read by the Guide alone — NOT the app's pgvector
+   `document_chunk` table, NOT any shared datastore. Fully isolated and hermetic (no DB
+   connection at all). pgvector-parity for the Guide store is DEFERRED to Phase 8; it changes the
+   storage backend, never the isolation boundary.
+3. **LLM key — DISTINCT, at the Guide's OWN Vault path.** The Guide uses its own LLM provider key
+   at `secret/vigil/guide/llm_api_key` (KV v2, field `value`), separate from the app's
+   `vigil/llm/*` keys — so "shares no credentials" is literally true. Local-dev env shim:
+   `VIGIL_GUIDE_LLM_API_KEY`.
+   - **The Guide's ENTIRE allowed secret/config set is exactly:** (a) its own file-store path
+     (local, no credential) — or none; (b) its own `message_events` sink DSN; (c) its own LLM key
+     (above). The §1 config/secret audit asserts the ABSENCE of everything else: no participant-DB
+     DSN, no broad Vault token, no Redis URL, no queue URL, no internal/admin API base URL, no app
+     JWT signing key.
+4. **`message_events` — own sink, same schema, separate store (confirmed).** The Guide writes its
+   turn rows to its OWN `message_events` sink (the same column shape as
+   `/specs/observability.md § message_events`, `surface = "public_guide"`, `sponsor_id = NULL`) —
+   it NEVER writes into the app's Postgres and NEVER imports `vigil.db.models`. Same schema,
+   separate store (`/specs/infra.md` § Who shares which datastore). This is how "emit the same
+   events for guardrail proof" and "share no datastore" are both satisfied.
+
+### Approved-docs corpus (the Guide's only data source)
+The Guide answers ONLY from these five approved, PUBLIC-safe documents, authored under
+**`guide/approved_docs/`** (the Guide owns them; co-located with the future Guide service):
+`brief.md`, `architecture.md`, `model_card.md`, `safety_policy.md`, `deploy_notes.md`. They
+contain NO real participant data, NO secrets, and NO internal-only detail; any performance number
+matches the model cards (`data/models/**`, `PHASE3_CARD.md`) and is never inflated. Gate 7.2
+builds the Guide's own index over exactly these files.
+
+### Relevance-threshold refusal (folded-in 5.7 carryover)
+Because the Guide is PUBLIC, its grounded-refusal must be SOUND, not just trigger on zero
+retrieval: a turn whose best retrieval is BELOW a relevance threshold also refuses ("I don't have
+a grounded answer for that"), never an under-grounded guess. This is addressed in Gate 7.2 (the
+Guide RAG) and asserted in Gate 7.4 (the eval/red-team suite includes low-relevance, not only
+zero-retrieval, refusal cases).
+
+### Gate order
+7.1 Guide service skeleton (separate, own creds, isolated; own `message_events` sink) → 7.2 Guide
+RAG over the approved-docs corpus + the Guide's own file-backed index (incl. relevance-threshold
+refusal) → 7.3 Guide guardrails + redaction (the owned copy) → **7.4 the isolation-proof suite
+(SACRED — §1 static + §2 behavioral red-team/egress-zero, the 5.4 analog)** → 7.5 landing/demo
+site. Layer-3 NetworkPolicy denial (§3) lands with Phase 8 infra; §1–§2 gate every PR in Phase 7.

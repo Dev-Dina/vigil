@@ -36,6 +36,7 @@ REQUIRED: dict[str, list[str]] = {
         "## MAY touch",
         "## MUST NOT touch",
         "## Proof obligation",
+        "## Phase 7 ratified decisions",
     ],
     "data.md": [
         "## Decisions (fixed)",
