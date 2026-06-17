@@ -53,9 +53,6 @@ $DenyTargets = @(
 )
 $PositiveTarget = @{ name = "allowed-egress"; port = 8088 }
 
-# Single-line python probe: connect (3s timeout) and close; raises -> non-zero exit on failure.
-$Probe = 'import socket,sys; socket.create_connection((sys.argv[1],int(sys.argv[2])),timeout=3).close()'
-
 $Results = [System.Collections.Generic.List[object]]::new()
 function Add-Result($target, $pre, $post) {
   $Results.Add([pscustomobject]@{ Target = $target; PreCheck = $pre; PostPolicy = $post })
@@ -68,9 +65,36 @@ function Require-Tool($name) {
 }
 
 # Connect from INSIDE the guide pod. Returns $true if reachable, $false if denied/refused.
+# Bug-3 fix: build the FULL python statement with host/port INTERPOLATED into a literal (no
+# sys.argv), and pass kubectl args via a SPLATTED array so each token - including the spaces in
+# the -c payload - is passed intact (PS native-arg quoting otherwise mangled it in the live run).
 function Test-PodConnect($targetHost, $port) {
-  kubectl exec -n $Ns deploy/guide -- python -c $Probe $targetHost "$port" *> $null
+  $stmt = "import socket; socket.create_connection(('$targetHost',$port),timeout=3).close()"
+  $kargs = @("exec", "-n", $Ns, "deploy/guide", "--", "python", "-c", $stmt)
+  kubectl @kargs *> $null
   return ($LASTEXITCODE -eq 0)
+}
+
+# Poll until a resource EXISTS (then the caller may safely `wait`/`rollout status` on it). Avoids
+# the live-run "no matching resources found" when waiting before Calico's objects register.
+function Wait-Exists([string[]]$getArgs, [int]$timeoutSec = 180) {
+  $deadline = (Get-Date).AddSeconds($timeoutSec)
+  while ((Get-Date) -lt $deadline) {
+    & kubectl @getArgs *> $null
+    if ($LASTEXITCODE -eq 0) { return $true }
+    Start-Sleep -Seconds 5
+  }
+  return $false
+}
+
+# Run a kubectl wait/rollout with retries - tolerate a slow bring-up (e.g. laptop sleep mid-run).
+function Invoke-WaitWithRetry([string[]]$waitArgs, [int]$retries = 3) {
+  for ($i = 1; $i -le $retries; $i++) {
+    & kubectl @waitArgs
+    if ($LASTEXITCODE -eq 0) { return $true }
+    if ($i -lt $retries) { Write-Host "    wait attempt $i timed out; retrying..."; Start-Sleep -Seconds 10 }
+  }
+  return $false
 }
 
 Start-Transcript -Path $Transcript -Force | Out-Null
@@ -83,9 +107,17 @@ try {
 
   Write-Host "`n[2/8] Installing Calico $CalicoVer (NetworkPolicy-enforcing CNI)..."
   kubectl apply -f $CalicoUrl
-  Write-Host "    waiting for Calico + CoreDNS to be ready (up to 5 min)..."
-  kubectl wait --for=condition=ready pods -l k8s-app=calico-node -n kube-system --timeout=300s
-  kubectl wait --for=condition=ready pods -l k8s-app=kube-dns   -n kube-system --timeout=300s
+  Write-Host "    waiting for the Calico daemonset to REGISTER, then become ready (up to 5 min)..."
+  if (-not (Wait-Exists @("get", "ds", "calico-node", "-n", "kube-system") 180)) {
+    throw "Calico daemonset never registered - the CNI install may have failed (check network/image pulls)."
+  }
+  if (-not (Invoke-WaitWithRetry @("rollout", "status", "ds/calico-node", "-n", "kube-system", "--timeout=300s"))) {
+    throw "Calico daemonset did not become ready - without an enforcing CNI the proof is invalid."
+  }
+  if (-not (Wait-Exists @("get", "deploy", "coredns", "-n", "kube-system") 120)) {
+    throw "CoreDNS deployment never registered."
+  }
+  [void](Invoke-WaitWithRetry @("rollout", "status", "deploy/coredns", "-n", "kube-system", "--timeout=300s"))
 
   Write-Host "`n[3/8] Building + loading the guide image ($Image)..."
   docker build -t $Image -f (Join-Path $RepoRoot "guide/Dockerfile") $RepoRoot
@@ -97,8 +129,10 @@ try {
     -f (Join-Path $K8sDir "guide.yaml") `
     -f (Join-Path $K8sDir "deny-targets.yaml") `
     -f (Join-Path $K8sDir "positive-control.yaml")
-  Write-Host "    waiting for all deployments to be available (up to 5 min)..."
-  kubectl wait --for=condition=available deploy --all -n $Ns --timeout=300s
+  Write-Host "    waiting for all deployments to be available (retried; tolerates a slow bring-up)..."
+  if (-not (Invoke-WaitWithRetry @("wait", "--for=condition=available", "deploy", "--all", "-n", $Ns, "--timeout=300s"))) {
+    throw "deployments did not become available after retries - check pod status: kubectl get pods -n $Ns"
+  }
 
   Write-Host "`n[5/8] NEGATIVE PRE-CHECK (before policy): every deny-list target must be REACHABLE..."
   $preOk = $true

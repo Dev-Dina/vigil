@@ -9,6 +9,10 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: guide-default-deny-egress
+  # SELF-DECLARED namespace (Gate 8.L3-c bug fix): without it, `kubectl apply -f` lands the policy
+  # in `default`, where it selects nothing in the proof namespace and enforces NOTHING (a fresh run
+  # would FALSELY show all targets reachable). The negative pre-check caught this in the live run.
+  namespace: vigil-isolation-proof
 spec:
   podSelector:
     matchLabels:
@@ -21,6 +25,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: guide-egress-allow
+  namespace: vigil-isolation-proof # self-declared (Gate 8.L3-c) — see guide-default-deny-egress
 spec:
   podSelector:
     matchLabels:
