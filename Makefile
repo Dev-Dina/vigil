@@ -46,6 +46,10 @@ baseline:  ## Train the Phase-3 baselines on REAL data/clean (metrics + SHAP + c
 leakage:  ## Run the sacred cross-tenant leakage test
 	uv run pytest tests/spine/test_leakage.py -q
 
+.PHONY: guide-isolation-proof
+guide-isolation-proof:  ## Layer-3: kind+Calico, prove the Guide can reach NO deny-list resource
+	./deploy/k8s/run-isolation-proof.sh
+
 .PHONY: test-slow
 test-slow:  ## Run the slow full-cohort synthetic regeneration tests (excluded by default)
 	uv run pytest -m slow -q

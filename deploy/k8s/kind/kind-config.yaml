@@ -1,0 +1,11 @@
+# kind cluster config for the Guide layer-3 isolation proof (Gate 8.L3-b).
+# CRITICAL: the default CNI (kindnet) does NOT enforce NetworkPolicies — disable it and install
+# Calico (the runner does this), or the proof is a FALSE PASS. podSubnet matches Calico's default
+# IPv4 pool (192.168.0.0/16) so no extra Calico config is needed.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  disableDefaultCNI: true
+  podSubnet: "192.168.0.0/16"
+nodes:
+  - role: control-plane

@@ -38,17 +38,52 @@ The deny-list targets hold **no real data** — they are throwaway services that
 denial is a real denial. The Guide image is built from `guide/Dockerfile` and loaded into the
 cluster by 8.L3-b (`kind load docker-image vigil-guide:local`).
 
-## The proof (run by 8.L3-b)
+## The proof — one command (Gate 8.L3-b)
 
-1. `kustomize build` / `kubectl apply -k .` onto the Calico cluster.
-2. **Negative pre-check** (before policies, or against an unselected pod): `postgres:5432` etc. ARE
-   reachable from the Guide pod → confirms the network + targets work.
-3. Apply the NetworkPolicies; from inside the Guide pod (`kubectl exec guide -- python -c "…socket…"`)
-   attempt a raw TCP connect to each deny-list `host:port`:
-   `postgres:5432`, `redis:6379`, `vault:8200`, `app-api:8000`, `model-endpoint:9000` → **every one
-   DENIED** (timeout/refused).
-4. **Positive control**: from the same pod, connect to `allowed-egress:8088` → **SUCCEEDS**. This
-   proves the policy is *selectively* enforcing, not that the net is merely broken.
+**You run this** (it needs Docker + kind + kubectl on PATH and a local cluster — it cannot run in
+the hermetic unit-CI). It builds the guide image, creates a Calico-enforced kind cluster, runs the
+negative pre-check + denial test + positive control, prints **PASS/FAIL**, writes a transcript to
+`deploy/k8s/last-proof-transcript.txt`, and tears the cluster down.
+
+```powershell
+# Windows PowerShell (your environment)
+pwsh ./deploy/k8s/run-isolation-proof.ps1            # run + tear down
+pwsh ./deploy/k8s/run-isolation-proof.ps1 -Keep      # leave the cluster up for the live demo
+```
+```bash
+# portable (macOS/Linux / git-bash)
+./deploy/k8s/run-isolation-proof.sh                  # run + tear down
+./deploy/k8s/run-isolation-proof.sh --keep
+make guide-isolation-proof                           # = the .sh
+```
+
+What the runner does (steps 1–8):
+1. create the kind cluster with the **default CNI disabled** (`kind/kind-config.yaml`);
+2. install **Calico** (pinned `v3.27.3`) and wait for calico-node + CoreDNS ready;
+3. `docker build` the guide image (`guide/Dockerfile`) + `kind load docker-image vigil-guide:local`;
+4. apply namespace + guide + deny-list targets + positive control **(NOT the policies yet)** and
+   wait for all deployments available;
+5. **NEGATIVE PRE-CHECK** — from inside the guide pod, raw-connect to each deny-list `host:port`
+   (`postgres:5432`, `redis:6379`, `vault:8200`, `app-api:8000`, `model-endpoint:9000`) and to the
+   positive control → assert **every one REACHABLE** (so the later denial is provably the policy);
+6. apply the guide **NetworkPolicies** + pause for propagation;
+7. **DENIAL TEST** — re-connect to each deny-list `host:port` → assert **every one DENIED**
+   (3s-timeout socket connect → timeout/refused);
+8. **POSITIVE CONTROL** — connect to `allowed-egress:8088` → assert **SUCCESS** (proves the policy
+   is *selectively* enforcing, not blanket-broken).
+
+The in-pod probe is a single-line python `socket.create_connection((host,port),timeout=3)` run via
+`kubectl exec` (the guide image is python-based, so no extra tooling is needed in the pod).
+
+### What PASS looks like
+```
+[5/8] NEGATIVE PRE-CHECK ... pre  postgres:5432 -> REACHABLE ... (all reachable)
+[7/8] DENIAL TEST        ... post postgres:5432 -> DENIED ... (all denied)
+[8/8] POSITIVE CONTROL   ... post allowed-egress:8088 -> OK (allowed)
+RESULT: PASS — every deny-list target DENIED after the policy; positive control OK.
+```
+A single deny-list target showing `REACHABLE (LEAK!)` after the policy, or the positive control
+`BLOCKED`, is a **FAIL** and (per `/specs/isolation.md` §3) blocks shipping the Guide.
 
 ## Positive-control reconcile (why not "the vector store")
 
