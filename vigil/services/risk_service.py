@@ -20,6 +20,7 @@ from vigil.db.models import Participant
 from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories.session import platform_session, scoped_session
+from vigil.services import scope_filter
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +105,13 @@ def get_participant_risk(scope: Scope, participant_id: str) -> RiskView | None:
     if row is None:
         return None
 
+    # SEC-1: sponsor RLS let the row through; narrow to the caller's trial/site scope (the score
+    # row carries the participant's sponsor/trial/site). Out-of-site → fail closed (404).
+    if not scope_filter.participant_visible(
+        scope, sponsor_id=row.sponsor_id, trial_id=row.trial_id, site_id=row.site_id
+    ):
+        return None
+
     # Defence in depth: the query already excludes non-champion rows; assert it.
     if row.model_version not in champion_versions:  # pragma: no cover - unreachable
         raise RuntimeError(
@@ -148,6 +156,14 @@ def get_participant_risk_history(
         participant = session.get(Participant, pid)
         if participant is None:
             return None  # RLS-hidden or nonexistent → out-of-scope fail-closed (404)
+        # SEC-1: cross-site narrowing (domain.md; matches 5.4 tools) — out-of-site → 404.
+        if not scope_filter.participant_visible(
+            scope,
+            sponsor_id=participant.sponsor_id,
+            trial_id=participant.trial_id,
+            site_id=participant.site_id,
+        ):
+            return None
         rows = scoring_repo.history_rows_for_participant(session, pid)
 
     points: list[RiskHistoryPointView] = []

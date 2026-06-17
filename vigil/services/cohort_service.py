@@ -22,6 +22,7 @@ from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import tenancy as tenancy_repo
 from vigil.repositories.session import platform_session, scoped_session
+from vigil.services import scope_filter
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +46,15 @@ def list_cohort(
 
     with scoped_session(scope, sponsor_id=sponsor_id) as session:
         rows = tenancy_repo.list_participants(session, limit=limit)
+        # SEC-1: sponsor RLS narrowed to the tenant; now narrow to the caller's trial/site scope
+        # (site roles see only their site) — the cross-site guarantee RLS can't express.
+        rows = [
+            p
+            for p in rows
+            if scope_filter.participant_visible(
+                scope, sponsor_id=p.sponsor_id, trial_id=p.trial_id, site_id=p.site_id
+            )
+        ]
         # Batch champion-only read: synthetic + top_factors come from the CHAMPION row only.
         champ_scores = scoring_repo.champion_scores_by_participant(
             session,

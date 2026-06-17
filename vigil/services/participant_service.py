@@ -19,6 +19,7 @@ from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import tenancy as tenancy_repo
 from vigil.repositories.session import platform_session, scoped_session
+from vigil.services import scope_filter
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +58,11 @@ def get_detail(scope: Scope, participant_id: str) -> ParticipantDetailView | Non
         p = tenancy_repo.get_participant(session, pid)
         if p is None:
             return None  # RLS-hidden or nonexistent → fail closed (404)
+        # SEC-1: cross-site narrowing the sponsor-only RLS can't do (domain.md; matches 5.4 tools).
+        if not scope_filter.participant_visible(
+            scope, sponsor_id=p.sponsor_id, trial_id=p.trial_id, site_id=p.site_id
+        ):
+            return None  # out of the caller's trial/site scope → fail closed (404)
         champ = scoring_repo.get_surfaceable_score(
             session, pid, champion_versions=champion_versions
         )
@@ -94,6 +100,11 @@ def log_intervention(
         p = tenancy_repo.get_participant(session, pid)
         if p is None:
             return None  # out-of-scope / not found → fail closed
+        # SEC-1: cannot log an intervention on a participant outside the caller's trial/site scope.
+        if not scope_filter.participant_visible(
+            scope, sponsor_id=p.sponsor_id, trial_id=p.trial_id, site_id=p.site_id
+        ):
+            return None
         row = tenancy_repo.add_intervention(
             session,
             sponsor_id=p.sponsor_id,
@@ -134,6 +145,11 @@ def list_interventions(
     with scoped_session(scope) as session:
         p = tenancy_repo.get_participant(session, pid)
         if p is None:
+            return None
+        # SEC-1: cross-site narrowing (domain.md; matches 5.4 tools) — out-of-site → fail closed.
+        if not scope_filter.participant_visible(
+            scope, sponsor_id=p.sponsor_id, trial_id=p.trial_id, site_id=p.site_id
+        ):
             return None
         rows = tenancy_repo.list_interventions(session, pid)
         return [
