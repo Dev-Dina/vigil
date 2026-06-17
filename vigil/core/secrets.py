@@ -25,6 +25,8 @@ JWT_SIGNING_KEY = "vigil/auth/jwt_signing_key"
 DB_DSN = "vigil/db/dsn"
 LLM_API_KEY = "vigil/llm/api_key"  # OpenRouter (fallback provider)
 ANTHROPIC_API_KEY = "vigil/llm/anthropic_api_key"  # Anthropic (primary provider)
+LANGFUSE_PUBLIC_KEY = "vigil/langfuse/public_key"  # Langfuse tracing (Phase 6.3)
+LANGFUSE_SECRET_KEY = "vigil/langfuse/secret_key"  # Langfuse tracing (Phase 6.3)
 
 
 class SecretNotFoundError(RuntimeError):
@@ -49,6 +51,8 @@ class EnvSecrets:
         DB_DSN: "VIGIL_DB_DSN",
         LLM_API_KEY: "VIGIL_LLM_API_KEY",
         ANTHROPIC_API_KEY: "VIGIL_ANTHROPIC_API_KEY",
+        LANGFUSE_PUBLIC_KEY: "VIGIL_LANGFUSE_PUBLIC_KEY",
+        LANGFUSE_SECRET_KEY: "VIGIL_LANGFUSE_SECRET_KEY",
     }
 
     def get(self, name: str) -> str:

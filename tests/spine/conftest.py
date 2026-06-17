@@ -24,6 +24,9 @@ os.environ.setdefault("VIGIL_JWT_SIGNING_KEY", "test-signing-key-not-a-secret")
 os.environ.setdefault("VIGIL_LLM_API_KEY", "test-llm-key")
 # Hermetic LLM: force the StubLLMClient so no test makes a live OpenRouter call (no key needed).
 os.environ.setdefault("VIGIL_LLM_STUB", "true")
+# Hermetic tracing: Langfuse OFF so no test makes a Langfuse call (no key, no SDK import, no
+# egress) → NullTracer. Additive/best-effort. Default is already False; set for parity.
+os.environ.setdefault("VIGIL_LANGFUSE_ENABLED", "false")
 
 _ADMIN_DSN = os.environ.get(
     "VIGIL_DB_ADMIN_DSN", "postgresql+psycopg://vigil:vigil@localhost:55432/vigil"

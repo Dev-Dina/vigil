@@ -83,3 +83,19 @@ queryable audit record. Traces carry **only redacted content** — no raw PII ev
 (redaction is before the LLM, and only redacted text is persisted/traced). Langfuse is a **new
 outbound egress**: allow-list it explicitly (deny-by-default posture, `/specs/isolation.md`). **CI
 is hermetic** — Langfuse is disabled/stubbed in CI (no key, no network), like the LLM client.
+
+**Implemented (Gate 6.3).** `vigil/agents/tracing.py` is the tracer (`get_tracer` → `NullTracer`
+unless `VIGIL_LANGFUSE_ENABLED=true`; `LangfuseTracer` lazy-imports the SDK). `run_assistant_turn`
+emits one `TurnTrace` per turn **after** the durable `message_events` write, **best-effort**
+(`safe_trace` swallows any failure) — a disabled/failing Langfuse never breaks the turn or the
+audit row. **Redacted-only by construction:** `TurnTrace` has NO raw field — only the same
+`redacted_user_msg`/`redacted_assistant_msg` + structural metadata (route/agent, retrieval,
+model, guardrail, latency, cost) the event row carries; raw text has no path to a trace.
+- **CI-hermetic flag:** `VIGIL_LANGFUSE_ENABLED` (default `false`) — OFF in `ci.yml` + the spine
+  conftest, so CI makes NO Langfuse call, imports no SDK, needs no key (mirrors `VIGIL_LLM_STUB`).
+- **Egress allow-list entry:** the Langfuse host (`VIGIL_LANGFUSE_HOST`, default
+  `https://cloud.langfuse.com`) joins `api.anthropic.com` + `openrouter.ai` as the only allowed
+  outbound destinations (deny-by-default; NetworkPolicy in `/specs/infra.md`).
+- **Vault keys:** `secret/vigil/langfuse/public_key` and `secret/vigil/langfuse/secret_key` (KV v2,
+  field `value`) — read only when tracing is enabled; never in code/repo/.env. Local-dev env shim:
+  `VIGIL_LANGFUSE_PUBLIC_KEY` / `VIGIL_LANGFUSE_SECRET_KEY`.

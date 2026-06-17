@@ -40,6 +40,9 @@ jobs:
       # Hermetic LLM: force the StubLLMClient so the assistant turn pipeline makes NO live
       # OpenRouter call (no provider key needed in CI). Real OpenRouter is local/demo only.
       VIGIL_LLM_STUB: "true"
+      # Hermetic tracing: Langfuse OFF in CI → NullTracer, NO Langfuse call/egress, NO key needed
+      # (no langfuse SDK import). Tracing is additive/best-effort; real Langfuse is local/demo only.
+      VIGIL_LANGFUSE_ENABLED: "false"
       # Admin (superuser) DSN runs migrations; the app connects as the least-privilege
       # vigil_app role created by the test harness so RLS actually binds.
       VIGIL_DB_ADMIN_DSN: postgresql+psycopg://vigil:vigil@localhost:55432/vigil

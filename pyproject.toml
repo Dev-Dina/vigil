@@ -30,6 +30,7 @@ dependencies = [
     "pgvector>=0.4.2",
     "sentence-transformers>=5.5.1",
     "anthropic>=0.109.2",
+    "langfuse>=2.0.0",
 ]
 
 [dependency-groups]

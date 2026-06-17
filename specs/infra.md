@@ -79,9 +79,10 @@ Plain manifests (kustomize base + overlays), applied to a local kind cluster:
   endpoint, its `message_events` sink, and the LLM key — never an app DSN/token.
 - **Jobs / CronJobs**: build-time AACT ingestion as a Job; drift/rollup as jittered CronJobs.
 - **NetworkPolicies** (the demo): default-deny in the namespace; explicit allows for app-side
-  pods → `postgres`/`redis`/`vault`/model endpoints; a `guide` policy that DENIES all of those and
-  ALLOWS only the approved-doc vector store. This is exactly what the layer-3 isolation integration
-  job asserts (`/specs/isolation.md` §3): from the `guide` pod, deny-list resources are unreachable
-  while the vector store succeeds.
+  pods → `postgres`/`redis`/`vault`/model endpoints + the allow-listed outbound egress
+  (`api.anthropic.com`, `openrouter.ai`, and the **Langfuse host** — Gate 6.3 tracing); a `guide`
+  policy that DENIES all of those and ALLOWS only the approved-doc vector store. This is exactly
+  what the layer-3 isolation integration job asserts (`/specs/isolation.md` §3): from the `guide`
+  pod, deny-list resources are unreachable while the vector store succeeds.
 - **Optional HPA**: on `api` and `worker` to show the cheap path scaling horizontally.
 The whole stack stands up on kind via one script; the isolation integration job runs against it.

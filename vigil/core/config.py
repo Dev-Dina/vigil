@@ -74,6 +74,16 @@ class Settings(BaseSettings):
     # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
     llm_cost_per_1k_tokens: float = 0.0
 
+    # --- langfuse tracing (Phase 6.3) ---
+    # Per-turn trace ON TOP of the durable message_events record. CI-hermetic: langfuse_enabled
+    # defaults FALSE, so CI/tests make NO Langfuse call and need NO key (same posture as
+    # VIGIL_LLM_STUB). Enabled only on local/demo with real Vault keys. The host is a NEW outbound
+    # egress — allow-listed (deny-by-default, /specs/isolation.md) alongside the LLM providers.
+    # Tracing is additive/best-effort: a disabled or failing Langfuse NEVER breaks a turn or its
+    # mandatory message_events write. Keys come from Vault (vigil/langfuse/*), never inlined.
+    langfuse_enabled: bool = False
+    langfuse_host: str = "https://cloud.langfuse.com"
+
     # --- embeddings (Phase 5) — LOCAL, vendored, OFFLINE (no embedding API, no runtime fetch) ---
     # The single real embedder is sentence-transformers all-MiniLM-L6-v2 (dim 384), loaded from
     # the VENDORED weights in-repo. Relative path binds to the repo root. No lexical fallback.
@@ -102,6 +112,16 @@ class Settings(BaseSettings):
     def anthropic_api_key(self) -> str:
         """Anthropic (primary) key. Read only when the Anthropic client is built."""
         return self._secrets.get(secret_paths.ANTHROPIC_API_KEY)
+
+    @cached_property
+    def langfuse_public_key(self) -> str:
+        """Langfuse public key. Read only when tracing is enabled + the tracer is built."""
+        return self._secrets.get(secret_paths.LANGFUSE_PUBLIC_KEY)
+
+    @cached_property
+    def langfuse_secret_key(self) -> str:
+        """Langfuse secret key. Read only when tracing is enabled + the tracer is built."""
+        return self._secrets.get(secret_paths.LANGFUSE_SECRET_KEY)
 
 
 @lru_cache(maxsize=1)

@@ -753,6 +753,7 @@ async def run_assistant_turn(
     from vigil.agents.llm import get_llm_client
     from vigil.agents.redaction import redact
     from vigil.agents.tools import agent_tool_context
+    from vigil.agents.tracing import TurnTrace, get_tracer, safe_trace
     from vigil.repositories import observability as obs_repo
 
     # Router intent → agent (all three on the same spine; 5.6). Keys match router.AGENT_DEFINITIONS.
@@ -763,6 +764,9 @@ async def run_assistant_turn(
     }
 
     llm = ctx.get("_llm_override") or get_llm_client()
+    # Tracer is best-effort + CI-hermetic (NullTracer unless langfuse_enabled). Constructing it
+    # never raises into the turn; the durable message_events write does not depend on it.
+    tracer = ctx.get("_tracer_override") or get_tracer()
     model_name = get_settings().llm_model
     created_at = datetime.now(tz=timezone.utc)
 
@@ -816,6 +820,27 @@ async def run_assistant_turn(
                 llm_provider_model=llm_provider_model or model_name,
                 latency_ms=latency_ms,
                 token_cost_estimate=token_cost_estimate,
+            )
+            # ADDITIVE/BEST-EFFORT trace AFTER the durable record. The TurnTrace carries ONLY the
+            # same redacted text + structural metadata (no raw field exists); a Langfuse failure is
+            # swallowed by safe_trace and never breaks the turn or the event row above.
+            safe_trace(
+                tracer,
+                TurnTrace(
+                    conversation_id=conversation_id,
+                    request_id=request_id or "assistant-turn",
+                    surface="local_assistant",
+                    role_or_guest_scope=scope.role.value,
+                    route_or_agent=route_or_agent,
+                    guardrail_decision=decision,
+                    status=status,
+                    llm_provider_model=llm_provider_model or model_name,
+                    latency_ms=latency_ms,
+                    token_cost_estimate=token_cost_estimate,
+                    redacted_user_msg=redacted_user,
+                    redacted_assistant_msg=redacted_assistant,
+                    retrieved_chunks=citations,
+                ),
             )
 
         # 1. Redact BEFORE the LLM + content guardrails (5.2). Fail-loud: a redaction error blocks.
