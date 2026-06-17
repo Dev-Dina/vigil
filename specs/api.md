@@ -212,15 +212,25 @@ class DriftPoint(BaseModel):
     threshold: float
     breached: bool
     ts: datetime
-class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, already redacted
+class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, ALREADY redacted
+    id: str
     conversation_id: str
     request_id: str
+    sponsor_id: str | None                  # null = Guide/platform turn (cross-tenant-by-role)
     role_or_guest_scope: str
+    surface: Literal["local_assistant", "public_guide"]
+    route_or_agent: str
     guardrail_decision: Literal["allowed", "blocked"]
+    status: str
     llm_provider_model: str
     latency_ms: int
-    status: str
+    token_cost_estimate: float
+    retrieved_chunks: list[dict]            # citation refs only (debug-retrieval duty)
+    redacted_user_msg: str                  # redacted at rest; NO raw column exists
+    redacted_assistant_msg: str
     ts: datetime
+# MessageQuery: optional filters surface | conversation_id | role_or_guest_scope |
+# guardrail_decision | status | since/until (ts range) + limit. Inspect is platform/auditor-only.
 ```
 
 ### admin (`/admin`) — users, assignment grants, sponsor/CRO setup

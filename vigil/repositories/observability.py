@@ -13,8 +13,10 @@ parameter, so raw text cannot be stored through this path by construction.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from vigil.db.models import MessageEvent
@@ -62,3 +64,40 @@ def write_message_event(
     session.add(row)
     session.flush()
     return row
+
+
+def query_message_events(
+    session: Session,
+    *,
+    surface: str | None = None,
+    conversation_id: uuid.UUID | None = None,
+    role_or_guest_scope: str | None = None,
+    guardrail_decision: str | None = None,
+    status: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    limit: int = 50,
+) -> list[MessageEvent]:
+    """Read message_events under the caller's RLS-scoped session (newest-first).
+
+    Visibility is the ``message_events_scope`` RLS policy (cross-tenant-by-role) — this never
+    adds a sponsor_id WHERE clause; filters are content/metadata only. Returns ORM rows carrying
+    only redacted text (no raw column exists).
+    """
+    stmt = select(MessageEvent)
+    if surface is not None:
+        stmt = stmt.where(MessageEvent.surface == surface)
+    if conversation_id is not None:
+        stmt = stmt.where(MessageEvent.conversation_id == conversation_id)
+    if role_or_guest_scope is not None:
+        stmt = stmt.where(MessageEvent.role_or_guest_scope == role_or_guest_scope)
+    if guardrail_decision is not None:
+        stmt = stmt.where(MessageEvent.guardrail_decision == guardrail_decision)
+    if status is not None:
+        stmt = stmt.where(MessageEvent.status == status)
+    if since is not None:
+        stmt = stmt.where(MessageEvent.ts >= since)
+    if until is not None:
+        stmt = stmt.where(MessageEvent.ts < until)
+    stmt = stmt.order_by(MessageEvent.ts.desc()).limit(limit)
+    return list(session.execute(stmt).scalars().all())

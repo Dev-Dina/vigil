@@ -8,15 +8,102 @@ consuming an opaque breach signal whose delivery is deferred to the observabilit
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from vigil.api.deps import ScopeDep
+from vigil.core.schemas import Page
 from vigil.core.scope import Scope
-from vigil.services import routing_service
+from vigil.services import monitoring_service, routing_service
+from vigil.services.monitoring_service import MonitoringPermissionError
 from vigil.services.routing_service import PromotionError, RoutingPermissionError
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
+
+
+# ---------------------------------------------------------------------------
+# GET /monitoring/messages — observability inspect surface (platform/auditor only)
+# ---------------------------------------------------------------------------
+
+
+class MessageEventOut(BaseModel):
+    """Mirrors specs/observability.md — ALREADY redacted; no raw-content field exists."""
+
+    id: str
+    conversation_id: str
+    request_id: str
+    sponsor_id: str | None
+    role_or_guest_scope: str
+    surface: str
+    route_or_agent: str
+    guardrail_decision: str
+    status: str
+    llm_provider_model: str
+    latency_ms: int
+    token_cost_estimate: float
+    retrieved_chunks: list
+    redacted_user_msg: str
+    redacted_assistant_msg: str
+    ts: datetime
+
+
+@router.get("/messages", response_model=Page)
+async def list_messages(
+    scope: Scope = ScopeDep,
+    surface: str | None = None,
+    conversation_id: str | None = None,
+    role_or_guest_scope: str | None = None,
+    guardrail_decision: str | None = None,
+    status_filter: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    limit: int = 50,
+) -> Page:
+    """GET /monitoring/messages — redacted message_events (PLATFORM/AUDITOR ONLY).
+
+    403 for every sponsor/site role (role gate = primary guard). Runs under the caller's
+    scope (RLS-bound = backstop). Returns only redacted fields (no raw column exists).
+    """
+    try:
+        views = monitoring_service.list_message_events(
+            scope,
+            surface=surface,
+            conversation_id=conversation_id,
+            role_or_guest_scope=role_or_guest_scope,
+            guardrail_decision=guardrail_decision,
+            status=status_filter,
+            since=since,
+            until=until,
+            limit=limit,
+        )
+    except MonitoringPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    items = [
+        MessageEventOut(
+            id=v.id,
+            conversation_id=v.conversation_id,
+            request_id=v.request_id,
+            sponsor_id=v.sponsor_id,
+            role_or_guest_scope=v.role_or_guest_scope,
+            surface=v.surface,
+            route_or_agent=v.route_or_agent,
+            guardrail_decision=v.guardrail_decision,
+            status=v.status,
+            llm_provider_model=v.llm_provider_model,
+            latency_ms=v.latency_ms,
+            token_cost_estimate=v.token_cost_estimate,
+            retrieved_chunks=v.retrieved_chunks,
+            redacted_user_msg=v.redacted_user_msg,
+            redacted_assistant_msg=v.redacted_assistant_msg,
+            ts=v.ts,
+        ).model_dump()
+        for v in views
+    ]
+    return Page(items=items, next_cursor=None, total=len(items))
 
 
 class ModelPromoteIn(BaseModel):
