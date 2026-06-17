@@ -1,0 +1,54 @@
+# The Guide's egress NetworkPolicies (specs/isolation.md §3). REQUIRES a NetworkPolicy-enforcing
+# CNI (Calico) — kindnet / minikube-default do NOT enforce these, yielding a FALSE PASS. See
+# deploy/k8s/README.md. Two policies, both selecting the guide pod; for a pod selected by ANY
+# Egress policy, egress is default-deny except what is explicitly allowed (the allows UNION). Net
+# effect: the Guide may egress ONLY to DNS + the allowed-egress stand-in — postgres/redis/vault/
+# app-api/model-endpoint have NO matching allow and are therefore DENIED.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guide-default-deny-egress
+spec:
+  podSelector:
+    matchLabels:
+      app: guide
+  policyTypes:
+    - Egress
+  egress: [] # deny ALL egress from the guide pod (baseline; the allow policy re-permits the minimum)
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: guide-egress-allow
+spec:
+  podSelector:
+    matchLabels:
+      app: guide
+  policyTypes:
+    - Egress
+  egress:
+    # 1. DNS resolution only (kube-dns in kube-system) — needed to resolve any name at all.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # 2. The ONE allowed application egress: the positive-control stand-in. NOTHING else is listed,
+    #    so every deny-list target (postgres/redis/vault/app-api/model-endpoint) is denied.
+    - to:
+        - podSelector:
+            matchLabels:
+              app: allowed-egress
+      ports:
+        - protocol: TCP
+          port: 8088
+# ---------------------------------------------------------------------------------------------
+# App-side inverse (commentary / future — NOT built in this gate): per specs/infra.md, the
+# app-side pods (api/worker/scheduler) would get policies ALLOWING egress to postgres/redis/vault
+# + the allow-listed outbound (api.anthropic.com / openrouter.ai / Langfuse host). This gate's
+# focus is the GUIDE policy; the app-side workloads + their policies are deferred Phase-8 work.

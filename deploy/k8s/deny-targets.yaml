@@ -1,0 +1,172 @@
+# The deny-list targets (specs/isolation.md § MUST NOT touch), each on its REAL port and addressable
+# by a Service — so that ABSENT the policy they are reachable at L3, making the policy-enforced
+# denial in 8.L3-b a REAL denial (the negative pre-check confirms reachability before the policy).
+# Real images where cheap + honest (postgres/redis/vault); tiny stand-ins for the app-API and model
+# endpoint (a minimal HTTP listener on the real port). These hold NO real data — throwaway targets.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels: { app: postgres, tier: denylist }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres, tier: denylist }
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: vigil
+            - name: POSTGRES_PASSWORD
+              value: throwaway-proof-target
+            - name: POSTGRES_DB
+              value: vigil
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels: { app: postgres, tier: denylist }
+spec:
+  selector: { app: postgres }
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels: { app: redis, tier: denylist }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis, tier: denylist }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels: { app: redis, tier: denylist }
+spec:
+  selector: { app: redis }
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  labels: { app: vault, tier: denylist }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: vault }
+  template:
+    metadata:
+      labels: { app: vault, tier: denylist }
+    spec:
+      containers:
+        - name: vault
+          image: hashicorp/vault:1.17
+          # Dev mode = a reachable :8200 listener for the proof target (throwaway; no real secrets).
+          args: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200"]
+          env:
+            - name: VAULT_DEV_ROOT_TOKEN_ID
+              value: throwaway-proof-target
+          ports:
+            - containerPort: 8200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  labels: { app: vault, tier: denylist }
+spec:
+  selector: { app: vault }
+  ports:
+    - port: 8200
+      targetPort: 8200
+---
+# app-API stand-in — a minimal HTTP listener on the real app port (:8000). Represents the real
+# app's API Service, which the Guide must never reach.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-api
+  labels: { app: app-api, tier: denylist }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: app-api }
+  template:
+    metadata:
+      labels: { app: app-api, tier: denylist }
+    spec:
+      containers:
+        - name: app-api
+          image: python:3.12-slim
+          command: ["python", "-m", "http.server", "8000"]
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-api
+  labels: { app: app-api, tier: denylist }
+spec:
+  selector: { app: app-api }
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+# model-endpoint stand-in — a minimal listener on a representative inference port (:9000).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-endpoint
+  labels: { app: model-endpoint, tier: denylist }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: model-endpoint }
+  template:
+    metadata:
+      labels: { app: model-endpoint, tier: denylist }
+    spec:
+      containers:
+        - name: model-endpoint
+          image: python:3.12-slim
+          command: ["python", "-m", "http.server", "9000"]
+          ports:
+            - containerPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: model-endpoint
+  labels: { app: model-endpoint, tier: denylist }
+spec:
+  selector: { app: model-endpoint }
+  ports:
+    - port: 9000
+      targetPort: 9000

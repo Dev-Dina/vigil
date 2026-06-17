@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Layer-3 Guide network-isolation proof (specs/isolation.md §3). Build with:
+#   kubectl kustomize deploy/k8s          # or: kustomize build deploy/k8s
+# Validate (no cluster): kubectl apply --dry-run=client -k deploy/k8s
+# Apply (8.L3-b, Calico-enforced cluster only): kubectl apply -k deploy/k8s
+
+namespace: vigil-isolation-proof
+
+resources:
+  - namespace.yaml
+  - guide.yaml
+  - deny-targets.yaml
+  - positive-control.yaml
+  - networkpolicies.yaml

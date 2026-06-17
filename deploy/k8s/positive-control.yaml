@@ -1,0 +1,35 @@
+# Positive-control stand-in (specs/isolation.md §3 reconcile). The Guide's approved-doc store is a
+# file-backed IN-POD index (7.0 decision) — not a network service — so it can't be a *network*
+# positive control. Instead, this in-cluster "allowed-egress" Service is the ONE destination the
+# guide-egress-allow policy permits. In 8.L3-b the Guide reaches THIS (success) while every
+# deny-list target is denied — proving the policy SELECTIVELY enforces, not that the net is broken.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: allowed-egress
+  labels: { app: allowed-egress, tier: positive-control }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: allowed-egress }
+  template:
+    metadata:
+      labels: { app: allowed-egress, tier: positive-control }
+    spec:
+      containers:
+        - name: allowed-egress
+          image: python:3.12-slim
+          command: ["python", "-m", "http.server", "8088"]
+          ports:
+            - containerPort: 8088
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: allowed-egress
+  labels: { app: allowed-egress, tier: positive-control }
+spec:
+  selector: { app: allowed-egress }
+  ports:
+    - port: 8088
+      targetPort: 8088

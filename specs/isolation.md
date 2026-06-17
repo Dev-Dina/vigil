@@ -56,11 +56,21 @@ expressed concretely as a `host:port` / Service name per environment.
 - Deploy the Guide with the production NetworkPolicies. From inside the Guide pod, attempt a raw
   connection to each deny-list resource — Postgres `:5432`, Redis `:6379`, the app API Service,
   Vault `:8200`, model endpoints — and assert every one is DENIED (connection refused/timeout).
-- **Positive control**: from the same pod, assert the approved-document vector store IS
-  reachable. This proves the policy is selectively enforcing, not that the network is merely
-  broken.
-- The live demo shows a deny-list connection hanging/failing side-by-side with a vector query
-  that succeeds.
+- **Positive control**: from the same pod, assert the **one allowed egress IS reachable**. This
+  proves the policy is selectively enforcing, not that the network is merely broken.
+  **Reconcile (Gate 8.L3-a):** the Guide's approved-doc store is a **file-backed in-pod index**
+  (the 7.0 ratified decision), reached with no network call — so it cannot serve as a *network*
+  positive control. The gated positive control is therefore an **in-cluster stand-in "allowed"
+  Service** that the `guide-egress-allow` policy explicitly permits: the Guide reaches it while
+  every deny-list target is denied, proving selective enforcement. (The live demo MAY additionally
+  show a real allow-listed LLM-host `:443` connect succeeding; the gated control is the stand-in.)
+- **Enforcement prerequisite (Gate 8.L3-a/b):** the manifests assume a **NetworkPolicy-enforcing
+  CNI (Calico)** — `kind`'s default `kindnet` and minikube's default do **NOT** enforce
+  NetworkPolicies, so a naive cluster yields a FALSE PASS. 8.L3-b installs Calico and runs a
+  **negative pre-check** (a deny-list target is reachable BEFORE the policy is applied) so the
+  subsequent denial is provably the policy, not a broken network.
+- The live demo shows a deny-list connection hanging/failing side-by-side with the allowed-egress
+  connection that succeeds.
 
 ### Gate
 Layers 1–2 run in CI on every PR; layer 3 runs in the kind-based integration job (no paid

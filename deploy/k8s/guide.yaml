@@ -1,0 +1,59 @@
+# The isolated public Guide (specs/infra.md — service `guide`, :8080). For the layer-3 proof the
+# pod only needs to RUN and be exec-able (8.L3-b runs the raw-connect test from inside it via
+# `kubectl exec ... python -c`); a working /ask RAG answer is NOT required here (the weights/index
+# mount stays deferred — optional demo enhancement). Image is built from guide/Dockerfile and
+# loaded into the kind cluster by 8.L3-b (`kind load docker-image vigil-guide:local`).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guide
+  labels:
+    app: guide
+    tier: guide
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: guide
+  template:
+    metadata:
+      labels:
+        app: guide
+        tier: guide
+    spec:
+      containers:
+        - name: guide
+          image: vigil-guide:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: VIGIL_GUIDE_LOG_LEVEL
+              value: INFO
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guide
+  labels:
+    app: guide
+spec:
+  selector:
+    app: guide
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vigil-isolation-proof
+  labels:
+    # The layer-3 NetworkPolicy isolation proof for the public Guide (specs/isolation.md §3).
+    purpose: guide-isolation-proof
