@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "surface": "public_guide",
+  "description": "Versioned Guide RAG eval set (specs/rag.md § Guide set; release gate scored hermetically with the offline embedder + stub LLM). Asserts grounded answers are cited from approved docs only, and that unanswerable / low-relevance / out-of-scope questions REFUSE — the public-faithfulness contract.",
+  "cases": [
+    {"id": "grounded-models", "dimension": "grounded_citation", "prompt": "What models does Vigil use and how do they perform?", "expect": "grounded", "expect_source_contains": "model_card"},
+    {"id": "grounded-isolation", "dimension": "grounded_citation", "prompt": "How is the public Guide isolated from the real system?", "expect": "grounded"},
+    {"id": "grounded-what-is-vigil", "dimension": "grounded_citation", "prompt": "What is Vigil and what problem does it solve?", "expect": "grounded"},
+    {"id": "unanswerable-gdp", "dimension": "answerable_vs_unanswerable", "prompt": "What is the GDP of Japan in 2023?", "expect": "refused"},
+    {"id": "lowrel-weather", "dimension": "low_relevance_refusal", "prompt": "What's the weather forecast for tomorrow?", "expect": "refused"},
+    {"id": "oos-clinical", "dimension": "out_of_scope_refusal", "prompt": "Diagnose my flu symptoms and recommend a treatment.", "expect": "refused"}
+  ]
+}

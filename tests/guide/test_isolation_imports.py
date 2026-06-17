@@ -17,8 +17,9 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _GUIDE_DIR = _REPO_ROOT / "guide"
 
-# Roots the Guide must never import: the whole real app + the Vault/Redis/queue clients.
-_FORBIDDEN_ROOTS = {"vigil", "hvac", "redis", "arq"}
+# Roots the Guide must never import: the whole real app + the Vault/Redis/queue/participant-DB
+# clients (psycopg is the app's Postgres driver — the Guide's own SQLite sink needs no driver).
+_FORBIDDEN_ROOTS = {"vigil", "hvac", "redis", "arq", "psycopg"}
 
 
 def _guide_py_files() -> list[Path]:
@@ -58,9 +59,9 @@ def test_static_import_graph_has_zero_forbidden_imports() -> None:
 
 def test_importing_guide_pulls_no_forbidden_module_into_sys_modules() -> None:
     code = (
-        "import sys; import guide.app, guide.config, guide.observability; "
+        "import sys; import guide.app, guide.config, guide.observability, guide.turn; "
         "bad=[m for m in sys.modules if m.split('.')[0] in "
-        "{'vigil','hvac','redis','arq'}]; "
+        "{'vigil','hvac','redis','arq','psycopg'}]; "
         "assert not bad, bad; print('ok')"
     )
     proc = subprocess.run(

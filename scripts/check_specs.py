@@ -29,6 +29,16 @@ _RAG_EVAL_DIMENSIONS = {
     "metric_grounding",
 }
 
+# Guide RAG eval set (specs/rag.md § Guide set) — required once the isolation phase exists (Gate
+# 7.4 release gate). Mirrors the local-assistant enforcement above.
+_GUIDE_EVAL_SET = _ROOT / "tests" / "eval" / "guide_eval.json"
+_GUIDE_EVAL_DIMENSIONS = {
+    "grounded_citation",
+    "answerable_vs_unanswerable",
+    "low_relevance_refusal",
+    "out_of_scope_refusal",
+}
+
 # spec file -> required section headings
 REQUIRED: dict[str, list[str]] = {
     "isolation.md": [
@@ -107,6 +117,7 @@ def check() -> list[str]:
                 problems.append(f"specs/{fname}: missing section '{heading}'")
 
     problems.extend(_check_rag_eval_set())
+    problems.extend(_check_guide_eval_set())
     return problems
 
 
@@ -130,6 +141,29 @@ def _check_rag_eval_set() -> list[str]:
     missing = _RAG_EVAL_DIMENSIONS - dims
     if missing:
         return [f"RAG eval set missing required dimensions: {sorted(missing)}"]
+    return []
+
+
+def _check_guide_eval_set() -> list[str]:
+    """Isolation phase (isolation.md present) REQUIRES the Guide RAG eval set (Gate 7.4 gate)."""
+    if not (SPECS / "isolation.md").exists():
+        return []
+    if not _GUIDE_EVAL_SET.exists():
+        return [
+            "Guide eval set missing: tests/eval/guide_eval.json "
+            "(specs/rag.md § Guide set; specs/isolation.md §2 release gate)"
+        ]
+    try:
+        spec = json.loads(_GUIDE_EVAL_SET.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return [f"Guide eval set unreadable: {exc}"]
+    cases = spec.get("cases") or []
+    if not cases:
+        return ["Guide eval set has no cases (tests/eval/guide_eval.json)"]
+    dims = {c.get("dimension") for c in cases}
+    missing = _GUIDE_EVAL_DIMENSIONS - dims
+    if missing:
+        return [f"Guide eval set missing required dimensions: {sorted(missing)}"]
     return []
 
 

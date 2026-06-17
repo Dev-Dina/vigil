@@ -14,6 +14,11 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
+# The Guide's ENTIRE toolset — exactly one capability (specs/isolation.md §1 tool-surface test).
+# There is NO DB tool, NO structured-source tool, NO participant tool, NO path to anything
+# tenant-scoped: the only way the Guide reaches grounding data is this file-backed vector search.
+TOOLSET: tuple[str, ...] = ("approved_document_vector_search",)
+
 # Chunking matches the app's card-corpus approach: paragraph blocks packed to a char bound.
 _MAX_CHARS = 800
 
