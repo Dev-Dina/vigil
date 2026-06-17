@@ -70,21 +70,19 @@ class LSTMScorer:
         # Suppress unused-import warning; torch is needed for no-grad context.
         self._torch = torch
 
-    def __call__(self, participant_df: Any, eng_df: Any) -> list[float]:
-        """Score each participant from their engagement trajectory.
+    def _assemble(self, participant_df: Any, eng_df: Any) -> tuple[Any, Any, Any]:
+        """Build the EXACT (seq, static_input, last_obs) tensors the model scores.
 
-        participant_df: one row per participant with all 8 static features.
-          Columns: participant_id, age_years, hba1c_pct, bmi, sex, arm_type,
-                   n_sites, planned_duration_days, phase.
-        eng_df: engagement rows for all participants; must have participant_id col.
-        Returns: list[float] — final-step risk probability per participant.
+        Shared by ``__call__`` and ``attributions`` so attribution perturbs the very inputs the
+        model scored (single feature path; invariant 9 — no parallel builder).
+        seq is standardized (N, T, seq_dim); a channel's standardized mean is 0.0, the neutral
+        baseline occlusion uses.
         """
         import numpy as np  # deferred
 
         import models.t2d.sequence as _seq_mod  # noqa: PLC0415
 
         t_max = self._cfg.max_visits
-        seq_dim = self._cfg.__class__  # sentinel; resolved from seq_means shape
         seq_dim = int(self._seq_means.shape[0])
 
         n = len(participant_df)
@@ -112,6 +110,11 @@ class LSTMScorer:
         static_input = self._static_enc.transform(
             participant_df.reset_index(drop=True)
         ).astype(np.float32)
+        return seq, static_input, last_obs
+
+    def _final_probs(self, seq: Any, static_input: Any, last_obs: Any) -> Any:
+        """Per-participant final-OBSERVED-step risk probability (np.ndarray, float64)."""
+        import numpy as np  # deferred
 
         torch = self._torch
         with torch.no_grad():
@@ -120,12 +123,77 @@ class LSTMScorer:
                 torch.from_numpy(static_input),
             )  # (N, T) logits
             probs = torch.sigmoid(logits).numpy()  # (N, T)
-
-        scores: list[float] = []
+        n = seq.shape[0]
+        out = np.empty(n, dtype=np.float64)
         for i in range(n):
             n_v = int(last_obs[i])
-            scores.append(float(probs[i, n_v - 1]) if n_v > 0 else 0.5)
-        return scores
+            out[i] = float(probs[i, n_v - 1]) if n_v > 0 else 0.5
+        return out
+
+    def __call__(self, participant_df: Any, eng_df: Any) -> list[float]:
+        """Score each participant from their engagement trajectory.
+
+        participant_df: one row per participant with all 8 static features.
+          Columns: participant_id, age_years, hba1c_pct, bmi, sex, arm_type,
+                   n_sites, planned_duration_days, phase.
+        eng_df: engagement rows for all participants; must have participant_id col.
+        Returns: list[float] — final-step risk probability per participant.
+        """
+        seq, static_input, last_obs = self._assemble(participant_df, eng_df)
+        return [float(v) for v in self._final_probs(seq, static_input, last_obs)]
+
+    def attributions(
+        self, participant_df: Any, eng_df: Any, *, top_k: int = 3
+    ) -> list[dict[str, Any]]:
+        """REAL per-participant occlusion attribution over the LSTM's OWN sequence inputs.
+
+        Method (leakage-safe, model-grounded): re-score with each sequence channel neutralised
+        (set to 0 in standardized space = its train mean) and measure the change in THIS
+        participant's final-step risk. The signed delta ``base - occluded`` is that channel's
+        contribution to the model's score — a genuine attribution of the model's OWN computation,
+        perturbing ONLY the model's input channels (``SEQ_NUMERIC``; never an outcome/latent/
+        provenance field — those are not in the sequence at all). On synthetic data the planted
+        signal (consecutive missed visits) surfaces here because it is what the model used.
+        Participants with no observed trajectory get NO reasons (honest: nothing to attribute).
+
+        Returns one dict per participant (aligned to ``participant_df`` row order):
+        ``{"top_factors": [name,...], "reasons": [{"feature","contribution","method"},...]}``.
+        """
+        import numpy as np  # deferred
+
+        from models.t2d.synthetic_data import SEQ_NUMERIC  # noqa: PLC0415
+
+        seq, static_input, last_obs = self._assemble(participant_df, eng_df)
+        base = self._final_probs(seq, static_input, last_obs)
+        seq_dim = seq.shape[2]
+        names = list(SEQ_NUMERIC)[:seq_dim]
+
+        # One occlusion forward pass per channel, batched over all participants.
+        deltas = np.zeros((seq.shape[0], seq_dim), dtype=np.float64)
+        for c in range(seq_dim):
+            occ = seq.copy()
+            occ[:, :, c] = 0.0  # standardized mean = neutral baseline for channel c
+            deltas[:, c] = base - self._final_probs(occ, static_input, last_obs)
+
+        out: list[dict[str, Any]] = []
+        for i in range(seq.shape[0]):
+            if int(last_obs[i]) == 0:
+                out.append({"top_factors": [], "reasons": []})
+                continue
+            order = np.argsort(-np.abs(deltas[i]))[:top_k]
+            reasons = [
+                {
+                    "feature": names[c],
+                    "contribution": round(float(deltas[i, c]), 6),
+                    "method": "lstm_occlusion",
+                }
+                for c in order
+                if abs(deltas[i, c]) > 0.0
+            ]
+            out.append(
+                {"top_factors": [r["feature"] for r in reasons], "reasons": reasons}
+            )
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +258,60 @@ class StructuralScorer:
         X, _ = self._transformer.transform(rows)
         raw_preds = self._gbt.predict(X)
         return [float(max(0.0, min(1.0, v))) for v in raw_preds]
+
+    def attributions(
+        self, participant_df: Any, *, top_k: int = 3
+    ) -> list[dict[str, Any]]:
+        """REAL per-participant occlusion attribution over the structural model's OWN features.
+
+        Method (leakage-safe, model-grounded): re-predict with each ContractTransformer feature
+        set to NaN (HistGradientBoosting's native missing handling = neutral) and measure the
+        change in THIS participant's predicted risk. The signed delta ``base - occluded`` is that
+        feature's contribution to the model's score — its OWN attribution over ONLY its input
+        features (identical surface to scoring; no outcome/leaky column is ever a feature). Only
+        the features actually populated for a participant move the score; the rest delta to 0 and
+        are dropped (honest — no fabricated contribution). Shadow attributions are stored, never
+        surfaced to users (champion-only read surface, B4).
+        """
+        import numpy as np  # deferred
+
+        rows = self._build_arm_rows(participant_df)
+        X, names = self._transformer.transform(rows)
+        # Keep X as the transformer returned it (carrying feature names) so re-predict matches the
+        # scoring call exactly — converting to a bare array would trip sklearn's name-mismatch path.
+        base = np.array(
+            [max(0.0, min(1.0, v)) for v in self._gbt.predict(X)], dtype=np.float64
+        )
+        n_rows = X.shape[0]
+        n_feat = X.shape[1]
+        deltas = np.zeros((n_rows, n_feat), dtype=np.float64)
+        for j in range(n_feat):
+            occ = X.copy()
+            occ.iloc[:, j] = (
+                np.nan
+            )  # HGBR native missing = neutral baseline (names preserved)
+            occ_pred = np.array(
+                [max(0.0, min(1.0, v)) for v in self._gbt.predict(occ)],
+                dtype=np.float64,
+            )
+            deltas[:, j] = base - occ_pred
+
+        out: list[dict[str, Any]] = []
+        for i in range(n_rows):
+            order = np.argsort(-np.abs(deltas[i]))[:top_k]
+            reasons = [
+                {
+                    "feature": names[c],
+                    "contribution": round(float(deltas[i, c]), 6),
+                    "method": "structural_occlusion",
+                }
+                for c in order
+                if abs(deltas[i, c]) > 0.0
+            ]
+            out.append(
+                {"top_factors": [r["feature"] for r in reasons], "reasons": reasons}
+            )
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -520,6 +642,9 @@ async def score_trial(
 
         scores = scorer(participant_df, eng_df)
 
+        # Gate 9.1: REAL model-attribution reasons (occlusion over the LSTM's OWN inputs).
+        champ_attrib = scorer.attributions(participant_df, eng_df)
+
         # Invariant 8: synthetic = logical-OR over engagement rows per participant.
         pid_synth: dict[str, bool] = {}
         for e in eng_snapshots:
@@ -550,6 +675,11 @@ async def score_trial(
             )
         scores = scorer(feature_df)
         synth_flags = [True] * len(participant_snapshots)
+        # Demo/override scorers (e.g. _demo_scorer = rng) support NO genuine attribution — write
+        # NO reasons rather than fabricate one (specs/scoring.md § Phase 9 honesty rule).
+        champ_attrib = [
+            {"top_factors": [], "reasons": []} for _ in participant_snapshots
+        ]
 
     if len(scores) != len(participant_snapshots):
         raise ValueError(
@@ -565,15 +695,24 @@ async def score_trial(
             return "medium"
         return "low"
 
+    # 9.1 leakage guard (sacred): attribution perturbs ONLY the model's input features — assert the
+    # reason feature names carry NO outcome/leaky token, the same guard the feature path runs. The
+    # attribution introduces no new feature surface; this makes that explicit + fail-loud.
+    _attrib_names = sorted({r["feature"] for a in champ_attrib for r in a["reasons"]})
+    if _attrib_names:
+        assert_no_outcome_features(_attrib_names)
+
     # 9. Writeback.
     n_scored = 0
     with sponsor_bootstrap_session(sponsor_id) as session:
         from sqlalchemy import update
 
-        for p_snap, score, synth_flag in zip(
-            participant_snapshots, scores, synth_flags, strict=True
+        for p_snap, score, synth_flag, attrib in zip(
+            participant_snapshots, scores, synth_flags, champ_attrib, strict=True
         ):
             band = _band(float(score))
+            # REAL model attributions (Gate 9.1); the synthetic flag travels WITH each reason.
+            reasons = [{**r, "synthetic": bool(synth_flag)} for r in attrib["reasons"]]
             scoring_repo.append_score(
                 session,
                 participant_id=p_snap["id"],
@@ -582,8 +721,8 @@ async def score_trial(
                 site_id=p_snap["site_id"],
                 risk_score=float(score),
                 risk_band=band,
-                top_factors=[],
-                reasons=[],
+                top_factors=list(attrib["top_factors"]),
+                reasons=reasons,
                 model_version=resolved_mv,
                 model_card_ref=_DEFAULT_MODEL_CARD,
                 synthetic=bool(synth_flag),
@@ -641,6 +780,9 @@ async def score_trial(
                 )
 
             shadow_scores = shadow_scorer_inst(shadow_participant_df)
+            # REAL shadow attributions (occlusion over the structural model's OWN features);
+            # STORED for analysis, NEVER surfaced to users (champion-only read surface, B4).
+            shadow_attrib = shadow_scorer_inst.attributions(shadow_participant_df)
 
             # Shadow synthetic flag: same logical-OR over engagement rows as champion (inv 8).
             shadow_pid_synth: dict[str, bool] = {}
@@ -651,10 +793,13 @@ async def score_trial(
                 ) or bool(e["synthetic"])
 
             with sponsor_bootstrap_session(sponsor_id) as session:
-                for p_snap, sh_score in zip(
-                    participant_snapshots, shadow_scores, strict=True
+                for p_snap, sh_score, sh_attrib in zip(
+                    participant_snapshots, shadow_scores, shadow_attrib, strict=True
                 ):
                     sh_synth = shadow_pid_synth.get(str(p_snap["id"]), True)
+                    sh_reasons = [
+                        {**r, "synthetic": bool(sh_synth)} for r in sh_attrib["reasons"]
+                    ]
                     scoring_repo.append_score(
                         session,
                         participant_id=p_snap["id"],
@@ -663,8 +808,8 @@ async def score_trial(
                         site_id=p_snap["site_id"],
                         risk_score=float(sh_score),
                         risk_band=_band(float(sh_score)),
-                        top_factors=[],
-                        reasons=[],
+                        top_factors=list(sh_attrib["top_factors"]),
+                        reasons=sh_reasons,
                         model_version=shadow_mv,
                         model_card_ref="data/models/t2d/model_card_structural.md",
                         synthetic=bool(sh_synth),
