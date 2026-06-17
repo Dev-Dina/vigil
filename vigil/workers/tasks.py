@@ -792,7 +792,14 @@ async def run_assistant_turn(
             redacted_assistant: str,
             route_or_agent: str,
             citations: list[Any],
+            llm_provider_model: str = "",
+            latency_ms: int = 0,
+            token_cost_estimate: float = 0.0,
         ) -> None:
+            # Usage defaults to honest-zero: paths with NO generation call (guardrail/router
+            # refusal) persist 0 cost/latency — real provider usage is threaded only where the
+            # agent actually generated an answer (Gate 6.2). ``llm_provider_model`` falls back to
+            # the configured model id when no provider answered (descriptive, not a cost claim).
             obs_repo.write_message_event(
                 tctx.session,
                 conversation_id=_uuid.UUID(conversation_id),
@@ -806,7 +813,9 @@ async def run_assistant_turn(
                 redacted_assistant_msg=redacted_assistant,
                 route_or_agent=route_or_agent,
                 retrieved_chunks=citations,
-                llm_provider_model=model_name,
+                llm_provider_model=llm_provider_model or model_name,
+                latency_ms=latency_ms,
+                token_cost_estimate=token_cost_estimate,
             )
 
         # 1. Redact BEFORE the LLM + content guardrails (5.2). Fail-loud: a redaction error blocks.
@@ -865,5 +874,9 @@ async def run_assistant_turn(
             redacted_assistant=redacted_answer,
             route_or_agent=f"agent:{decision.agent}",
             citations=ans.citations,
+            # Real provider usage from the answering LLM (grounded refusal → honest-zero).
+            llm_provider_model=ans.provider_model,
+            latency_ms=ans.latency_ms,
+            token_cost_estimate=ans.token_cost_estimate,
         )
         return _turn(redacted_answer, "allowed", ans.status, ans.citations)

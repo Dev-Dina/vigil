@@ -24,6 +24,23 @@ from vigil.db.models import AuditLog, RoutingState
 ROUTING_ACTIONS = ("model_promote", "model_demote", "model_fallback")
 
 
+def list_routing_state(session: Session) -> list[RoutingState]:
+    """All routing_state rows (champion/challenger/shadow across regimes), stable order.
+
+    The read backing ``GET /monitoring/models`` — the current routing projection, exactly as
+    stored. Platform-only table (no RLS); callers gate on is_platform at the service layer.
+    """
+    return list(
+        session.execute(
+            select(RoutingState).order_by(
+                asc(RoutingState.regime), asc(RoutingState.role)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
 def get_champion(session: Session, *, regime: str) -> RoutingState | None:
     """Return the champion RoutingState row for regime, or None if absent."""
     return session.execute(

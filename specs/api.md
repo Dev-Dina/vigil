@@ -212,6 +212,23 @@ class DriftPoint(BaseModel):
     threshold: float
     breached: bool
     ts: datetime
+# DriftQuery: optional filters (model_name | since/until); read surface only — honest-empty
+# today (no drift computed/stored), so /monitoring/drift returns Page[DriftPoint] with items=[].
+class CostQuery(BaseModel):                 # /monitoring/cost filters
+    surface: Literal["local_assistant", "public_guide"] | None = None
+    since: datetime | None = None           # ts range (UTC)
+    until: datetime | None = None
+class CostRollup(BaseModel):                # one (surface, model) bucket
+    surface: str
+    llm_provider_model: str
+    turns: int
+    total_cost: float                       # summed REAL token_cost_estimate; honest-zero, never faked
+    total_latency_ms: int
+    avg_latency_ms: float
+class CostReport(BaseModel):                # rollups from REAL persisted usage only
+    total_turns: int
+    total_cost: float
+    rollups: list[CostRollup]
 class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, ALREADY redacted
     id: str
     conversation_id: str

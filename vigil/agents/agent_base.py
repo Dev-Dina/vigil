@@ -30,6 +30,13 @@ class AgentAnswer:
         default_factory=list
     )  # {source_type, source_id, locator}
     status: Literal["ok", "refused"] = "ok"
+    # Provider usage threaded from the LLMResponse (Gate 6.2 cost/latency capture). A grounded
+    # refusal makes NO generation call, so these stay at honest-zero — never fabricated.
+    provider_model: str = ""
+    latency_ms: int = 0
+    token_cost_estimate: float = 0.0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
 
 def grounded_answer(
@@ -98,4 +105,15 @@ def grounded_answer(
         ],
         temperature=0.0,
     )
-    return AgentAnswer(content=resp.content, citations=citations, status="ok")
+    return AgentAnswer(
+        content=resp.content,
+        citations=citations,
+        status="ok",
+        # Real provider usage: model records WHICH provider answered (FailoverClient sets it);
+        # cost_estimate is real tokens × the configured per-1k rate, or honest-zero if no rate.
+        provider_model=resp.model,
+        latency_ms=resp.latency_ms,
+        token_cost_estimate=resp.cost_estimate,
+        prompt_tokens=resp.prompt_tokens,
+        completion_tokens=resp.completion_tokens,
+    )

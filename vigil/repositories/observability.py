@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from vigil.db.models import MessageEvent
@@ -101,3 +101,42 @@ def query_message_events(
         stmt = stmt.where(MessageEvent.ts < until)
     stmt = stmt.order_by(MessageEvent.ts.desc()).limit(limit)
     return list(session.execute(stmt).scalars().all())
+
+
+def cost_rollup(
+    session: Session,
+    *,
+    surface: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> list[tuple[str, str, int, float, int]]:
+    """Aggregate REAL persisted usage from ``message_events``, grouped by surface + model.
+
+    Returns ``(surface, llm_provider_model, turns, total_cost, total_latency_ms)`` tuples,
+    summed straight from the stored ``token_cost_estimate`` / ``latency_ms`` columns — NO
+    fabrication: a turn that captured honest-zero usage contributes zero. Runs under the
+    caller's RLS-scoped session (visibility = the ``message_events_scope`` policy); never adds a
+    sponsor_id WHERE clause. Empty result when no events match (honest-empty).
+    """
+    stmt = select(
+        MessageEvent.surface,
+        MessageEvent.llm_provider_model,
+        func.count().label("turns"),
+        func.coalesce(func.sum(MessageEvent.token_cost_estimate), 0).label(
+            "total_cost"
+        ),
+        func.coalesce(func.sum(MessageEvent.latency_ms), 0).label("total_latency_ms"),
+    )
+    if surface is not None:
+        stmt = stmt.where(MessageEvent.surface == surface)
+    if since is not None:
+        stmt = stmt.where(MessageEvent.ts >= since)
+    if until is not None:
+        stmt = stmt.where(MessageEvent.ts < until)
+    stmt = stmt.group_by(
+        MessageEvent.surface, MessageEvent.llm_provider_model
+    ).order_by(MessageEvent.surface, MessageEvent.llm_provider_model)
+    return [
+        (surface_, model or "", int(turns), float(cost), int(latency))
+        for surface_, model, turns, cost, latency in session.execute(stmt).all()
+    ]

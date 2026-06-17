@@ -8,6 +8,7 @@ consuming an opaque breach signal whose delivery is deferred to the observabilit
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
@@ -103,6 +104,116 @@ async def list_messages(
         ).model_dump()
         for v in views
     ]
+    return Page(items=items, next_cursor=None, total=len(items))
+
+
+# ---------------------------------------------------------------------------
+# GET /monitoring/cost — token/cost rollups from REAL persisted usage
+# ---------------------------------------------------------------------------
+
+
+class CostRollupOut(BaseModel):
+    surface: str
+    llm_provider_model: str
+    turns: int
+    total_cost: float
+    total_latency_ms: int
+    avg_latency_ms: float
+
+
+class CostReportOut(BaseModel):
+    """Rollups over real persisted message_events usage — honest-zero, never fabricated."""
+
+    total_turns: int
+    total_cost: float
+    rollups: list[CostRollupOut]
+
+
+@router.get("/cost", response_model=CostReportOut)
+async def get_cost(
+    scope: Scope = ScopeDep,
+    surface: str | None = None,
+    since: datetime | None = None,
+    until: datetime | None = None,
+) -> CostReportOut:
+    """GET /monitoring/cost — token/cost rollups (PLATFORM/AUDITOR ONLY; RLS-bound).
+
+    Rollups come only from the real stored ``token_cost_estimate`` / ``latency_ms`` (honest-zero
+    when usage was not captured, never faked). 403 for sponsor/site roles.
+    """
+    try:
+        report = monitoring_service.cost_report(
+            scope, surface=surface, since=since, until=until
+        )
+    except MonitoringPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    return CostReportOut(
+        total_turns=report.total_turns,
+        total_cost=report.total_cost,
+        rollups=[CostRollupOut(**asdict(r)) for r in report.rollups],
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /monitoring/models — champion/challenger/shadow projection
+# ---------------------------------------------------------------------------
+
+
+class ModelStatusOut(BaseModel):
+    model_name: str
+    version: str
+    role: str
+    regime: str
+    health: str
+    promoted_at: datetime | None
+
+
+@router.get("/models", response_model=Page)
+async def list_models(scope: Scope = ScopeDep) -> Page:
+    """GET /monitoring/models — current routing projection (PLATFORM/AUDITOR ONLY).
+
+    Reflects routing_state (champion/challenger/shadow) as stored. 403 for sponsor/site roles.
+    """
+    try:
+        views = monitoring_service.list_model_status(scope)
+    except MonitoringPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    items = [ModelStatusOut(**asdict(v)).model_dump() for v in views]
+    return Page(items=items, next_cursor=None, total=len(items))
+
+
+# ---------------------------------------------------------------------------
+# GET /monitoring/drift — HONEST-EMPTY read surface (real drift DEFERRED)
+# ---------------------------------------------------------------------------
+
+
+class DriftPointOut(BaseModel):
+    model_name: str
+    metric: str
+    value: float
+    threshold: float
+    breached: bool
+    ts: datetime
+
+
+@router.get("/drift", response_model=Page)
+async def list_drift(scope: Scope = ScopeDep) -> Page:
+    """GET /monitoring/drift — drift read surface (PLATFORM/AUDITOR ONLY).
+
+    HONEST-EMPTY: drift is not computed/stored yet (real drift is a deferred TODO), so this
+    returns an empty page rather than fabricating numbers. 403 for sponsor/site roles.
+    """
+    try:
+        views = monitoring_service.list_drift_points(scope)
+    except MonitoringPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    items = [DriftPointOut(**asdict(v)).model_dump() for v in views]
     return Page(items=items, next_cursor=None, total=len(items))
 
 
