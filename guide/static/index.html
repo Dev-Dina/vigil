@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vigil Guide</title>
+    <!--
+      Public guest surface (Phase 7). This page is served BY the isolated Guide service and talks
+      ONLY to its same-origin POST /ask. It makes NO call to the real Vigil app, requires NO auth,
+      and has NO path to any participant/dashboard/admin endpoint. No external scripts/fonts/CDN —
+      fully self-contained (hermetic). The isolation PROOF is the test suite (tests/guide/), not
+      this UI; this is just a clean honest chat.
+
+      Endpoint config: defaults to same-origin "/ask". To point at the Guide elsewhere, set
+      window.GUIDE_API_BASE before this script runs (the Guide would then need CORS enabled).
+    -->
+    <style>
+      :root {
+        --bg: #0f1115;
+        --panel: #171a21;
+        --border: #262b35;
+        --fg: #e6e9ef;
+        --muted: #8b93a3;
+        --accent: #5b8def;
+        --refuse: #c9a14a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.55 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+      header h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+      header p { color: var(--muted); margin: 0 0 24px; }
+      form { display: flex; gap: 8px; }
+      input[type="text"] {
+        flex: 1; background: var(--panel); color: var(--fg);
+        border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; font: inherit;
+      }
+      input[type="text"]:focus { outline: none; border-color: var(--accent); }
+      button {
+        background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+        padding: 0 18px; font: inherit; font-weight: 600; cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #log { margin-top: 28px; display: flex; flex-direction: column; gap: 18px; }
+      .turn { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+      .q { background: var(--panel); padding: 12px 14px; color: var(--muted); font-size: 14px; }
+      .q b { color: var(--fg); font-weight: 600; }
+      .a { padding: 14px; white-space: pre-wrap; }
+      .a.refused { color: var(--refuse); }
+      .a.error { color: #d9657a; }
+      .cites { padding: 0 14px 14px; margin: 0; }
+      .cites .label {
+        color: var(--muted); font-size: 12px; text-transform: uppercase;
+        letter-spacing: 0.05em; margin-bottom: 6px;
+      }
+      .cites ul { margin: 0; padding-left: 18px; }
+      .cites li { color: var(--muted); font-size: 13px; font-family: ui-monospace, monospace; }
+      .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Vigil Guide</h1>
+        <p>
+          Ask about the Vigil project. Answers come only from approved public documents and are
+          cited; anything out of scope is politely declined.
+        </p>
+      </header>
+
+      <form id="ask-form" autocomplete="off">
+        <input
+          id="question"
+          type="text"
+          placeholder="e.g. What models does Vigil use? How is it isolated?"
+          maxlength="4000"
+          required
+        />
+        <button id="submit" type="submit">Ask</button>
+      </form>
+      <p class="hint">Public guide · no login · explains the project from approved materials only.</p>
+
+      <div id="log" aria-live="polite"></div>
+    </main>
+
+    <script>
+      (function () {
+        "use strict";
+        var API_BASE = window.GUIDE_API_BASE || ""; // same-origin: the Guide serves this page
+        var form = document.getElementById("ask-form");
+        var input = document.getElementById("question");
+        var button = document.getElementById("submit");
+        var log = document.getElementById("log");
+
+        function el(tag, cls, text) {
+          var n = document.createElement(tag);
+          if (cls) n.className = cls;
+          if (text != null) n.textContent = text;
+          return n;
+        }
+
+        function addTurn(question) {
+          var turn = el("div", "turn");
+          var q = el("div", "q");
+          q.appendChild(el("b", null, "You: "));
+          q.appendChild(document.createTextNode(question));
+          turn.appendChild(q);
+          var a = el("div", "a", "…");
+          turn.appendChild(a);
+          log.prepend(turn);
+          return { turn: turn, answer: a };
+        }
+
+        function renderResult(slot, data) {
+          // A refusal (guardrail-blocked or low-relevance) looks the same to the user: the
+          // honest message in `answer`, no citations. A grounded answer shows its sources.
+          var refused = data.status === "refused" || data.guardrail_decision === "blocked";
+          slot.answer.className = refused ? "a refused" : "a";
+          slot.answer.textContent = data.answer;
+          if (!refused && data.citations && data.citations.length) {
+            var box = el("div", "cites");
+            box.appendChild(el("div", "label", "Sources"));
+            var ul = document.createElement("ul");
+            data.citations.forEach(function (c) {
+              ul.appendChild(el("li", null, c.source_id + " · " + c.locator));
+            });
+            box.appendChild(ul);
+            slot.turn.appendChild(box);
+          }
+        }
+
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var question = input.value.trim();
+          if (!question) return;
+          var slot = addTurn(question);
+          input.value = "";
+          button.disabled = true;
+
+          fetch(API_BASE + "/ask", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: question }),
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error("status " + r.status);
+              return r.json();
+            })
+            .then(function (data) {
+              renderResult(slot, data);
+            })
+            .catch(function () {
+              // Honest error state — NEVER a fabricated answer.
+              slot.answer.className = "a error";
+              slot.answer.textContent =
+                "The Guide is unavailable right now. Please try again later.";
+            })
+            .finally(function () {
+              button.disabled = false;
+              input.focus();
+            });
+        });
+      })();
+    </script>
+  </body>
+</html>

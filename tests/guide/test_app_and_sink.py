@@ -7,6 +7,8 @@ observability.md schema but is its OWN model (module under guide.*), written to 
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -44,8 +46,31 @@ def test_health_and_landing_respond() -> None:
     client = TestClient(create_app())
     r = client.get("/healthz")
     assert r.status_code == 200 and r.json()["status"] == "ok"
+    # Landing is the static public chat page served BY the Guide (HTML, not JSON).
     r2 = client.get("/")
-    assert r2.status_code == 200 and "approved public documents" in r2.json()["message"]
+    assert r2.status_code == 200
+    assert "text/html" in r2.headers["content-type"]
+    assert "Vigil Guide" in r2.text and "/ask" in r2.text
+
+
+def test_landing_page_couples_only_to_guide_ask() -> None:
+    html = (
+        Path(__file__).resolve().parents[2] / "guide" / "static" / "index.html"
+    ).read_text(encoding="utf-8")
+    # Talks ONLY to the Guide's own same-origin /ask — never the real app's API surface.
+    assert "/ask" in html
+    for forbidden in (
+        "/api/v1",
+        ":8000",
+        "localhost:8000",
+        "/cohort",
+        "/participants",
+        "/monitoring",
+        "/auth",
+    ):
+        assert forbidden not in html, (
+            f"landing page must not reference the real app: {forbidden}"
+        )
 
 
 def test_sink_schema_matches_observability_and_is_guide_owned() -> None:

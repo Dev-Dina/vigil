@@ -1,17 +1,23 @@
 """The Guide FastAPI app (isolated public service, :8080 per specs/infra.md).
 
-The public guest surface: health/landing + ``POST /ask`` (the guardrailed Guide turn). No auth —
-it's a public surface — but it can reach NOTHING real: its only tool is approved-doc vector search
-(isolation proven in `tests/guide/`). Every turn writes a redacted row to the Guide's OWN sink.
-Imports nothing from `vigil.*`.
+The public guest surface: a static landing/chat page (``GET /``) + ``POST /ask`` (the guardrailed
+Guide turn) + ``GET /healthz``. No auth — it's a public surface — but it can reach NOTHING real:
+its only tool is approved-doc vector search (isolation proven in `tests/guide/`). Every turn writes
+a redacted row to the Guide's OWN sink. Imports nothing from `vigil.*`.
+
+The landing page is a vanilla static file SERVED BY THE GUIDE (`guide/static/index.html`) — it
+ships with the Guide, talks ONLY to this service's same-origin ``/ask``, and pulls in NONE of the
+real app's frontend / API surface. That is the strongest form of the public-surface isolation.
 """
 
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Callable
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
 
@@ -21,6 +27,8 @@ from guide.llm import get_guide_llm_client
 from guide.observability import create_sink_engine, init_sink
 from guide.retrieval import IndexedChunk, load_index
 from guide.turn import run_guide_turn
+
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 # (sink_engine, index, embedder, llm) — everything the turn needs, all Guide-owned.
 Resources = tuple[Engine, list[IndexedChunk], object, object]
@@ -56,14 +64,9 @@ def create_app(resources: Callable[[], Resources] | None = None) -> FastAPI:
         return {"status": "ok", "service": "guide"}
 
     @app.get("/")
-    async def landing() -> dict[str, str]:
-        return {
-            "service": "Vigil Guide",
-            "message": (
-                "Public project guide. Ask about the Vigil project — answers come from "
-                "approved public documents only."
-            ),
-        }
+    async def landing() -> FileResponse:
+        # The public chat page — a vanilla static file served BY the Guide; calls only /ask.
+        return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
 
     @app.post("/ask", response_model=AskOut)
     async def ask(body: AskIn) -> AskOut:
