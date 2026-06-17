@@ -16,3 +16,7 @@ tests/golden/_clean_tmp/
 infra/vault/data/
 infra/vault/*.local
 infra/vault/init.json
+
+# Guide-owned build artifacts (the approved-doc index is built by guide/build_index.py)
+guide/data/
+tests/guide/_built_index.json

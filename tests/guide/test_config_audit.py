@@ -12,18 +12,34 @@ from guide.config import GuideConfig, get_config
 
 # The Guide's ENTIRE allowed config/secret surface (specs/isolation.md § Phase 7 ratified).
 _ALLOWED_FIELDS = {
+    # runtime
     "host",
     "port",
     "log_level",
+    # (b) own file-backed approved-doc index
+    "approved_docs_path",
     "approved_docs_index_path",
+    # (a) own message_events sink
     "message_events_sink_dsn",
+    # (c) own LLM key + the Guide's OWN minimal LLM client config
     "llm_api_key",
+    "llm_stub",
+    "llm_base_url",
+    "llm_model",
+    "llm_timeout_seconds",
+    "llm_max_tokens",
+    # own offline embedder + retrieval/sound-refusal tuning
+    "embedding_model_path",
+    "embedding_dim",
+    "retrieval_top_k",
+    "relevance_threshold",
 }
 
-# Substrings that would betray a deny-listed credential/route on any field name.
+# Substrings that would betray a deny-listed CREDENTIAL or internal/admin ROUTE on a field name.
+# NB: "token" is deliberately NOT here — it would false-positive on the legitimate LLM token
+# budget (`llm_max_tokens`); a broad VAULT token is caught by "vault".
 _FORBIDDEN_SUBSTRINGS = (
     "vault",
-    "token",
     "redis",
     "queue",
     "arq",
@@ -31,6 +47,7 @@ _FORBIDDEN_SUBSTRINGS = (
     "signing",
     "participant",
     "admin",
+    "postgres",
     "scope",
     "session",
 )
