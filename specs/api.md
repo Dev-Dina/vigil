@@ -247,7 +247,7 @@ class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, A
     redacted_assistant_msg: str
     ts: datetime
 # MessageQuery: optional filters surface | conversation_id | role_or_guest_scope |
-# guardrail_decision | status | since/until (ts range) + limit. Inspect is platform/auditor-only.
+# guardrail_decision | status_filter | since/until (ts range) + limit. Inspect is platform/auditor-only.
 ```
 
 ### admin (`/admin`) — users, assignment grants, sponsor/CRO setup

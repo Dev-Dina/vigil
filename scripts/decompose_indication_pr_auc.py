@@ -120,6 +120,59 @@ def _safe_pr_auc(y_true: np.ndarray, y_score: np.ndarray) -> float | None:
     return float(average_precision_score(y_true, y_score))
 
 
+# Percentile-bootstrap CI config. Fixed seed for reproducibility; n_resamples stated in output.
+# QUANTIFY-ONLY: this adds an honest range around the existing point estimate — it never changes
+# the point estimate, and the CI is reported exactly as it comes out (no seed/n cherry-picking).
+BOOTSTRAP_N_RESAMPLES = 2000
+BOOTSTRAP_SEED = MODEL_SEED
+
+
+def _bootstrap_pr_auc_ci(
+    y_bin: np.ndarray,
+    y_pred: np.ndarray,
+    n_resamples: int = BOOTSTRAP_N_RESAMPLES,
+    seed: int = BOOTSTRAP_SEED,
+) -> dict[str, Any]:
+    """Percentile bootstrap 95% CI for PR-AUC by resampling the TEST fold with replacement.
+
+    Resamples that collapse to a single class (no positives or no negatives) are skipped — PR-AUC
+    is undefined there — and counted in ``n_valid_resamples`` so the CI's own stability is
+    auditable. Small test folds (e.g. ALZ n_test=172) yield deliberately WIDE intervals; that is
+    the honest point of this analysis, not a defect to be tuned away.
+    """
+    y_bin = np.asarray(y_bin)
+    y_pred = np.asarray(y_pred)
+    n = len(y_bin)
+    rng = np.random.default_rng(seed)
+    aps: list[float] = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, n, size=n)
+        if len(np.unique(y_bin[idx])) < 2:
+            continue
+        aps.append(float(average_precision_score(y_bin[idx], y_pred[idx])))
+    if len(aps) < 2:
+        return {
+            "ci_lo": None,
+            "ci_hi": None,
+            "ci_n_resamples": n_resamples,
+            "ci_n_valid_resamples": len(aps),
+        }
+    return {
+        "ci_lo": float(np.percentile(aps, 2.5)),
+        "ci_hi": float(np.percentile(aps, 97.5)),
+        "ci_n_resamples": n_resamples,
+        "ci_n_valid_resamples": len(aps),
+    }
+
+
+_CI_NULL = {
+    "ci_lo": None,
+    "ci_hi": None,
+    "ci_n_resamples": BOOTSTRAP_N_RESAMPLES,
+    "ci_n_valid_resamples": 0,
+}
+
+
 def _clip01(arr: np.ndarray) -> np.ndarray:
     return np.clip(arr.astype(float), 0.0, 1.0)
 
@@ -173,6 +226,7 @@ def within_indication_pr_auc(
         "split_type": None,
         "n_train_arms": 0,
         "n_test_arms": 0,
+        **_CI_NULL,
     }
 
     # Need started > 0 and completed not null — apply same filter used by baselines
@@ -225,6 +279,7 @@ def within_indication_pr_auc(
     y_pred = _clip01(gbt.predict(test_m.X))
 
     pr_auc = _safe_pr_auc(y_bin, y_pred)
+    ci = _bootstrap_pr_auc_ci(y_bin, y_pred) if pr_auc is not None else dict(_CI_NULL)
 
     result_base.update(
         {
@@ -232,11 +287,17 @@ def within_indication_pr_auc(
             "split_type": split_type,
             "n_train_arms": int(len(train_m.X)),
             "n_test_arms": int(len(test_m.X)),
+            **ci,
         }
+    )
+    _ci_str = (
+        f" CI[{ci['ci_lo']:.4f},{ci['ci_hi']:.4f}]"
+        if ci["ci_lo"] is not None
+        else " CI[n/a]"
     )
     print(
         f"  [{indication}] n_trials={n_trials} n_arms={n_arms} "
-        f"split={split_type} PR-AUC={pr_auc if pr_auc is not None else 'N/A (1-class)'}"
+        f"split={split_type} PR-AUC={pr_auc if pr_auc is not None else 'N/A (1-class)'}{_ci_str}"
     )
     return result_base
 
@@ -318,6 +379,7 @@ def _random_split_pr_auc(
     y_pred = _clip01(gbt.predict(test_m.X))
 
     pr_auc = _safe_pr_auc(y_bin, y_pred)
+    ci = _bootstrap_pr_auc_ci(y_bin, y_pred) if pr_auc is not None else dict(_CI_NULL)
 
     n_trials_used = len(sub_trial)
     n_arms_used = len(sub_arm)
@@ -329,6 +391,7 @@ def _random_split_pr_auc(
             "split_type": "small-N random",
             "n_train_arms": int(len(train_m.X)),
             "n_test_arms": int(len(test_m.X)),
+            **ci,
         }
     )
     print(
@@ -351,9 +414,14 @@ def write_decomposition_note(
             if isinstance(row["test_pr_auc"], float)
             else "N/A"
         )
+        ci_str = (
+            f"[{row['ci_lo']:.4f}, {row['ci_hi']:.4f}]"
+            if isinstance(row.get("ci_lo"), float)
+            else "N/A"
+        )
         table_rows.append(
             f"| {row['indication']:<8} | {row['n_trials']:>8} | {row['n_arms']:>6} "
-            f"| {pr_auc_str:>12} | {row['split_type'] or '':>18} "
+            f"| {pr_auc_str:>12} | {ci_str:>20} | {row['split_type'] or '':>18} "
             f"| {row['n_train_arms']:>12} | {row['n_test_arms']:>10} |"
         )
 
@@ -366,9 +434,14 @@ def write_decomposition_note(
 
 ## Per-indication PR-AUC (top 8 by arm count)
 
-| Indication | n_trials | n_arms | test_pr_auc | split_type | n_train_arms | n_test_arms |
-|------------|----------|--------|-------------|------------|--------------|-------------|
+| Indication | n_trials | n_arms | test_pr_auc | 95% CI (bootstrap) | split_type | n_train_arms | n_test_arms |
+|------------|----------|--------|-------------|--------------------|------------|--------------|-------------|
 {table_str}
+
+95% CIs are percentile bootstrap ({BOOTSTRAP_N_RESAMPLES} resamples, seed {BOOTSTRAP_SEED}) over the
+test fold. Small folds (e.g. ALZ n_test≈172) give WIDE intervals that overlap neighbours — the
+honest reading is "directional, not a ranked order". The point estimates are unchanged; the CIs
+only quantify their uncertainty.
 
 ## Interpretation: Between- vs Within-Indication Signal
 
@@ -431,9 +504,24 @@ def main() -> int:
     print("\nIndication counts (arms in modelling cohort, excl. OTHER):")
     print(ind_arm_counts.to_string(index=False))
 
-    # 3. Pan-indication PR-AUC
+    # 3. Pan-indication PR-AUC + base-rate-adjusted skill
     print("\n[Step 3] Pan-indication GBT PR-AUC...")
     pan_pr_auc = get_pan_indication_pr_auc(ref_trial, ref_arm)
+
+    # Base-rate-adjusted skill = (PR-AUC - prevalence) / (1 - prevalence): the fraction of the
+    # gap from the test base rate to 1.0 that the model closes. Reads the prevalence straight from
+    # baselines/metrics.json so it stays script-derived, not hand-typed.
+    pan_base_rate: float | None = None
+    pan_skill: float | None = None
+    if BASELINES_METRICS.exists():
+        _bm = json.loads(BASELINES_METRICS.read_text(encoding="utf-8"))
+        pan_base_rate = _bm.get("test", {}).get("positive_prevalence")
+        if pan_base_rate is not None and pan_base_rate < 1.0:
+            pan_skill = (pan_pr_auc - pan_base_rate) / (1.0 - pan_base_rate)
+            print(
+                f"[pan-indication] base rate={pan_base_rate:.4f} -> "
+                f"base-rate-adjusted skill={pan_skill:.4f}"
+            )
 
     # 4. Per-indication PR-AUC for top 8
     top8 = ind_arm_counts.head(8)["indication"].tolist()
@@ -455,6 +543,11 @@ def main() -> int:
 
     json_out = {
         "pan_indication": pan_pr_auc,
+        "pan_indication_base_rate": pan_base_rate,
+        "pan_indication_skill_above_base_rate": pan_skill,
+        "ci_method": "percentile bootstrap, 95%, resampling the test fold with replacement",
+        "ci_n_resamples": BOOTSTRAP_N_RESAMPLES,
+        "ci_seed": BOOTSTRAP_SEED,
         "by_indication": by_indication,
     }
     (DECOMP_ROOT / "indication_pr_auc.json").write_text(

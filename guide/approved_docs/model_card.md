@@ -11,24 +11,28 @@ overstated. Where a result is negative or limited, it is stated plainly.
   ~37,000 trials / ~97,000 arms), split by time so the test window is the most recent period.
   Aggregate per-arm data only — **no patient-level data, no PHI**.
 - **Headline:** pan-indication test PR-AUC = **0.697** for predicting high-dropout arms.
+- **Base-rate-adjusted:** the test base rate is **0.474**, so the base-rate-adjusted skill is
+  (0.697 − 0.474) / (1 − 0.474) ≈ **0.42** — real skill above the base rate, but the
+  within-indication breakdown shows the pooled number rides between-indication base-rate variation.
 - **The honest caveat:** that 0.697 is **substantially inflated by base-rate differences between
   indications** — the model largely learns *which disease area* has higher baseline dropout, not
-  within-trial participant risk. Read against each indication on its own test fold the picture is
-  weaker and varies widely:
+  within-trial participant risk. Read against each indication on its own test fold (where 0.5 =
+  chance) the picture is weaker and varies widely. CIs are a percentile bootstrap (2,000 resamples):
 
-  | Indication | test arms | within-indication PR-AUC |
-  |---|---|---|
-  | T2D (type-2 diabetes) | 516 | 0.38 |
-  | Psoriasis | 240 | 0.65 |
-  | IBD | 229 | 0.50 |
-  | Alzheimer's | 172 | 0.77 (directional only — small n, no CI) |
-  | Depression (MDD) | 152 | 0.32 |
-  | Multiple sclerosis | 142 | 0.62 |
-  | Heart failure | 107 | 0.58 |
+  | Indication | test arms | within-indication PR-AUC | 95% CI |
+  |---|---|---|---|
+  | T2D (type-2 diabetes) | 516 | 0.38 | [0.32, 0.45] |
+  | Psoriasis | 240 | 0.65 | [0.57, 0.74] |
+  | IBD | 229 | 0.50 | [0.41, 0.60] |
+  | Alzheimer's | 172 | 0.77 | [0.68, 0.86] (directional — overlaps psoriasis) |
+  | Depression (MDD) | 152 | 0.32 | [0.23, 0.44] |
+  | Multiple sclerosis | 142 | 0.62 | [0.51, 0.73] |
+  | Heart failure | 107 | 0.58 | [0.46, 0.73] |
 
-  These are single-split point estimates with **no confidence intervals** (a deferred hardening
-  item). The Alzheimer's 0.77 in particular rests on only 172 test arms and must be read as
-  directional, not as an established "strong-signal" ranking.
+  The CIs confirm the story rather than change it: T2D and depression sit **entirely below the 0.5
+  chance line**, IBD straddles it, and Alzheimer's 0.77 — on only 172 test arms — has a wide
+  interval that **overlaps psoriasis**, so it is directional, not an established "strong-signal"
+  ranking.
 
 ### 2. Visit-trajectory modelling — SYNTHETIC cohort (clearly labelled)
 To test whether *visit-attendance patterns* add predictive signal beyond static covariates, the

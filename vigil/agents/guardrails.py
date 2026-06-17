@@ -51,9 +51,14 @@ _CLINICAL = re.compile(
     re.IGNORECASE,
 )
 _INJECTION = re.compile(
-    r"\b(ignore (?:all |the )?previous instructions|disregard (?:all |the )?(?:previous|above)|"
-    r"system prompt|reveal your (?:prompt|instructions|system)|you are now|act as|"
-    r"exfiltrat\w*|jailbreak|do anything now)\b",
+    # "ignore … instructions" / "disregard … (previous|above|instructions)" with any qualifier in
+    # between (your / all the / previous), so "ignore your previous instructions" is caught too.
+    # Mirrors guide/guardrails.py (the Guide's 7.4-broadened pattern) so both surfaces match.
+    r"(\bignore\b[^.?!]{0,40}\binstructions\b|"
+    r"\bdisregard\b[^.?!]{0,40}\b(?:previous|above|instructions)\b|"
+    r"\bsystem prompt\b|\breveal your (?:prompt|instructions|system)\b|"
+    r"\brepeat your (?:system )?prompt\b|\byou are now\b|\bact as\b|"
+    r"\bexfiltrat\w*|\bjailbreak\b|\bdo anything now\b)",
     re.IGNORECASE,
 )
 _SECRET = re.compile(

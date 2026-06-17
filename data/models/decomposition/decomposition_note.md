@@ -4,16 +4,21 @@
 
 ## Per-indication PR-AUC (top 8 by arm count)
 
-| Indication | n_trials | n_arms | test_pr_auc | split_type | n_train_arms | n_test_arms |
-|------------|----------|--------|-------------|------------|--------------|-------------|
-| T2D      |      863 |   2666 |       0.3809 |           temporal |         1669 |        516 |
-| PSO      |      352 |   1407 |       0.6474 |           temporal |          899 |        240 |
-| IBD      |      354 |   1207 |       0.4975 |           temporal |          646 |        229 |
-| ALZ      |      332 |    927 |       0.7747 |           temporal |          581 |        172 |
-| MDD      |      310 |    791 |       0.3206 |           temporal |          481 |        152 |
-| MS       |      259 |    719 |       0.6201 |           temporal |          452 |        142 |
-| HF       |      235 |    548 |       0.5829 |           temporal |          320 |        107 |
-| RA       |        4 |      9 |          N/A |     small-N random |            8 |          1 |
+| Indication | n_trials | n_arms | test_pr_auc | 95% CI (bootstrap) | split_type | n_train_arms | n_test_arms |
+|------------|----------|--------|-------------|--------------------|------------|--------------|-------------|
+| T2D      |      863 |   2666 |       0.3809 |     [0.3227, 0.4536] |           temporal |         1669 |        516 |
+| PSO      |      352 |   1407 |       0.6474 |     [0.5661, 0.7386] |           temporal |          899 |        240 |
+| IBD      |      354 |   1207 |       0.4975 |     [0.4134, 0.5956] |           temporal |          646 |        229 |
+| ALZ      |      332 |    927 |       0.7747 |     [0.6806, 0.8579] |           temporal |          581 |        172 |
+| MDD      |      310 |    791 |       0.3206 |     [0.2300, 0.4414] |           temporal |          481 |        152 |
+| MS       |      259 |    719 |       0.6201 |     [0.5091, 0.7286] |           temporal |          452 |        142 |
+| HF       |      235 |    548 |       0.5829 |     [0.4585, 0.7257] |           temporal |          320 |        107 |
+| RA       |        4 |      9 |          N/A |                  N/A |     small-N random |            8 |          1 |
+
+95% CIs are percentile bootstrap (2000 resamples, seed 20240601) over the
+test fold. Small folds (e.g. ALZ n_test≈172) give WIDE intervals that overlap neighbours — the
+honest reading is "directional, not a ranked order". The point estimates are unchanged; the CIs
+only quantify their uncertainty.
 
 ## Interpretation: Between- vs Within-Indication Signal
 

@@ -8,24 +8,39 @@
 **Pan-indication GBT TEST PR-AUC = 0.697** (REAL `ref_trial` + `ref_arm`, 37k+ arms, all
 modelling phases, temporal split). Source: `data/models/baselines/metrics.json`.
 
+**Base-rate-adjusted reading:** the test base rate (positive prevalence) is **0.474**, so the
+base-rate-adjusted skill = (0.697 − 0.474) / (1 − 0.474) ≈ **0.42** — i.e. the model closes ~42%
+of the gap from the base rate to a perfect score. That is real skill above the base rate, **but**
+the within-indication breakdown below shows the pooled number rides between-indication base-rate
+variation (T2D and MDD sit *below* their own within-indication chance line). Source:
+`positive_prevalence` in `metrics.json`; skill in `decomposition/indication_pr_auc.json`.
+
 ### Per-indication decomposition
 
 PR-AUC is computed on the **TEST fold** — read each score against `n_test_arms` (the n it was
-actually computed on), not the total `n_arms`. Single temporal split, point estimates, **no
-confidence intervals** (deferred to the hardening track).
+actually computed on), not the total `n_arms`. Single temporal split; the 95% CIs are a
+**percentile bootstrap** (2,000 resamples, fixed seed, resampling the test fold with replacement).
+Each indication is binarised on its own train median, so **0.5 = chance within indication**.
 
-| Indication | n_arms (total) | **n_test_arms** | Within-indication PR-AUC (on test fold) | Split |
-|---|---|---|---|---|
-| T2D | 2,666 | 516 | 0.3809 | temporal |
-| PSO | 1,407 | 240 | 0.6474 | temporal |
-| IBD | 1,207 | 229 | 0.4975 | temporal |
-| ALZ | 927 | 172 | 0.7747 | temporal |
-| MDD | 791 | 152 | 0.3206 | temporal |
-| MS | 719 | 142 | 0.6201 | temporal |
-| HF | 548 | 107 | 0.5829 | temporal |
-| RA | 9 | 1 | N/A | small-N random |
+| Indication | n_arms (total) | **n_test_arms** | Within-indication PR-AUC (test fold) | 95% CI (bootstrap) | Split |
+|---|---|---|---|---|---|
+| T2D | 2,666 | 516 | 0.3809 | [0.3227, 0.4536] | temporal |
+| PSO | 1,407 | 240 | 0.6474 | [0.5661, 0.7386] | temporal |
+| IBD | 1,207 | 229 | 0.4975 | [0.4134, 0.5956] | temporal |
+| ALZ | 927 | 172 | 0.7747 | [0.6806, 0.8579] | temporal |
+| MDD | 791 | 152 | 0.3206 | [0.2300, 0.4414] | temporal |
+| MS | 719 | 142 | 0.6201 | [0.5091, 0.7286] | temporal |
+| HF | 548 | 107 | 0.5829 | [0.4585, 0.7257] | temporal |
+| RA | 9 | 1 | N/A | N/A | small-N random |
 
 Source: `data/models/decomposition/indication_pr_auc.json`.
+
+**What the CIs confirm (they quantify the story; they do not change it):**
+- **T2D [0.32, 0.45] and MDD [0.23, 0.44]** lie **entirely below the 0.5 chance line** — the
+  below-chance reading is firm, not a single-split fluke.
+- **IBD [0.41, 0.60]** straddles 0.5 — ≈ chance, as stated.
+- **ALZ [0.68, 0.86] overlaps PSO [0.57, 0.74]** — ALZ stays **directional, not a ranked
+  winner**; at n_test=172 the interval is wide by design.
 
 **Key finding:** The pooled 0.697 is substantially inflated by base-rate variation between
 indications. T2D (~14% dropout base rate) mixes with ALZ, PSO, and others that have different
@@ -43,11 +58,11 @@ the breakdown), AND it has the weakest within-indication structural signal (0.38
 0.70). That combination — maximum data, minimum covariate signal — makes it the correct and
 hardest test for whether adding visit-trajectory features produces a real lift.
 
-ALZ's within-indication PR-AUC (0.7747) is **DIRECTIONAL only**: it rests on **172 test arms,
-a single temporal split, with no confidence interval**, so it must not be over-read as a ranked
-"strong-signal" indication — at this n the estimate is wide and could overlap PSO (0.65). Read
-it as a hint that covariates may carry more ALZ dropout structure, not as an established result.
-T2D is the stress test (largest n, weakest covariate signal).
+ALZ's within-indication PR-AUC (0.7747) is **DIRECTIONAL only**: it rests on **172 test arms and
+a single temporal split**, and its bootstrap 95% CI **[0.6806, 0.8579] overlaps PSO's [0.5661,
+0.7386]** — so it must not be over-read as a ranked "strong-signal" indication. Read it as a hint
+that covariates may carry more ALZ dropout structure, not as an established ordering. T2D is the
+stress test (largest n, weakest covariate signal).
 
 ---
 
