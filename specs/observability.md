@@ -47,3 +47,39 @@ never raw messages (none exist) — and is the human-facing proof that guardrail
   the page has no path to any unredacted text.
 - Auditor scope is read-only (no actions); admin may not see identifiable participant data — the
   page exposes coded ids only.
+
+## Phase 6 contracts
+The Phase-6 build (observe what Phases 4–5 produce; the table + write path already exist — 5.1
+created `message_events`, every assistant turn writes one row — 5.5/5.6).
+
+### Inspect endpoint scope contract (the sacred contract)
+`GET /monitoring/messages` (the inspect surface) is **PLATFORM / AUDITOR ONLY** — `403` for every
+sponsor and site role. It MUST run under `scoped_session(scope)` (RLS-bound), **never**
+`platform_session` unconditionally: so even a misrouted non-platform caller is **narrowed by the
+`message_events` RLS** (`USING (is_platform OR sponsor_id = current_sponsor)`), never widened — the
+inspect surface can only honour the cross-tenant-by-role boundary, never broaden it. It exposes
+**only redacted fields** (`redacted_user_msg`/`redacted_assistant_msg` + metadata); there is no raw
+column, so raw PII cannot be surfaced by construction. The inspect surface adds NO new visibility
+beyond what the row's RLS already grants the caller.
+
+### Cost / latency capture (required)
+`latency_ms` and `token_cost_estimate` MUST be persisted on the `message_events` row by the turn
+pipeline, threaded from the provider response (`LLMResponse` usage). They currently default to `0`
+because the agent answer drops usage; the cost surface (`GET /monitoring/cost`) reports **real
+captured cost or honest-zero/absent — NEVER a fabricated cost number**. Capturing usage is a
+Phase-6 build item; rollups are computed only from real persisted values.
+
+### Drift read-surface only (real drift deferred)
+Drift signals are **not computed or stored today** — B3 deferred the drift *source* to the
+observability phase (it only consumes an opaque breach signal). Phase 6 builds the `GET
+/monitoring/drift` **READ SURFACE ONLY**: it returns **honest-empty** ("no drift data computed
+yet") when none exists — **never fabricated drift numbers**. Real drift computation (rolling PSI /
+AUC / prediction-drift metrics writing drift rows) is an explicit **DEFERRED TODO**, future work,
+NOT Phase 6.
+
+### Langfuse
+Langfuse holds the **full per-turn trace** (a real instance); `message_events` is the durable,
+queryable audit record. Traces carry **only redacted content** — no raw PII ever reaches Langfuse
+(redaction is before the LLM, and only redacted text is persisted/traced). Langfuse is a **new
+outbound egress**: allow-list it explicitly (deny-by-default posture, `/specs/isolation.md`). **CI
+is hermetic** — Langfuse is disabled/stubbed in CI (no key, no network), like the LLM client.

@@ -61,6 +61,7 @@ REQUIRED: dict[str, list[str]] = {
         "## Decisions (fixed)",
         "## message_events",
         "## Admin observability",
+        "## Phase 6 contracts",
     ],
     "scoring.md": [
         "## Decisions (fixed)",

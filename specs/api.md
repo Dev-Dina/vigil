@@ -188,12 +188,13 @@ class AssistantTurn(BaseModel):
 ```
 
 ### monitoring (`/monitoring`) — model health, drift, cost (platform/auditor scope)
+All `/monitoring/*` reads are **platform/auditor only** (`403` for sponsor/site roles).
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
-| `GET /monitoring/models` | — | `Page[ModelStatus]` | champion/challenger, version, regime |
-| `GET /monitoring/drift` | `DriftQuery` | `Page[DriftPoint]` | drift signals over time |
-| `GET /monitoring/cost` | `CostQuery` | `CostReport` | token/cost rollups |
-| `GET /monitoring/messages` | `MessageQuery` | `Page[MessageEventOut]` | redacted `message_events` (admin observability page) |
+| `GET /monitoring/models` | — | `Page[ModelStatus]` | champion/challenger, version, regime (from `routing_state`) |
+| `GET /monitoring/drift` | `DriftQuery` | `Page[DriftPoint]` | drift signals over time. **Read surface only** — drift is not computed/stored yet (B3 deferred the source); returns **honest-empty** when none exists, **never fabricated** numbers. Real drift computation is a deferred TODO (`/specs/observability.md` § Phase 6 contracts). |
+| `GET /monitoring/cost` | `CostQuery` | `CostReport` | token/cost rollups from **real** persisted `latency_ms`/`token_cost_estimate` only — honest-zero/absent if not captured, never faked (`/specs/observability.md` § Phase 6 contracts). |
+| `GET /monitoring/messages` | `MessageQuery` | `Page[MessageEventOut]` | redacted `message_events` (admin observability page). **PLATFORM/AUDITOR ONLY** (403 for sponsor/site roles); runs under `scoped_session` (RLS-bound, never widens the cross-tenant-by-role boundary); **redacted fields only** — no raw column exists (`/specs/observability.md` § Inspect endpoint scope contract). |
 | `POST /monitoring/models/promote` | `ModelPromoteIn` | `ModelPromoteOut` | manual champion promotion, **platform_admin only** (403 otherwise); audited (`model_promote`, non-null actor); honesty-hooked `eval_provenance` (synthetic → `architecture_validation`); non-null `model_card_ref` (specs/routing.md § Audited promotion) |
 
 ```python
