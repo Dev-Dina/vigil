@@ -270,6 +270,50 @@ def _high_participant_other_site(ids: dict[str, str], *, score: float = 0.9) -> 
         return str(p.id)
 
 
+def _high_participant_own_site(ids: dict[str, str], *, score: float = 0.88) -> str:
+    """A high-band participant at coord.a's OWN site_a/trial_a (so coord.a sees it).
+
+    Created HERE, in b2e, after the slow LSTM scoring tests (b2b/b2d) have already run — so its
+    denorm band is NOT mutated by ``score_trial(trial_a)``. (The seeded ``participant_a`` IS
+    re-scored by those tests to a non-high band, which is why these at-risk tests must not depend
+    on it.) No later test re-scores trial_a, so this row stays ``high`` order-independently.
+    """
+    from vigil.db.models import Participant
+    from vigil.repositories import scoring as scoring_repo
+    from vigil.repositories.session import sponsor_bootstrap_session
+
+    sponsor_a = uuid.UUID(ids["sponsor_a"])
+    trial_a = uuid.UUID(ids["trial_a"])
+    site_a = uuid.UUID(ids["site_a"])
+    with sponsor_bootstrap_session(ids["sponsor_a"]) as session:
+        p = Participant(
+            sponsor_id=sponsor_a,
+            trial_id=trial_a,
+            site_id=site_a,
+            coded_ref="PT-ATRISK-S1",
+            status="active",
+            risk_score=score,
+            risk_band="high",
+        )
+        session.add(p)
+        session.flush()
+        scoring_repo.append_score(
+            session,
+            participant_id=p.id,
+            sponsor_id=sponsor_a,
+            trial_id=trial_a,
+            site_id=site_a,
+            risk_score=score,
+            risk_band="high",
+            top_factors=["consecutive_missed"],
+            reasons=[{"feature": "consecutive_missed", "contribution": 0.2}],
+            model_version=_CHAMPION_MV,
+            model_card_ref=_CARD,
+            synthetic=True,
+        )
+        return str(p.id)
+
+
 def _atrisk_ids(client: TestClient, tok: str, **params: str) -> list[str]:
     q = "&".join(f"{k}={v}" for k, v in {"risk_band": "high", **params}.items())
     r = client.get(f"/api/v1/cohort?{q}", headers=_h(tok))
@@ -282,12 +326,13 @@ def test_atrisk_site_coordinator_cannot_see_other_site(
 ) -> None:
     """SACRED cross-site: a site-1 coordinator's at-risk list excludes a site-2 at-risk participant."""
     ids = migrated_db
+    own = _high_participant_own_site(
+        ids
+    )  # coord.a's OWN site (stable high; not seed-dependent)
     other = _high_participant_other_site(ids)
     client = _client()
     seen = _atrisk_ids(client, _token(client, "coord.a@vigil.example"))
-    assert ids["participant_a"] in seen, (
-        "coordinator must see their OWN site's at-risk participant"
-    )
+    assert own in seen, "coordinator must see their OWN site's at-risk participant"
     assert other not in seen, (
         "CROSS-SITE LEAK on the at-risk surface: site coordinator saw another site's at-risk row"
     )
@@ -309,10 +354,11 @@ def test_atrisk_sponsor_oversight_not_over_narrowed(
 ) -> None:
     """Sponsor-oversight sees at-risk across ALL its sites (not over-narrowed to one site)."""
     ids = migrated_db
-    other = _high_participant_other_site(ids)
+    own = _high_participant_own_site(ids)  # site_a; stable high (not seed-dependent)
+    other = _high_participant_other_site(ids)  # a different site
     client = _client()
     seen = _atrisk_ids(client, _token(client, "oversight.a@vigil.example"))
-    assert {ids["participant_a"], other} <= set(seen), (
+    assert {own, other} <= set(seen), (
         "sponsor-oversight must see at-risk participants across all its sites"
     )
 

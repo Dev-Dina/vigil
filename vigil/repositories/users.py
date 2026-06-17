@@ -36,6 +36,38 @@ def list_users(session: Session, limit: int = 50) -> list[User]:
     return list(session.execute(select(User).limit(limit)).scalars())
 
 
+def set_notification_email(
+    session: Session, user_id: uuid.UUID, email: str | None
+) -> User | None:
+    """Set/clear the notification_email of EXACTLY the given user (Gate 9.5 /me self-service).
+
+    Keyed strictly by ``user_id`` (the verified token subject) — the caller never passes another
+    user's id. Returns the updated row, or None if not found/visible under the session.
+    """
+    user = session.get(User, user_id)
+    if user is None:
+        return None
+    user.notification_email = email
+    session.flush()
+    return user
+
+
+def users_with_notification_email(session: Session) -> list[User]:
+    """All ACTIVE users with a notification_email set — the candidate recipient pool (Gate 9.5).
+
+    Read under an is_platform session (cross-tenant ``user`` table); scope-bound filtering to a
+    crossing's participant is applied by the resolver via ``scope.permits``, not here.
+    """
+    return list(
+        session.execute(
+            select(User).where(
+                User.notification_email.is_not(None),
+                User.is_active.is_(True),
+            )
+        ).scalars()
+    )
+
+
 def create_user(
     session: Session,
     *,

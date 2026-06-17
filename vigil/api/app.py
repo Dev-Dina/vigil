@@ -19,6 +19,7 @@ from vigil.api.routers import (
     assistant,
     auth,
     cohort,
+    me,
     monitoring,
     participants,
     scoring,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(scoring.router, prefix="/api/v1")
     app.include_router(monitoring.router, prefix="/api/v1")
     app.include_router(assistant.router, prefix="/api/v1")
+    app.include_router(me.router, prefix="/api/v1")
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

@@ -90,12 +90,28 @@ def get_participant(session: Session, participant_id: uuid.UUID) -> Participant 
     return session.get(Participant, participant_id)
 
 
-def list_participants(session: Session, limit: int = 50) -> list[Participant]:
-    return list(
-        session.execute(
-            select(Participant).order_by(Participant.risk_score.desc()).limit(limit)
-        ).scalars()
-    )
+def list_participants(
+    session: Session,
+    *,
+    risk_band: str | None = None,
+    limit: int | None = None,
+) -> list[Participant]:
+    """RLS-scoped participants, highest risk first.
+
+    ``risk_band`` filters to a band IN SQL (so the at-risk scan returns only matching rows).
+    ``limit`` is OPTIONAL and, when given, caps THIS sponsor-wide RLS read — callers that must
+    apply cross-site (SEC-1) narrowing first should pass ``limit=None`` and cap the result AFTER
+    narrowing, so a site role's own rows are never evicted by higher-risk rows at OTHER sites of
+    the same sponsor (the cross-site narrowing RLS cannot express). Ordering by ``risk_score``
+    desc keeps the most-at-risk first regardless.
+    """
+    stmt = select(Participant)
+    if risk_band is not None:
+        stmt = stmt.where(Participant.risk_band == risk_band)
+    stmt = stmt.order_by(Participant.risk_score.desc())
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    return list(session.execute(stmt).scalars())
 
 
 # --- intervention ---

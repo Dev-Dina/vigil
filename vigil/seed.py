@@ -50,6 +50,10 @@ log = get_logger("vigil.seed")
 
 # Demo password for every seeded user. Local-dev default; override via env.
 SEED_PASSWORD = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
+# Demo serious-risk doorbell recipient (Gate 9.5) — supplied at SEED TIME via the environment,
+# NEVER a committed literal (domain.md § Notification routing). None → coord.a is seeded with no
+# notification email (the field defaults UNSET for everyone).
+_DEMO_NOTIFY_EMAIL = os.environ.get("VIGIL_DEMO_NOTIFY_EMAIL") or None
 
 # Path to the synthetic T2D parquet files (build-time ingestion output, never live-fetched).
 _SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
@@ -284,6 +288,11 @@ def seed() -> dict[str, str]:
             home_sponsor_id=sponsor_a_id,
             home_trial_id=tenant_a["trial"],
             home_site_id=tenant_a["site"],
+            # Demo serious-risk doorbell recipient — SEED DATA from the environment, NEVER a
+            # committed code constant (domain.md § Notification routing). Set
+            # VIGIL_DEMO_NOTIFY_EMAIL at seed time (e.g. the demo Gmail) to enable the demo email;
+            # unset → coord.a has no notification email, like every other seeded user.
+            notification_email=_DEMO_NOTIFY_EMAIL,
         )
         coord_b = _add_user(
             session,

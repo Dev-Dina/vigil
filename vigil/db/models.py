@@ -180,6 +180,10 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
+    # Phase 9 (9.5): the address the PII-free serious-risk doorbell routes to. The login `email`
+    # is the identity; this is a separate, user-settable notification target. Nullable, defaults
+    # UNSET; set per user via PUT /me/notification-email (domain.md § Notification routing).
+    notification_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     home_sponsor_id: Mapped[uuid.UUID | None] = mapped_column(
         PG_UUID(as_uuid=True),
         ForeignKey("sponsor.id", ondelete="RESTRICT"),

@@ -56,7 +56,12 @@ def list_cohort(
         champion_versions = routing_repo.champion_model_versions(session)
 
     with scoped_session(scope, sponsor_id=sponsor_id) as session:
-        rows = tenancy_repo.list_participants(session, limit=limit)
+        # Fetch the RLS-scoped, band-filtered, risk-ordered set WITHOUT a SQL limit: the limit is
+        # applied AFTER the SEC-1 cross-site narrowing below, so a site role's own at-risk rows are
+        # never evicted by higher-risk rows at OTHER sites of the same sponsor (the eviction bug a
+        # pre-limit caused once a sponsor exceeded the limit). The band filter in SQL keeps the
+        # at-risk scan bounded to matching rows.
+        rows = tenancy_repo.list_participants(session, risk_band=risk_band, limit=None)
         # SEC-1: sponsor RLS narrowed to the tenant; now narrow to the caller's trial/site scope
         # (site roles see only their site) — the cross-site guarantee RLS can't express.
         rows = [
@@ -90,9 +95,11 @@ def list_cohort(
                 )
             )
 
-    # Phase-9 at-risk filter + sort, applied AFTER scope narrowing (so band/sort never widen
-    # what the caller may see). risk_band picks one band; sort orders by risk_score.
+    # Phase-9 at-risk filter + sort, applied AFTER scope narrowing (so band/sort never widen what
+    # the caller may see). The band is already filtered in SQL; this is defence-in-depth. Sort by
+    # risk, then cap with the caller's limit LAST — so the limit bounds the SCOPED result, never
+    # the pre-scope scan (the regression that dropped a site role's own at-risk rows).
     if risk_band is not None:
         result = [r for r in result if r.risk_band == risk_band]
     result.sort(key=lambda r: r.risk_score, reverse=(sort != "risk_asc"))
-    return result
+    return result[:limit]

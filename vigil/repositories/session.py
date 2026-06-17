@@ -77,6 +77,29 @@ def auth_lookup_session() -> Iterator[Session]:
 
 
 @contextmanager
+def user_self_session() -> Iterator[Session]:
+    """Self-service session for a user reading/writing THEIR OWN ``user`` row (Gate 9.5 /me).
+
+    ``notification_email`` is an identity attribute on the cross-tenant-by-design ``user`` table,
+    whose bespoke RLS WITH CHECK keys on ``home_sponsor_id`` — so a CRO user (no home sponsor)
+    could read but not update their own row under a sponsor-bound session. This opener sets
+    ``app.is_platform = on`` so the bespoke ``user`` table admits the read/write uniformly across
+    roles. **The CALLER (service layer) MUST constrain every query to ``id = scope.user_id``** —
+    it is identity self-service for the verified token subject, never a path to another user's row
+    (the /me endpoints take no user-id parameter). It touches ONLY the ``user`` table, never any
+    participant/tenant data.
+    """
+    factory = get_session_factory()
+    session = factory()
+    try:
+        with session.begin():
+            _bind_rls(session, sponsor=None, is_platform=True)
+            yield session
+    finally:
+        session.close()
+
+
+@contextmanager
 def platform_session() -> Iterator[Session]:
     """A platform-privileged session for bootstrap/seed only (no request Scope yet).
 
