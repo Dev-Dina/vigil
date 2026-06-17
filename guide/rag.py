@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from guide.config import get_config
+from guide.guardrails import check_content
 from guide.llm import GuideLLMClient, GuideLLMMessage
 from guide.redaction import redact
 from guide.retrieval import IndexedChunk, search
@@ -67,6 +68,14 @@ def answer_question(
     redacted_q = redact(
         question
     )  # redact BEFORE the LLM (own copy); raw never leaves this path
+
+    # Content guard FIRST — a clinical/diagnostic/medication, injection, or secret-extraction
+    # question is refused because of WHAT it is, NEVER because it happened to retrieve below the
+    # relevance threshold. This makes the medical refusal robust to corpus changes and independent
+    # of the caller (run_guide_turn guards too, but this path must be safe on its own — defense in
+    # depth on the public surface). No retrieval, no LLM call on a blocked question.
+    if check_content(redacted_q).decision == "blocked":
+        return GuideAnswer(_REFUSAL, [], "refused", 0.0)
 
     if not index:  # empty index → refuse everything (no source to ground in)
         return GuideAnswer(_REFUSAL, [], "refused", 0.0)

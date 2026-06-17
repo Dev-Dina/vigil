@@ -55,8 +55,9 @@ def test_low_relevance_question_refuses(guide_index) -> None:  # type: ignore[no
 
 
 def test_clinical_question_refuses(guide_index) -> None:  # type: ignore[no-untyped-def]
-    # Out-of-scope clinical ask is below the relevance threshold → refused here (7.3 also adds an
-    # explicit clinical content guardrail).
+    # A clinical ask is refused by the CONTENT GUARDRAIL (because it is clinical), NOT by the
+    # retrieval-similarity margin — answer_question applies check_content itself, so the medical
+    # refusal is robust to corpus changes (a model_card edit must never let a clinical ask through).
     ans = answer_question(
         "Diagnose my symptoms and tell me what medication to take.",
         index=guide_index,
