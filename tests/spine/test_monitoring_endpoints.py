@@ -1,8 +1,10 @@
 """Gate 6.2 — cost/latency capture + /cost · /models · /drift read surfaces.
 
 Proves the 6.0 contract for the three monitoring read endpoints:
-- CAPTURE: a real turn persists the provider's REAL latency/cost onto the message_events row
-  (no longer defaulted 0); a grounded refusal (no generation call) stays at honest-zero.
+- CAPTURE (6.2 + 6.2b): a real turn persists the provider's REAL latency/cost onto the
+  message_events row (no longer defaulted 0). The row carries the TURN TOTAL — router-classify +
+  agent-generation; a refusal-AT-router shows the router's real (non-zero) cost; only a
+  guardrail block BEFORE the router (no LLM call) is genuinely zero.
 - COST: /monitoring/cost rolls up ONLY the real stored usage (no fabrication); platform/auditor
   only (403 others); RLS-bound (no cross-tenant leak in aggregates).
 - MODELS: /monitoring/models reflects routing_state champion/shadow; platform/auditor only.
@@ -32,6 +34,12 @@ from vigil.workers.tasks import run_assistant_turn
 _CHAMPION_MV = "sequence_v1.0:demo"
 _CARD = "data/models/t2d/model_card.md"
 
+# Controlled stub usage (6.2b): a turn's cost/latency = router-classify + agent-generation.
+_ROUTER_COST = 0.00005
+_ROUTER_LATENCY = 12
+_AGENT_COST = 0.00045
+_AGENT_LATENCY = 137
+
 
 # ---------------------------------------------------------------------------
 # Harness
@@ -54,17 +62,22 @@ class UsageLLM:
     def complete(self, messages, *, model=None, max_tokens=None, temperature=0.0):  # type: ignore[no-untyped-def]
         system = next((m.content for m in messages if m.role == "system"), "")
         if "ROUTER" in system:
+            # The router-classification call carries its OWN real (small) usage (6.2b).
             return LLMResponse(
                 content=f'{{"agent": "{self._route_to}", "reason": "stub"}}',
                 model="scripted/router",
+                prompt_tokens=40,
+                completion_tokens=8,
+                cost_estimate=_ROUTER_COST,
+                latency_ms=_ROUTER_LATENCY,
             )
         return LLMResponse(
             content=self._answer,
             model="anthropic/claude-haiku-4-5",
             prompt_tokens=120,
             completion_tokens=30,
-            cost_estimate=0.00045,
-            latency_ms=137,
+            cost_estimate=_AGENT_COST,
+            latency_ms=_AGENT_LATENCY,
         )
 
 
@@ -153,19 +166,21 @@ def test_turn_captures_real_usage(migrated_db: dict[str, str]) -> None:
     rows = _events(ids, res["_conversation_id"])
     assert len(rows) == 1
     row = rows[0]
-    # Real provider usage is persisted — NOT the old 0 default.
-    assert row.latency_ms == 137, f"latency not captured: {row.latency_ms}"
-    assert float(row.token_cost_estimate) == 0.00045, (
-        f"cost not captured: {row.token_cost_estimate}"
+    # TURN TOTAL (6.2b): router-classification + agent-generation, summed — NOT the old 0 default.
+    assert row.latency_ms == _ROUTER_LATENCY + _AGENT_LATENCY, (
+        f"latency must be router+agent: {row.latency_ms}"
     )
-    # Which provider actually answered is recorded (FailoverClient/agent threads it).
+    assert abs(float(row.token_cost_estimate) - (_ROUTER_COST + _AGENT_COST)) < 1e-9, (
+        f"cost must be router+agent: {row.token_cost_estimate}"
+    )
+    # Provider_model records the ANSWERING provider (the agent generation).
     assert row.llm_provider_model == "anthropic/claude-haiku-4-5"
 
 
-def test_refusal_turn_is_honest_zero(migrated_db: dict[str, str]) -> None:
+def test_refusal_at_router_shows_real_router_cost(migrated_db: dict[str, str]) -> None:
     ids = migrated_db
-    # A router-refused turn makes NO generation call → cost/latency MUST be honest-zero,
-    # never a fabricated figure.
+    # A router-refused turn MADE a real classification call → its row carries the router's real
+    # (non-zero) cost/latency now (6.2b), no longer honest-zero — but NOT the agent's.
     res = _run(
         ids,
         user_id=ids["coordinator_a"],
@@ -174,6 +189,28 @@ def test_refusal_turn_is_honest_zero(migrated_db: dict[str, str]) -> None:
     )
     assert res["status"] == "refused"
     row = _events(ids, res["_conversation_id"])[0]
+    assert row.route_or_agent == "router:refuse"
+    assert row.latency_ms == _ROUTER_LATENCY, (
+        f"router latency missing: {row.latency_ms}"
+    )
+    assert abs(float(row.token_cost_estimate) - _ROUTER_COST) < 1e-9, (
+        f"router cost must be real (non-zero), not honest-zero: {row.token_cost_estimate}"
+    )
+
+
+def test_guardrail_block_before_router_is_zero(migrated_db: dict[str, str]) -> None:
+    ids = migrated_db
+    # A clinical/diagnostic question is blocked by the content guardrail BEFORE the router LLM
+    # ever runs → no LLM call at all → genuinely zero (honest-zero is correct here).
+    res = _run(
+        ids,
+        user_id=ids["coordinator_a"],
+        content="What medication should this patient take for their diagnosis?",
+        llm=UsageLLM(route_to="retention"),
+    )
+    assert res["status"] == "refused"
+    row = _events(ids, res["_conversation_id"])[0]
+    assert row.route_or_agent.startswith("guardrail:")
     assert row.latency_ms == 0 and float(row.token_cost_estimate) == 0.0
 
 

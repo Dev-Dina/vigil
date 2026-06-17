@@ -62,6 +62,25 @@ A thin **LLM-classification dispatch step** in front of the three agents.
 - The router LLM call is subject to the same CI-stub posture (§ Decisions): recorded/fake
   responses in CI, real OpenRouter only on local/demo.
 
+### Routing-approach decision (ratified)
+**DECISION:** the router classifies intent via an **LLM call** (a classification prompt over the
+agent definitions), **NOT a trained ML classifier.**
+- **RATIONALE:** no labeled routing dataset exists, and within the project timeline building a
+  trained classifier (dataset creation → training → eval → versioning) was not justified. An
+  LLM-classification prompt is correct-by-construction against the agent definitions with **zero
+  training data**, and fails closed to a refusal on any unparseable output.
+- **COST IMPLICATION:** every turn that reaches the router makes one classification LLM call, so
+  routing has a **real per-turn token cost**. This cost is **attributed** (Gate 6.2b): the
+  `message_events` row's `token_cost_estimate` / `latency_ms` reflect the TURN TOTAL —
+  router-classification + agent-generation for an answered turn; the router's own (real, small)
+  cost alone for a refusal-at-router; genuinely **zero** only when a pre-router guardrail block
+  made no LLM call. Cost stays real-or-honest-zero (real tokens × configured rate), never faked.
+- **FUTURE PATH:** once enough labeled routing data accumulates (e.g. mined from `message_events`:
+  redacted question → chosen agent), a small **trained intent classifier** could replace the LLM
+  router — cheaper and faster per turn, with no per-turn LLM cost. This is a **data-dependent
+  future optimization**, not a current gap: LLM-routing is the right choice NOW given no data +
+  timeline; a trained classifier is the improvement when the data exists.
+
 ## Grounding rules
 Nothing is generated free-hand: every claim an agent makes is traceable to a retrieved source,
 and a turn that retrieves nothing relevant refuses rather than improvises. The two surfaces have

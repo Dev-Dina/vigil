@@ -55,6 +55,14 @@ class RouteDecision:
     agent: str | None  # one of AGENT_DEFINITIONS keys, or None = refuse
     reason: str
     raw: str = ""
+    # Usage of the router's OWN classification LLM call (Gate 6.2b cost attribution). Every turn
+    # that reaches the router makes this call, so its cost is real and is attributed to the turn —
+    # combined with the agent generation for answered turns, or shown alone for a router refusal.
+    provider_model: str = ""
+    latency_ms: int = 0
+    token_cost_estimate: float = 0.0
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
 
     @property
     def refused(self) -> bool:
@@ -76,16 +84,26 @@ def classify(llm: LLMClient, question: str) -> RouteDecision:
         [LLMMessage("system", _SYSTEM), LLMMessage("user", question)],
         temperature=0.0,
     )
+
+    def _decide(agent: str | None, reason: str) -> RouteDecision:
+        # Carry the router-classification call's REAL usage onto every outcome (refuse included).
+        return RouteDecision(
+            agent,
+            reason,
+            resp.content,
+            provider_model=resp.model,
+            latency_ms=resp.latency_ms,
+            token_cost_estimate=resp.cost_estimate,
+            prompt_tokens=resp.prompt_tokens,
+            completion_tokens=resp.completion_tokens,
+        )
+
     try:
         data = _extract_json(resp.content)
         agent = data.get("agent")
         reason = str(data.get("reason", ""))
     except (ValueError, json.JSONDecodeError):
-        return RouteDecision(
-            None, "router could not classify the request; refusing", resp.content
-        )
+        return _decide(None, "router could not classify the request; refusing")
     if agent == _REFUSE or agent not in AGENT_DEFINITIONS:
-        return RouteDecision(
-            None, reason or "no matching agent; refusing", resp.content
-        )
-    return RouteDecision(agent, reason, resp.content)
+        return _decide(None, reason or "no matching agent; refusing")
+    return _decide(agent, reason)

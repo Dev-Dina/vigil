@@ -835,6 +835,9 @@ async def run_assistant_turn(
             return _turn(refusal, "blocked", "refused", [])
 
         # 2. Router classify (LLM, stubbed in CI). Refuse-at-router → blocked outcome, no dispatch.
+        #    The router call has REAL usage (6.2b): a refusal-at-router row carries the router's own
+        #    classification cost/latency (no longer honest-zero) — only a pre-router guardrail block
+        #    (above, no LLM call) is genuinely zero.
         decision = router_mod.classify(llm, guard.redacted_text)
         if decision.refused:
             refusal = "I can't help with that request."
@@ -845,6 +848,9 @@ async def run_assistant_turn(
                 redacted_assistant=redact(refusal),
                 route_or_agent="router:refuse",
                 citations=[],
+                llm_provider_model=decision.provider_model,
+                latency_ms=decision.latency_ms,
+                token_cost_estimate=decision.token_cost_estimate,
             )
             return _turn(refusal, "blocked", "refused", [])
 
@@ -862,11 +868,18 @@ async def run_assistant_turn(
                 redacted_assistant=redact(refusal),
                 route_or_agent="router:unknown_agent",
                 citations=[],
+                llm_provider_model=decision.provider_model,
+                latency_ms=decision.latency_ms,
+                token_cost_estimate=decision.token_cost_estimate,
             )
             return _turn(refusal, "blocked", "refused", [])
 
         ans = agent_fn(tctx, llm, guard.redacted_text, participant_id=participant_id)
         redacted_answer = redact(ans.content)
+        # TURN TOTAL (6.2b): an answered turn's usage = router-classification + agent-generation.
+        # Cost/latency SUM across both LLM calls; the row's provider_model records the ANSWERING
+        # provider (the agent generation), the dominant cost (a grounded refusal contributes honest-
+        # zero agent usage, leaving just the router's real classification cost).
         _write(
             decision="allowed",
             status=ans.status,
@@ -874,9 +887,10 @@ async def run_assistant_turn(
             redacted_assistant=redacted_answer,
             route_or_agent=f"agent:{decision.agent}",
             citations=ans.citations,
-            # Real provider usage from the answering LLM (grounded refusal → honest-zero).
-            llm_provider_model=ans.provider_model,
-            latency_ms=ans.latency_ms,
-            token_cost_estimate=ans.token_cost_estimate,
+            llm_provider_model=ans.provider_model or decision.provider_model,
+            latency_ms=decision.latency_ms + ans.latency_ms,
+            token_cost_estimate=round(
+                decision.token_cost_estimate + ans.token_cost_estimate, 6
+            ),
         )
         return _turn(redacted_answer, "allowed", ans.status, ans.citations)
