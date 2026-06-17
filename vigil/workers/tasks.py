@@ -702,10 +702,27 @@ async def score_trial(
     if _attrib_names:
         assert_no_outcome_features(_attrib_names)
 
+    # 9.2 prior champion band per participant (BEFORE any append this run) — the transition
+    # reference for serious-risk crossing detection. Champion allowlist from the platform table.
+    from vigil.repositories import routing as routing_repo
+    from vigil.repositories.session import platform_session
+
+    with platform_session() as _psession:
+        champion_versions = routing_repo.champion_model_versions(_psession)
+
     # 9. Writeback.
     n_scored = 0
     with sponsor_bootstrap_session(sponsor_id) as session:
         from sqlalchemy import update
+
+        # Newest champion row per participant that exists BEFORE this run's appends — its band is
+        # the "prior champion band" the crossing transition is measured against.
+        prior_champ = scoring_repo.champion_scores_by_participant(
+            session,
+            [p["id"] for p in participant_snapshots],
+            champion_versions=champion_versions,
+        )
+        prior_band = {pid: row.risk_band for pid, row in prior_champ.items()}
 
         for p_snap, score, synth_flag, attrib in zip(
             participant_snapshots, scores, synth_flags, champ_attrib, strict=True
@@ -713,7 +730,7 @@ async def score_trial(
             band = _band(float(score))
             # REAL model attributions (Gate 9.1); the synthetic flag travels WITH each reason.
             reasons = [{**r, "synthetic": bool(synth_flag)} for r in attrib["reasons"]]
-            scoring_repo.append_score(
+            score_row = scoring_repo.append_score(
                 session,
                 participant_id=p_snap["id"],
                 sponsor_id=p_snap["sponsor_id"],
@@ -740,6 +757,14 @@ async def score_trial(
                 .where(Participant.id == p_snap["id"])
                 .values(risk_score=float(score), risk_band=band)
             )
+            # 9.2 serious-risk crossing: a non-high -> high champion transition. Idempotent (the
+            # crossing is anchored on this score row's id; a retry's prior band is already high so
+            # no new transition fires; staying high fires nothing). NO email here — that is 9.6.
+            pre = prior_band.get(p_snap["id"])  # None when no prior champion point
+            if band == "high" and pre != "high":
+                scoring_repo.record_crossing(
+                    session, score_row=score_row, prior_band=pre
+                )
             n_scored += 1
 
     # 10. Shadow scoring (B2c): structural GBT runs alongside champion if registered.

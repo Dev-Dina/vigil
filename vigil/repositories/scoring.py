@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from vigil.db.models import AuditLog, ParticipantScore
+from vigil.db.models import AuditLog, ParticipantScore, RiskCrossing
 
 
 def append_score(
@@ -161,6 +161,57 @@ def list_scores_for_participant(
             select(ParticipantScore).where(
                 ParticipantScore.participant_id == participant_id
             )
+        ).scalars()
+    )
+
+
+def record_crossing(
+    session: Session,
+    *,
+    score_row: ParticipantScore,
+    prior_band: str | None,
+) -> RiskCrossing | None:
+    """Record a serious-risk crossing for ``score_row`` (non-high → high) — IDEMPOTENTLY.
+
+    Anchored on ``crossing_score_id`` (UNIQUE): the champion score row that crossed is recorded
+    at most once, so a double-detection of the SAME row never duplicates. The TRANSITION semantic
+    (caller only calls this when the prior champion band was non-high and the new band is high)
+    plus this anchor give the dedupe contract: a re-score while still high, and a retried job
+    whose prior band is now high, both produce NO crossing. Carries the participant's full
+    (sponsor, trial, site) scope for later scope-bound recipient resolution (Gate 9.5). Runs under
+    the caller's RLS-scoped (sponsor-bound) session — the row inserts under that sponsor.
+    """
+    existing = session.execute(
+        select(RiskCrossing).where(RiskCrossing.crossing_score_id == score_row.id)
+    ).scalar_one_or_none()
+    if existing is not None:
+        return existing
+    row = RiskCrossing(
+        sponsor_id=score_row.sponsor_id,
+        participant_id=score_row.participant_id,
+        trial_id=score_row.trial_id,
+        site_id=score_row.site_id,
+        crossing_score_id=score_row.id,
+        model_version=score_row.model_version,
+        risk_score=score_row.risk_score,
+        risk_band=score_row.risk_band,
+        prior_band=prior_band if prior_band in ("low", "medium") else "none",
+        synthetic=score_row.synthetic,
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def list_crossings_for_participant(
+    session: Session, participant_id: uuid.UUID
+) -> list[RiskCrossing]:
+    """All serious-risk crossings for a participant (newest first) under RLS scope."""
+    return list(
+        session.execute(
+            select(RiskCrossing)
+            .where(RiskCrossing.participant_id == participant_id)
+            .order_by(RiskCrossing.detected_at.desc())
         ).scalars()
     )
 

@@ -49,6 +49,7 @@ TENANT_TABLES: tuple[str, ...] = (
     "engagement",
     "intervention",
     "participant_score",
+    "risk_crossing",
 )
 
 
@@ -304,6 +305,61 @@ class ParticipantScore(Base):
     model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False, default="")
     synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     computed_at: Mapped[datetime] = created_at()
+
+
+# ------------------------------------------------ serious-risk crossing (Phase 9, Gate 9.2)
+class RiskCrossing(Base):
+    """A serious-risk CROSSING: a champion-point transition from non-high → high (Phase 9).
+
+    Tenant-scoped (sponsor_id, RLS — same guarantee as participant_score). Detected worker-side
+    right after the score writeback, when the worker knows the PRIOR champion band. Idempotent by
+    construction: ``crossing_score_id`` is UNIQUE (the champion score row that crossed is the
+    anchor), and the transition is only recorded when the prior champion band was non-high — so a
+    re-score while still high, and a retried job (whose prior band is now high), add NO new
+    crossing. The row carries the participant's full (sponsor, trial, site) scope so Gate 9.5 can
+    resolve recipients SCOPE-BOUND; ``notified`` is the dedupe hook the 9.6 email claims. No email
+    is sent here (Gate 9.6).
+    """
+
+    __tablename__ = "risk_crossing"
+    __table_args__ = (
+        UniqueConstraint("crossing_score_id", name="uq_risk_crossing_score"),
+        Index("ix_risk_crossing_sponsor_site", "sponsor_id", "site_id"),
+        Index("ix_risk_crossing_notified", "notified"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    sponsor_id: Mapped[uuid.UUID] = sponsor_fk()
+    participant_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("participant.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    trial_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("trial.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    site_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("site.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    # The champion score row whose append produced the crossing — UNIQUE → idempotent anchor.
+    crossing_score_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("participant_score.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    model_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    risk_score: Mapped[float] = mapped_column(Float, nullable=False)
+    risk_band: Mapped[str] = mapped_column(String(8), nullable=False)  # always 'high'
+    prior_band: Mapped[str] = mapped_column(
+        String(8), nullable=False
+    )  # the non-high band crossed FROM: low|medium|none
+    synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    notified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    detected_at: Mapped[datetime] = created_at()
 
 
 # ---------------------------------------------------------------- engagement (B2a-1)

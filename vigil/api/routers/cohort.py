@@ -31,6 +31,8 @@ class CohortRow(BaseModel):
 async def list_cohort(
     sponsor_id: str | None = Query(default=None),
     limit: int = Query(default=50, le=200),
+    risk_band: str | None = Query(default=None, pattern="^(high|medium|low)$"),
+    sort: str = Query(default="risk_desc", pattern="^(risk_desc|risk_asc)$"),
     scope: Scope = ScopeDep,
 ) -> Page:
     # Platform users (ML admin, auditor) have no sponsor scope; participant-level
@@ -41,7 +43,14 @@ async def list_cohort(
             detail="platform roles may not access participant cohort data",
         )
     try:
-        rows = cohort_service.list_cohort(scope, sponsor_id=sponsor_id, limit=limit)
+        # Phase-9 at-risk surface = /cohort?risk_band=high&sort=risk_desc, scope-bound (SEC-1).
+        rows = cohort_service.list_cohort(
+            scope,
+            sponsor_id=sponsor_id,
+            limit=limit,
+            risk_band=risk_band,
+            sort=sort,
+        )
     except ScopeError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)

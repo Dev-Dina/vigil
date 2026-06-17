@@ -38,8 +38,19 @@ class CohortRow:
 
 
 def list_cohort(
-    scope: Scope, *, sponsor_id: str | None = None, limit: int = 50
+    scope: Scope,
+    *,
+    sponsor_id: str | None = None,
+    limit: int = 50,
+    risk_band: str | None = None,
+    sort: str = "risk_desc",
 ) -> list[CohortRow]:
+    """Scope-bound ranked cohort. ``risk_band`` filters to a band (the Phase-9 at-risk surface uses
+    ``risk_band='high'``); ``sort`` orders by ``risk_score`` (``risk_desc`` default | ``risk_asc``).
+    Scope narrowing (RLS + SEC-1 ``scope_filter``) is applied FIRST, so the band filter/sort only
+    ever see the caller's own in-scope participants — a site coordinator never sees another site's
+    at-risk rows.
+    """
     # Champion allowlist from the platform routing table (not sponsor-scoped).
     with platform_session() as session:
         champion_versions = routing_repo.champion_model_versions(session)
@@ -78,4 +89,10 @@ def list_cohort(
                     synthetic=champ.synthetic if champ is not None else True,
                 )
             )
-        return result
+
+    # Phase-9 at-risk filter + sort, applied AFTER scope narrowing (so band/sort never widen
+    # what the caller may see). risk_band picks one band; sort orders by risk_score.
+    if risk_band is not None:
+        result = [r for r in result if r.risk_band == risk_band]
+    result.sort(key=lambda r: r.risk_score, reverse=(sort != "risk_asc"))
+    return result
