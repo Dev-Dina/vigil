@@ -86,3 +86,27 @@ Plain manifests (kustomize base + overlays), applied to a local kind cluster:
   pod, deny-list resources are unreachable while the vector store succeeds.
 - **Optional HPA**: on `api` and `worker` to show the cheap path scaling horizontally.
 The whole stack stands up on kind via one script; the isolation integration job runs against it.
+
+## Phase 9 notification egress
+
+The Phase-9 clinical-ops loop (`/specs/scoring.md § Phase 9`) adds one new app-side outbound
+dependency: an SMTP host for the PII-free serious-risk doorbell email. It follows the existing
+egress + secret discipline exactly.
+
+- **Egress allow-list (deny-by-default).** The SMTP host (Gmail SMTP) is added to the **app-side**
+  allow-listed outbound egress in the NetworkPolicies, alongside `api.anthropic.com`,
+  `openrouter.ai`, and the Langfuse host. It is an app-side (`worker`) egress only; the `guide`
+  pod never gains it — the Guide boundary (`/specs/isolation.md` §3) is unchanged.
+- **Transport.** stdlib `smtplib`, sent from an **Arq job on `worker`, never inline** (mirrors
+  scoring). No new ingress; `worker` has no Service.
+- **Secret (Vault).** The Gmail **App Password** lives at `secret/vigil/notifications/email_password`
+  (Vault KV v2, field `value`), with a local-dev/CI env shim (`VIGIL_NOTIFY_EMAIL_PASSWORD`) in the
+  `EnvSecrets` map — same pattern as the LLM/Langfuse keys. It is the ONLY new secret.
+- **Non-secret config.** The SMTP host/port and the sender (`From`) account are non-secret config
+  (env/ConfigMap), like the LLM base URLs.
+- **Recipients are NOT secrets.** Recipient addresses are read from each user's
+  `notification_email` record at routing time (`/specs/domain.md § Notification routing (Phase 9)`)
+  — never from Vault, never a code constant, never a global config default.
+- **CI-hermetic.** A stub flag (`VIGIL_EMAIL_STUB`) makes tests send NO real email and require no
+  credential. The live send is a **run-once manual verification bundled with the other live-keys
+  checks (LLM/Langfuse), NOT a CI gate.**

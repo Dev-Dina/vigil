@@ -81,3 +81,32 @@ holding a sponsor's data carries `sponsor_id` + the default RLS policy, full sto
   CRAs to sites and coordinators to trials/follow-ups within their own scope; a site lead/PI
   manages users at their own site. No one assigns a scope they do not themselves hold.
 - Every user creation, assignment, or scope change is an audited action (written to the audit trail).
+
+## Notification routing (Phase 9)
+
+The clinical-ops loop (`/specs/scoring.md § Phase 9`) rings a minimal, PII-free email doorbell when
+a participant crosses the serious-risk threshold. Routing is a sacred, scope-bound contract.
+
+**User model gains a notification-email field.** The `user` record gains a nullable
+`notification_email` column (the user model has no email-for-notifications field today; the
+`auth/login` email is the login identity, a distinct concern). It is **settable per user** by the
+user themselves (`PUT /me/notification-email`, `/specs/api.md § me`) and **defaults UNSET**. A
+score/crossing never depends on it; an unset address simply means that user is not a recipient.
+
+**Scope-bound recipient resolution (SACRED).** A serious-risk crossing for a participant routes
+ONLY to the `notification_email` of user(s) whose **scope COVERS that participant's
+`(sponsor_id, trial_id, site_id)`** — resolved with the existing `Scope.permits` /
+`ScopeTuple.contains` subset check (`vigil/core/scope.py`), the same primitive that guards every
+participant read (SEC-1). A crossing MUST NEVER route to a user whose scope does not cover that
+site — **even a PII-free email mis-routed to the wrong site leaks the EXISTENCE of an at-risk
+participant there.** This resolution is a scope-bound query and gets an **adversarial cross-site
+test** (create a crossing at site A; assert a coordinator scoped only to site B is NOT resolved as
+a recipient), an extension of the sacred cross-tenant + cross-site leakage suite. The sacred
+egress/transport half of this contract lives in `/specs/isolation.md § Phase 9`.
+
+**Seed contract (demo).** The demo coordinator user `coord.a@vigil.example` is **seeded** with the
+notification email `ramezms218@gmail.com` set on that user record. This is **seed data on a single
+user row — NOT a hardcoded global default constant in application code**; the personal address must
+never appear as a committed code constant or a global config default. Production recipients come
+the same way: from each user's own `notification_email` on their record (never from a secret, never
+from code).

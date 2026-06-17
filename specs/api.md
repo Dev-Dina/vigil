@@ -83,6 +83,32 @@ class MeOut(BaseModel):
     scope: list[ScopeTuple]
 ```
 
+### me (`/me`) — per-user notification settings (Phase 9)
+A user manages their OWN notification preferences. Used by the Phase-9 clinical-ops loop to route
+the PII-free serious-risk doorbell email to the user's chosen address.
+| Method · Path | Request | Response | Notes |
+|---|---|---|---|
+| `GET /me/notification-email` | — (bearer) | `NotificationEmailOut` | the caller's own notification email (null if unset) |
+| `PUT /me/notification-email` | `NotificationEmailIn` | `NotificationEmailOut` | set/update/clear the CALLER's OWN notification email; audited |
+
+```python
+class NotificationEmailIn(BaseModel):
+    notification_email: EmailStr | None        # None clears it; defaults UNSET per user
+class NotificationEmailOut(BaseModel):
+    user_id: str
+    notification_email: EmailStr | None
+```
+
+- A user may set ONLY their own `notification_email` (the field is on the `user` record,
+  `/specs/domain.md`); there is no admin path to set another user's address here. Every change is
+  audited.
+- The address is used solely as a **recipient** of the PII-free doorbell email; it is NEVER a
+  secret and is read from the user record at routing time — never from Vault, never a code
+  constant (`/specs/isolation.md § Phase 9`, `/specs/infra.md § Phase 9 notification egress`).
+- **Recipient resolution is scope-bound (sacred):** a serious-risk crossing routes only to the
+  notification emails of users whose scope COVERS the participant's site
+  (`/specs/domain.md § Notification routing (Phase 9)`, `/specs/isolation.md § Phase 9`).
+
 ### cohort (`/cohort`) — ranked triage list (scope-filtered, coded data only)
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
@@ -111,6 +137,12 @@ class CohortSummary(BaseModel):
     by_band: dict[Literal["high", "medium", "low"], int]
     mean_risk: float
 ```
+
+**Phase 9 — at-risk view (no new endpoint).** The Phase-9 at-risk surface is
+`GET /cohort?risk_band=high&sort=risk_desc`. `CohortQuery` already declares `risk_band` and `sort`;
+the cohort service currently ignores them and 9.2 wires the `risk_band` filter + honors
+`sort=risk_desc` server-side (scope-bound exactly as today via RLS + `scope_filter`). See
+`/specs/dashboard.md § At-risk surface (Phase 9)`.
 
 ### participants (`/participants`) — detail, factors, interventions
 | Method · Path | Request | Response | Notes |

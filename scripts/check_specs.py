@@ -47,6 +47,7 @@ REQUIRED: dict[str, list[str]] = {
         "## MUST NOT touch",
         "## Proof obligation",
         "## Phase 7 ratified decisions",
+        "## Phase 9 — clinical-ops egress + recipient routing",
     ],
     "data.md": [
         "## Decisions (fixed)",
@@ -54,7 +55,12 @@ REQUIRED: dict[str, list[str]] = {
         "## Synthetic cohort",
         "## Features",
     ],
-    "domain.md": ["## Decisions (fixed)", "## Roles", "## Tenancy rules"],
+    "domain.md": [
+        "## Decisions (fixed)",
+        "## Roles",
+        "## Tenancy rules",
+        "## Notification routing (Phase 9)",
+    ],
     "api.md": ["## Decisions (fixed)", "## JWT claim shape", "## Endpoints"],
     "rag.md": [
         "## Decisions (fixed)",
@@ -67,7 +73,11 @@ REQUIRED: dict[str, list[str]] = {
         "## Evaluation set",
         "## Done-when",
     ],
-    "infra.md": ["## Decisions (fixed)", "## Topology"],
+    "infra.md": [
+        "## Decisions (fixed)",
+        "## Topology",
+        "## Phase 9 notification egress",
+    ],
     "observability.md": [
         "## Decisions (fixed)",
         "## message_events",
@@ -83,6 +93,7 @@ REQUIRED: dict[str, list[str]] = {
         "## Engagement (visit trajectory) input",
         "## Demo-scope boundary",
         "## Leakage-test invariants",
+        "## Phase 9 — clinical-ops loop",
     ],
     "dashboard.md": [
         "## Decisions (fixed)",
@@ -90,6 +101,7 @@ REQUIRED: dict[str, list[str]] = {
         "## Role-scoped rendering",
         "## Demo loop",
         "## Synthetic data disclosure",
+        "## At-risk surface (Phase 9)",
     ],
     "routing.md": [
         "## Decisions (fixed)",

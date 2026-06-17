@@ -172,6 +172,35 @@ element on every surface that shows a synthetic score. Any design that renders a
 score without the disclosure (e.g. a print view, an export, a summary card) violates this
 spec and must be fixed before the surface ships.
 
+## At-risk surface (Phase 9)
+
+The Phase-9 clinical-ops at-risk surface is **the system** (the email is only a doorbell — see
+`/specs/isolation.md § Phase 9`). It is built by **EXTENDING the existing `/cohort` endpoint, NOT
+a new endpoint:**
+
+- **The at-risk view = `GET /cohort?risk_band=high&sort=risk_desc`.** `CohortQuery` already
+  declares `risk_band` and `sort` (`/specs/api.md § cohort`), but the cohort service currently
+  **ignores** them — 9.2 wires the `risk_band` filter and honors `sort=risk_desc` server-side
+  (the dashboard renders the API order without re-sorting, per § Decisions). No new route.
+- **Scope-bound (SEC-1, inherited).** The at-risk list runs through the same RLS + `scope_filter`
+  narrowing as every cohort read (`cohort_service` → `scope_filter.participant_visible`): a
+  coordinator sees only **their own site's** at-risk participants. This is the existing cross-site
+  guarantee; no new scoping path is introduced.
+- **Coded data only.** Rows are coded ids; identity (`coded_ref`) is surfaced ONLY to site roles,
+  exactly as the per-participant panel already does. No identifiable data is added.
+- **What it shows.** Per at-risk participant: the **reasons** (`top_factors`, now REAL model
+  attributions per `/specs/scoring.md § Phase 9`), the **risk trajectory** (the existing
+  `GET /participants/{id}/risk/history` sparkline — wiring the trend the watchlist currently
+  stubs), and the **recommended protocol actions** (9.3 — static protocol guidance, explicitly
+  distinct from model `reasons`; never presented as a model attribution).
+- **Synthetic banner extends here.** The non-dismissible synthetic disclosure (§ Synthetic data
+  disclosure) is mandatory on the at-risk surface for any synthetic-derived row — same contract as
+  the watchlist row badge and the per-participant panel banner.
+
+The at-risk participant data lives **behind authentication**; it is reached only by logging in to
+this surface. It is NEVER placed in the email (the email is a PII-free deep-link doorbell, see
+`/specs/isolation.md § Phase 9` and `/specs/api.md § me`).
+
 ## Out of scope (roadmap only)
 The following are explicitly excluded from this spec. They appear in ROADMAP.md and will
 be specced in a future phase before implementation:

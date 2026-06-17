@@ -431,3 +431,63 @@ This invariant is a B2a-build obligation; the tests come in B2a-build (B2a-1).
 - `planned_duration_days` is trial-level; it carries no companion flag and is never added to
   the `participant` table. Any test checking for `planned_duration_days_baseline_imputed` on
   `participant` MUST NOT exist.
+
+## Phase 9 — clinical-ops loop (contract)
+
+Phase 9 is the clinical-operations loop: a serious-risk crossing populates a scope-bound in-app
+at-risk surface (reasons + trajectory + recommended actions) and rings a minimal PII-free email
+doorbell. It is framed as a **CAPABILITY DEMONSTRATION on labeled-synthetic data — NEVER a clinical
+finding.** The sequence/trajectory signal is a synthetic capability proof; every Phase-9 output
+carries the synthetic-demonstration label where the signal is synthetic (see § below +
+`/specs/dashboard.md § Synthetic data disclosure`). Gate order: 9.1 real `top_factors` →
+9.2 crossing-detection + scope-bound at-risk `/cohort` → 9.3 recommended actions → 9.4 at-risk
+frontend → 9.5 per-user notification email + scope-bound routing → 9.6 email notifier
+(SMTP/Vault/egress/CI-stub) → 9.7 synthetic trajectory demo (done-when).
+
+### Serious-risk threshold (fixed)
+The **serious-risk threshold is the existing HIGH band (`risk_score > 0.6`)** — there is NO new
+threshold and no new band. A **serious-risk crossing** is a champion-point transition from a
+non-`high` band to `high` across a participant's champion-of-record history (the latest champion
+point is `high` and the immediately-prior champion point was `medium`/`low`/absent). This reuses
+the band logic already fixed in § Scoring contract; a threshold change still requires a model-card
+update + version bump.
+
+### Reasons / `top_factors` = REAL model attributions (fixed; 9.1 implements)
+`top_factors` / `reasons` MUST be **genuine attributions from the scoring model**, never invented
+narrative:
+- For the **structural** model: SHAP / feature-importance over the model's actual feature matrix.
+- For the **sequence (LSTM)** model: the model's actual sequence/static features (gradient or
+  attention attribution over the real inputs), not a hand-authored story.
+- They are honestly labeled as **model attributions**; on synthetic data they reflect the
+  **planted synthetic signal** and are labeled `synthetic` (the score's `synthetic` flag already
+  governs this). 9.1 replaces today's empty `top_factors=[]` / `reasons=[]` writeback (the worker
+  currently writes empty lists) with real attributions, under the same champion/shadow and
+  leakage discipline as the score itself.
+- **FORBIDDEN:** hand-written or rule-invented clinical reasons unattached to the model's
+  computation. A reason that does not trace to the model's attribution of its own inputs is a
+  spec violation — it would fabricate a clinical rationale the model never produced. The
+  recommended-actions layer (9.3, `/specs/dashboard.md`) is the place for protocol *guidance*; it
+  is explicitly distinct from `reasons` and is never presented as a model attribution.
+
+### Crossing detection — worker-side, idempotent (fixed; 9.2/9.5/9.6 implement)
+Crossing detection runs **in the scoring worker, immediately after the score writeback** (the
+worker has just appended the new champion point and can read the prior champion-of-record band, so
+no separate scan service is needed). The detection is **recorded idempotently**: a retried worker
+job (the writeback APPENDS and is not upsert-idempotent — see § Writeback / § Execution model)
+MUST NOT produce a second crossing record or a second email for the same transition.
+
+### Crossing dedupe (fixed)
+A serious-risk crossing fires the notification **ONCE on the non-`high` → `high` transition**. It
+does **NOT** re-fire on every subsequent rescore while the participant remains `high` (only a new
+non-`high` → `high` transition fires again). Dedupe keys on the **transition** (a durable
+per-participant crossing marker), and is idempotent so a retried job never double-fires. The
+in-app `high`-crossing alert already specced in `/specs/dashboard.md § Demo loop` is the UI face of
+the same transition; the email is the out-of-band doorbell for it.
+
+### Synthetic provenance on every Phase-9 output (fixed)
+The synthetic flag (`participant_score.synthetic`, already propagated end-to-end) governs every
+Phase-9 surface: the at-risk list, the per-participant panel, any report, and the **email body**
+all carry the synthetic-demonstration label where the signal is synthetic. The non-dismissible
+banner contract from `/specs/dashboard.md § Synthetic data disclosure` extends to the at-risk
+surface and the email. A Phase-9 output that renders a synthetic-derived crossing without the
+disclosure is a spec violation.

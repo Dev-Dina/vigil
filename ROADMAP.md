@@ -138,6 +138,24 @@ Docker Compose dev · deploy/k8s (Deployments/Services/Ingress/Config/Secrets/Jo
 
 ---
 
+## Phase 9 — Clinical-ops loop (capability demonstration on labeled-synthetic data)  [ ]
+The serious-risk crossing → scope-bound in-app at-risk surface (reasons + trajectory + recommended
+actions) + a minimal PII-FREE email doorbell. Framed as a CAPABILITY DEMONSTRATION, never a
+clinical finding; every output labels the signal synthetic. Real-app only — does NOT touch the
+public Guide; weakens no isolation/sacred invariant.
+**Done when:** a synthetic event sequence shifts a participant's trajectory across the serious
+threshold; the crossing populates the scope-bound at-risk surface with REAL model-attribution
+reasons + recommended actions; a PII-free deep-link email is sent (stubbed in CI); cross-tenant +
+cross-site (recipient-routing) tests green; Guide isolation untouched.
+Gate order: **9.1** real `top_factors` (replace the empty-`[]` writeback with genuine model
+attributions) → **9.2** crossing-detection (worker-side, idempotent, deduped) + scope-bound at-risk
+`/cohort?risk_band=high&sort=risk_desc` → **9.3** recommended actions (protocol guidance, distinct
+from model reasons) → **9.4** at-risk frontend surface (reuse triage/participant; wire the
+`/risk/history` sparkline) → **9.5** per-user notification email field + `/me` settings +
+scope-bound routing (sacred) → **9.6** email notifier (Gmail SMTP/Vault/allow-list/CI-stub) →
+**9.7** synthetic trajectory demo (done-when).
+  - [x] **Gate 9.0 — Phase 9 spec reconcile + ratified decisions (2026-06-17)** — SPEC ONLY, no app code. Locked the clinical-ops contract into the specs. **Ratified:** (1) **serious-risk threshold = the existing HIGH band (>0.6)**, no new threshold; a crossing = champion-point transition non-high → high (`scoring.md § Phase 9`). (2) **reasons/`top_factors` = REAL model attributions** (SHAP/feature-importance for structural; actual sequence features for the LSTM), labeled synthetic on synthetic data; **hand-written/rule-invented clinical reasons FORBIDDEN**; 9.1 replaces the current empty-`[]` writeback (`scoring.md § Phase 9`). (3) **at-risk surface = EXTEND `/cohort`** (`?risk_band=high&sort=risk_desc`, currently ignored by the service), NOT a new endpoint; scope-bound via existing SEC-1 `scope_filter`, coded-ids-only (`dashboard.md § At-risk surface`, `api.md § cohort`). (4) **per-user notification email (Option A):** `user.notification_email` (nullable, defaults UNSET, set via `PUT /me/notification-email`); the demo coordinator `coord.a@vigil.example` is **seeded** with `ramezms218@gmail.com` (seed data on that user — NOT a code constant); **scope-bound recipient resolution is SACRED** — a crossing routes ONLY to users whose `Scope.permits` covers the participant's site (a mis-routed PII-free email leaks at-risk EXISTENCE), with an adversarial cross-site test (`domain.md § Notification routing`, `isolation.md § Phase 9`, `api.md § me`). (5) **email body = minimal PII-free doorbell** ("a participant at your site crossed the serious-risk threshold — log in: [deep link]") + synthetic label; no identity/clinical detail/factors; data lives behind auth (`isolation.md § Phase 9`). (6) **Gmail SMTP via stdlib smtplib, Arq job (never inline)**; SMTP host = new app-side allow-listed egress (deny-by-default, like the LLM/Langfuse hosts); App Password in Vault `secret/vigil/notifications/email_password` (+ env shim); recipients from user records (NOT a secret); **CI-stub `VIGIL_EMAIL_STUB` (no real send), live send = run-once manual check, not a CI gate** (`isolation.md § Phase 9`, `infra.md § Phase 9 notification egress`). (7) **crossing dedupe** — fires ONCE on the non-high → high transition, not on every rescore while still high; idempotent (`scoring.md § Phase 9`). (8) **crossing detection worker-side**, right after the writeback (the worker knows the prior champion band), recorded idempotently (`scoring.md § Phase 9`). (9) **synthetic label on EVERY Phase-9 output** (at-risk surface, reports, email) — the non-dismissible banner contract extends here (`scoring.md`/`dashboard.md`). Registered 5 new `##` headings in `check_specs.py` (scoring/dashboard/domain/isolation/infra); existing headings byte-identical; **check_specs PASS (10)**. No app code touched.
+
 ## Open TODO register
 Synced from `TODO(...)` comments in the tree + decisions. (file:line · note)
 - [x] extract.py:153 — RESOLVED 2026-06-05: `--live` run against hosted AACT, snapshot pinned (TODO removed)

@@ -130,3 +130,42 @@ RAG over the approved-docs corpus + the Guide's own file-backed index (incl. rel
 refusal) → 7.3 Guide guardrails + redaction (the owned copy) → **7.4 the isolation-proof suite
 (SACRED — §1 static + §2 behavioral red-team/egress-zero, the 5.4 analog)** → 7.5 landing/demo
 site. Layer-3 NetworkPolicy denial (§3) lands with Phase 8 infra; §1–§2 gate every PR in Phase 7.
+
+## Phase 9 — clinical-ops egress + recipient routing (sacred)
+
+Phase 9 is a **REAL-APP** clinical-ops feature (`/specs/scoring.md § Phase 9`,
+`/specs/dashboard.md § At-risk surface`). It **does NOT touch the public Guide** and weakens NO
+existing isolation/sacred invariant — the Guide's three-layer isolation (§1–§3 above) is untouched.
+Phase 9 introduces its OWN sacred surfaces on the app side: a new outbound egress (SMTP) and a
+scope-bound recipient-routing query.
+
+### Email body — minimal, PII-FREE doorbell (fixed)
+The notification email is a **doorbell, not a data channel.** Its body is exactly:
+> *"A participant at your site has crossed the serious-risk threshold — log in to review:
+> [deep link]."* — plus the **synthetic-demonstration label line** when the signal is synthetic.
+
+It carries **NO participant identity, NO coded id, NO clinical detail, NO risk score, and NO
+reasons/factors.** The deep link points at the authenticated, scope-bound at-risk surface; the
+at-risk data lives behind auth and is reached only by logging in (`/specs/dashboard.md`). A future
+change that puts any participant detail into the email body is a spec violation.
+
+### SMTP egress — allow-listed, deny-by-default (fixed)
+The SMTP host (Gmail SMTP) is a **NEW outbound egress** and is allow-listed deny-by-default, the
+**same pattern** as the LLM/Langfuse hosts (`api.anthropic.com`, `openrouter.ai`, the Langfuse
+host — `/specs/infra.md`). The email is sent via stdlib `smtplib` from an **Arq job, never inline**
+in the request path (like scoring). The App Password lives in **Vault at
+`secret/vigil/notifications/email_password`** (+ a CI env shim); **recipient addresses come from the
+user records (`notification_email`), NEVER from a secret and NEVER a code constant.** CI is
+hermetic: a stub (`VIGIL_EMAIL_STUB`) makes tests send **NO real email and need no credential**.
+The live send is a **run-once manual verification bundled with the other live-keys checks — NOT a
+CI gate.**
+
+### Scope-bound recipient resolution (SACRED)
+A serious-risk crossing routes ONLY to the `notification_email` of user(s) whose scope COVERS the
+participant's `(sponsor_id, trial_id, site_id)` via `Scope.permits` / `ScopeTuple.contains` — the
+same SEC-1 primitive that guards every participant read. A crossing MUST NEVER route to a user
+outside that scope: **even a PII-free email mis-routed to the wrong site leaks the EXISTENCE of an
+at-risk participant at that site.** This gets an **adversarial cross-site test** (crossing at site
+A must not resolve a site-B-only coordinator as a recipient), an extension of the sacred
+cross-tenant + cross-site leakage suite. The user-model/seed half of this contract lives in
+`/specs/domain.md § Notification routing (Phase 9)`.
