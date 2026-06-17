@@ -10,7 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { MetricCard, PulseDivider, StatusDot, type StatusType } from "@/components/vigil"
-import { getDrift, getModels } from "@/lib/stubs"
+import { getDrift, getModels } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
+import { PLATFORM_ROLES } from "@/lib/role-gates"
 import type { DriftPoint, ModelStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
@@ -21,18 +23,39 @@ function healthStatus(h: ModelStatus["health"]): StatusType {
 }
 
 export default function MonitoringPage() {
+  const { me } = useAuth()
   const [models, setModels] = useState<ModelStatus[]>([])
   const [drift, setDrift] = useState<DriftPoint[]>([])
 
+  // Platform/auditor only (the API 403s others — this gate is UX). Non-platform sees a message.
+  const isPlatformRole = me?.role != null && (PLATFORM_ROLES as string[]).includes(me.role)
+
   useEffect(() => {
-    // TODO(phase4/5): wire to GET /monitoring/models
-    getModels().then((page) => setModels(page.items))
-    // TODO(phase4/5): wire to GET /monitoring/drift
-    getDrift().then((page) => setDrift(page.items))
-  }, [])
+    if (!isPlatformRole) return
+    // GET /monitoring/models — champion/challenger/shadow projection (routing_state).
+    getModels()
+      .then((page) => setModels(page.items))
+      .catch(() => setModels([]))
+    // GET /monitoring/drift — honest-empty read surface (no drift computed yet).
+    getDrift()
+      .then((page) => setDrift(page.items))
+      .catch(() => setDrift([]))
+  }, [isPlatformRole])
 
   const champion = models.find((m) => m.role === "champion")
   const breached = drift.filter((d) => d.breached).length
+
+  if (!isPlatformRole) {
+    return (
+      <div className="min-h-screen bg-background">
+        <main className="mx-auto max-w-7xl px-6 py-16">
+          <p className="text-muted-foreground">
+            This view is available only to platform and auditor roles.
+          </p>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,9 +148,19 @@ export default function MonitoringPage() {
 
         <PulseDivider />
 
-        {/* Drift signals — GET /monitoring/drift (DriftPoint) */}
+        {/* Drift signals — GET /monitoring/drift (DriftPoint). HONEST-EMPTY: drift is not computed
+            or stored yet (real drift is a deferred TODO); render the empty state, NOT a chart. */}
         <div className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-foreground">Drift Signals</h2>
+          {drift.length === 0 ? (
+            <div className="rounded-lg border-[0.5px] border-border bg-card p-6">
+              <p className="text-sm text-muted-foreground">
+                No drift data computed yet. Drift monitoring (rolling PSI / AUC / prediction-drift)
+                is deferred future work — this surface stays honestly empty rather than showing
+                fabricated signals.
+              </p>
+            </div>
+          ) : (
           <div className="overflow-hidden rounded-lg border-[0.5px] border-border">
             <Table>
               <TableHeader>
@@ -188,6 +221,7 @@ export default function MonitoringPage() {
               </TableBody>
             </Table>
           </div>
+          )}
         </div>
       </main>
     </div>

@@ -5,12 +5,16 @@ import { usePathname, useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
+import { PLATFORM_ROLES } from "@/lib/role-gates"
 
+// `platformOnly` links (monitoring/cost/observability) are platform/auditor-only — the API 403s
+// others; hiding them from the nav is the UX layer of that gate (defence-in-depth, not the guard).
 const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/triage", label: "Triage" },
-  { href: "/monitoring", label: "Monitoring" },
-  { href: "/costs", label: "Costs" },
+  { href: "/monitoring", label: "Monitoring", platformOnly: true },
+  { href: "/costs", label: "Costs", platformOnly: true },
+  { href: "/observability", label: "Observability", platformOnly: true },
 ]
 
 function isActive(pathname: string, href: string): boolean {
@@ -27,6 +31,9 @@ export function AppNav() {
     logout()
     router.push("/login")
   }
+
+  const isPlatformRole = me?.role != null && (PLATFORM_ROLES as string[]).includes(me.role)
+  const navItems = NAV.filter((item) => !item.platformOnly || isPlatformRole)
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b-[0.5px] border-border bg-card px-6">
@@ -62,7 +69,7 @@ export function AppNav() {
         </Link>
 
         <nav className="flex items-center gap-6">
-          {NAV.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}

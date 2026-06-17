@@ -189,13 +189,46 @@ export interface DriftPoint {
   ts: string
 }
 
+// Citation ref carried in retrieved_chunks (specs/rag.md) — already coded, no PII.
+export interface Citation {
+  source_type?: string
+  source_id?: string
+  locator?: string
+  [key: string]: unknown
+}
+
+// Full 6.1 MessageEventOut shape (api.md § monitoring) — ALREADY redacted; no raw column exists.
 export interface MessageEventOut {
+  id: string
   conversation_id: string
   request_id: string
+  sponsor_id: string | null // null = Guide/platform turn (cross-tenant-by-role)
   role_or_guest_scope: string
+  surface: "local_assistant" | "public_guide"
+  route_or_agent: string
   guardrail_decision: "allowed" | "blocked"
+  status: string
   llm_provider_model: string
   latency_ms: number
-  status: string
+  token_cost_estimate: number
+  retrieved_chunks: Citation[] // debug-retrieval duty
+  redacted_user_msg: string // redacted at rest; NO raw column exists
+  redacted_assistant_msg: string
   ts: string
+}
+
+// 6.2 cost rollups — from REAL persisted usage only (honest-zero, never fabricated).
+export interface CostRollup {
+  surface: string
+  llm_provider_model: string
+  turns: number
+  total_cost: number
+  total_latency_ms: number
+  avg_latency_ms: number
+}
+
+export interface CostReport {
+  total_turns: number
+  total_cost: number
+  rollups: CostRollup[]
 }

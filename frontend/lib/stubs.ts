@@ -6,14 +6,9 @@
 import type {
   AssistantTurn,
   ConversationOut,
-  DriftPoint,
   JobAccepted,
   JobPending,
-  ModelStatus,
-  Page,
 } from "./types"
-
-const ISO = (d: string) => new Date(d).toISOString()
 
 // ---- auth ----
 // Auth is wired to the real backend (Wire-1): POST /auth/login + GET /auth/me +
@@ -27,75 +22,8 @@ const ISO = (d: string) => new Date(d).toISOString()
 // or intervention stub remains here. Monitoring/assistant stubs below stay until later gates.
 
 // ---- monitoring ----
-// TODO(phase4/5): wire to GET /monitoring/models
-export async function getModels(): Promise<Page<ModelStatus>> {
-  const items: ModelStatus[] = [
-    {
-      model_name: "retention-xgb",
-      version: "v3.2.1",
-      role: "champion",
-      regime: "phase_iii_cardio",
-      health: "healthy",
-      promoted_at: ISO("2026-05-12T00:00:00Z"),
-    },
-    {
-      model_name: "retention-tabnet",
-      version: "v0.9.4",
-      role: "challenger",
-      regime: "phase_iii_cardio",
-      health: "degraded",
-      promoted_at: null,
-    },
-    {
-      model_name: "retention-lstm",
-      version: "v1.1.0",
-      role: "shadow",
-      regime: "phase_ii_onco",
-      health: "fallback",
-      promoted_at: null,
-    },
-  ]
-  return { items, next_cursor: null, total: items.length }
-}
-
-// TODO(phase4/5): wire to GET /monitoring/drift
-export async function getDrift(): Promise<Page<DriftPoint>> {
-  const items: DriftPoint[] = [
-    {
-      model_name: "retention-xgb",
-      metric: "psi_risk_score",
-      value: 0.12,
-      threshold: 0.2,
-      breached: false,
-      ts: ISO("2026-06-04T00:00:00Z"),
-    },
-    {
-      model_name: "retention-xgb",
-      metric: "auc_rolling_7d",
-      value: 0.71,
-      threshold: 0.75,
-      breached: true,
-      ts: ISO("2026-06-04T00:00:00Z"),
-    },
-    {
-      model_name: "retention-tabnet",
-      metric: "psi_feature_adherence",
-      value: 0.27,
-      threshold: 0.2,
-      breached: true,
-      ts: ISO("2026-06-04T00:00:00Z"),
-    },
-    {
-      model_name: "retention-lstm",
-      metric: "prediction_drift",
-      value: 0.08,
-      threshold: 0.15,
-      breached: false,
-      ts: ISO("2026-06-04T00:00:00Z"),
-    },
-  ]
-  return { items, next_cursor: null, total: items.length }
-}
+// Monitoring is wired to the real platform/auditor backend (Gate 6.4): GET /monitoring/models,
+// /drift (honest-empty), /cost, and /messages via lib/api.ts. No monitoring stub remains here.
 
 // ---- assistant (async 202 + poll) ----
 // TODO(phase4/5): wire to POST /assistant/conversations

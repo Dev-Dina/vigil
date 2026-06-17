@@ -11,11 +11,13 @@ import type {
   CohortRow,
   CohortSummary,
   ConversationOut,
+  CostReport,
   DriftPoint,
   InterventionIn,
   InterventionOut,
   JobAccepted,
   JobPending,
+  MessageEventOut,
   ModelStatus,
   Page,
   ParticipantDetail,
@@ -165,7 +167,54 @@ export async function getModels(): Promise<Page<ModelStatus>> {
 }
 
 export async function getDrift(): Promise<Page<DriftPoint>> {
+  // Honest-empty read surface (6.2): items === [] until real drift computation exists.
   return apiFetch<Page<DriftPoint>>("/api/v1/monitoring/drift")
+}
+
+export interface MessageQuery {
+  surface?: string
+  conversation_id?: string
+  role_or_guest_scope?: string
+  guardrail_decision?: string
+  status?: string
+  since?: string
+  until?: string
+  limit?: number
+}
+
+export async function getMessages(
+  params?: MessageQuery,
+): Promise<Page<MessageEventOut>> {
+  // GET /monitoring/messages — platform/auditor only (403 otherwise; the API is the real guard).
+  const qs = new URLSearchParams()
+  if (params?.surface) qs.set("surface", params.surface)
+  if (params?.conversation_id) qs.set("conversation_id", params.conversation_id)
+  if (params?.role_or_guest_scope) qs.set("role_or_guest_scope", params.role_or_guest_scope)
+  if (params?.guardrail_decision) qs.set("guardrail_decision", params.guardrail_decision)
+  // The 6.1 endpoint names this query param `status_filter` (avoids shadowing fastapi.status).
+  if (params?.status) qs.set("status_filter", params.status)
+  if (params?.since) qs.set("since", params.since)
+  if (params?.until) qs.set("until", params.until)
+  if (params?.limit != null) qs.set("limit", String(params.limit))
+  const query = qs.toString() ? `?${qs.toString()}` : ""
+  return apiFetch<Page<MessageEventOut>>(`/api/v1/monitoring/messages${query}`)
+}
+
+export interface CostQuery {
+  surface?: string
+  since?: string
+  until?: string
+}
+
+export async function getCost(params?: CostQuery): Promise<CostReport> {
+  // GET /monitoring/cost — platform/auditor only; rollups from REAL persisted usage (honest-zero
+  // until a cost rate is configured), never fabricated.
+  const qs = new URLSearchParams()
+  if (params?.surface) qs.set("surface", params.surface)
+  if (params?.since) qs.set("since", params.since)
+  if (params?.until) qs.set("until", params.until)
+  const query = qs.toString() ? `?${qs.toString()}` : ""
+  return apiFetch<CostReport>(`/api/v1/monitoring/cost${query}`)
 }
 
 // ---------------------------------------------------------------------------
