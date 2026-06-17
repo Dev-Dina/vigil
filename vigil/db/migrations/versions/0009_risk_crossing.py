@@ -66,9 +66,7 @@ def upgrade() -> None:
         sa.Column("risk_band", sa.Text, nullable=False),
         sa.Column("prior_band", sa.Text, nullable=False),
         sa.Column("synthetic", sa.Boolean, nullable=False, server_default=sa.true()),
-        sa.Column(
-            "notified", sa.Boolean, nullable=False, server_default=sa.false()
-        ),
+        sa.Column("notified", sa.Boolean, nullable=False, server_default=sa.false()),
         sa.Column(
             "detected_at",
             sa.DateTime(timezone=True),

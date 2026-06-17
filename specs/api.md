@@ -169,6 +169,12 @@ class RiskExplanation(BaseModel):
     horizon_days: int = 28
     factors: list[FactorContribution]       # signed feature contributions, sorted by |impact|
     model_version: str
+    recommended_actions: list[SuggestedAction] = []  # Phase-9: operational coordinator next-steps
+    synthetic: bool = True                  # actions labelled synthetic where the risk is synthetic
+class SuggestedAction(BaseModel):           # operational next-step, NOT clinical advice (Gate 9.3)
+    action: str                             # from the approved operational catalog only
+    intervention_kind: str                  # pre-fills the audited POST /interventions (call|...)
+    factor: str | None = None               # the attribution driver it responds to (null=baseline)
 class RiskHistoryPoint(BaseModel):
     risk_score: float
     risk_band: Literal["high", "medium", "low"]

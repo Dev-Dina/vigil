@@ -50,12 +50,29 @@ class FactorContribution(BaseModel):
     contribution: float  # signed; sign encodes direction
 
 
+class SuggestedAction(BaseModel):
+    """An operational coordinator next-step (Phase 9 / Gate 9.3) — NOT clinical advice.
+
+    A suggestion only: acting on it goes through the audited POST /interventions; ``intervention_kind``
+    pre-fills that log. ``factor`` is the attribution driver it responds to (null = baseline).
+    """
+
+    action: str
+    intervention_kind: str
+    factor: str | None = None
+
+
 class RiskExplanation(BaseModel):
     participant_id: str
     risk_score: float
     horizon_days: int = 28
     factors: list[FactorContribution]
     model_version: str
+    # Operational protocol next-steps mapped from band + factors (suggestions; not clinical advice).
+    recommended_actions: list[SuggestedAction] = []
+    synthetic: bool = (
+        True  # the actions are labelled synthetic where the risk is synthetic
+    )
 
 
 class RiskHistoryPoint(BaseModel):
@@ -182,6 +199,15 @@ async def get_risk(
             for f in view.factors
         ],
         model_version=view.model_version,
+        recommended_actions=[
+            SuggestedAction(
+                action=a.action,
+                intervention_kind=a.intervention_kind,
+                factor=a.factor,
+            )
+            for a in view.recommended_actions
+        ],
+        synthetic=view.synthetic,
     )
 
 

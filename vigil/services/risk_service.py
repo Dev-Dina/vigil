@@ -20,7 +20,7 @@ from vigil.db.models import Participant
 from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories.session import platform_session, scoped_session
-from vigil.services import scope_filter
+from vigil.services import recommended_actions, scope_filter
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +35,9 @@ class RiskView:
     risk_score: float
     factors: list[FactorView]
     model_version: str
+    # Phase-9 (9.3): operational coordinator next-steps mapped from band + factors; NOT clinical.
+    recommended_actions: list[recommended_actions.RecommendedAction]
+    synthetic: bool  # provenance — the actions are labelled synthetic where the risk is synthetic
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,11 +121,18 @@ def get_participant_risk(scope: Scope, participant_id: str) -> RiskView | None:
             f"champion-only surfacing breached: {row.model_version} not a champion"
         )
 
+    factors = _factors_from_reasons(row.reasons)
     return RiskView(
         participant_id=str(pid),
         risk_score=row.risk_score,
-        factors=_factors_from_reasons(row.reasons),
+        factors=factors,
         model_version=row.model_version,
+        # Operational next-steps from the band + the model's OWN attribution factors (transparent
+        # static mapping; not clinical advice). Suggestions only — acting goes through /interventions.
+        recommended_actions=recommended_actions.recommend(
+            row.risk_band, [f.feature for f in factors]
+        ),
+        synthetic=row.synthetic,
     )
 
 
