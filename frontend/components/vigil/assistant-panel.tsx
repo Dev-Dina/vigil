@@ -1,11 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { X, Send, MessageSquare, Sparkles } from "lucide-react"
+import { X, Send, MessageSquare } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { openConversation, postMessage, pollJob } from "@/lib/stubs"
-
-type AgentType = "retention" | "report" | "operations"
+import { openConversation, postMessage, pollJob } from "@/lib/api"
 
 interface ToolCall {
   text: string
@@ -16,30 +14,11 @@ interface Message {
   id: string
   role: "user" | "assistant"
   content: string
-  agent?: AgentType
+  // Honest states: a blocked turn renders its refusal content; an error is never a fake answer.
+  blocked?: boolean
+  isError?: boolean
   toolCalls?: ToolCall[]
   timestamp?: string
-}
-
-const agentConfig: Record<AgentType, { label: string; color: string }> = {
-  retention: { label: "Retention agent", color: "bg-status-calm/10 text-status-calm" },
-  report: { label: "Report agent", color: "bg-status-watch/10 text-status-watch" },
-  operations: { label: "Operations agent", color: "bg-[#15323A]/10 text-foreground" },
-}
-
-function AgentChip({ agent }: { agent: AgentType }) {
-  const config = agentConfig[agent]
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium",
-        config.color
-      )}
-    >
-      <Sparkles className="w-3 h-3" />
-      {config.label}
-    </span>
-  )
 }
 
 function ToolCallChip({ tool }: { tool: ToolCall }) {
@@ -73,11 +52,13 @@ function UserMessage({ content }: { content: string }) {
 
 function AssistantMessage({
   content,
-  agent,
+  blocked,
+  isError,
   toolCalls,
 }: {
   content: string
-  agent?: AgentType
+  blocked?: boolean
+  isError?: boolean
   toolCalls?: ToolCall[]
 }) {
   // Parse content to render monospace numbers
@@ -98,7 +79,11 @@ function AssistantMessage({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {agent && <AgentChip agent={agent} />}
+      {blocked && (
+        <span className="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-status-watch/10 text-status-watch">
+          Refused by guardrail
+        </span>
+      )}
       {toolCalls && toolCalls.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-1">
           {toolCalls.map((tool, i) => (
@@ -106,64 +91,35 @@ function AssistantMessage({
           ))}
         </div>
       )}
-      <div className="max-w-[95%] bg-card border border-border px-3 py-2 rounded-lg rounded-bl-sm text-sm text-foreground shadow-sm">
-        {renderContent(content)}
-      </div>
+      {content && (
+        <div
+          className={cn(
+            "max-w-[95%] px-3 py-2 rounded-lg rounded-bl-sm text-sm shadow-sm border",
+            isError
+              ? "bg-status-alert/5 border-status-alert/30 text-foreground"
+              : "bg-card border-border text-foreground"
+          )}
+        >
+          {renderContent(content)}
+        </div>
+      )}
     </div>
   )
 }
-
-const sampleConversation: Message[] = [
-  {
-    id: "1",
-    role: "user",
-    content: "Why is participant P-0412 flagged as high risk?",
-    timestamp: "2:34 PM",
-  },
-  {
-    id: "2",
-    role: "assistant",
-    agent: "retention",
-    toolCalls: [
-      { text: "pulling participant P-0412", status: "complete" },
-      { text: "analyzing risk factors", status: "complete" },
-    ],
-    content:
-      "Participant P-0412 has a risk score of 78%, placing them in the at-risk category. The primary concerns are: they missed their last 2 scheduled check-ins, reported increased side effects during week 6, and their engagement score dropped from 85% to 42% over the past 14 days. Travel distance to the site (47 miles) may also be a contributing factor.",
-    timestamp: "2:34 PM",
-  },
-  {
-    id: "3",
-    role: "user",
-    content: "Can you draft a summary report of at-risk participants this week?",
-    timestamp: "2:35 PM",
-  },
-  {
-    id: "4",
-    role: "assistant",
-    agent: "report",
-    toolCalls: [
-      { text: "querying at-risk cohort", status: "complete" },
-      { text: "drafting summary", status: "complete" },
-    ],
-    content:
-      "Weekly At-Risk Summary (Week 24): 12 participants are currently flagged at-risk, up from 8 last week. Top reasons: missed appointments (5), reported side effects (4), and declining engagement (3). Recommended actions: schedule outreach calls for 7 participants, consider protocol adjustment review for 2. Average risk score for flagged group: 71%.",
-    timestamp: "2:36 PM",
-  },
-]
 
 interface AssistantPanelProps {
   className?: string
 }
 
-// Poll interval for the stubbed job poller (ms).
+// Poll cadence + cap for the async turn (api.md: POST 202 -> poll GET /assistant/jobs/{id}).
 const POLL_INTERVAL_MS = 600
+const MAX_POLLS = 60 // ~36s before surfacing an honest timeout error
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export function AssistantPanel({ className }: AssistantPanelProps) {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [messages, setMessages] = React.useState<Message[]>(sampleConversation)
+  const [messages, setMessages] = React.useState<Message[]>([])
   const [input, setInput] = React.useState("")
   const [sending, setSending] = React.useState(false)
   // Conversation id is opened lazily on first send and reused thereafter.
@@ -180,8 +136,8 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     }
   }, [isOpen, messages])
 
-  // Async flow per api.md: POST message -> 202 JobAccepted, then poll
-  // GET /assistant/jobs/{job_id} until an AssistantTurn (never inline).
+  // Async flow per api.md: POST a message -> 202 JobAccepted, then poll
+  // GET /assistant/jobs/{job_id} until an AssistantTurn (the agent never runs inline).
   const handleSend = async () => {
     const content = input.trim()
     if (!content || sending) return
@@ -199,28 +155,32 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
     const pendingMessage: Message = {
       id: pendingId,
       role: "assistant",
-      agent: "retention",
-      toolCalls: [{ text: "enqueuing request", status: "running" }],
+      toolCalls: [{ text: "working…", status: "running" }],
       content: "",
     }
     setMessages((prev) => [...prev, userMessage, pendingMessage])
 
     try {
-      // TODO(phase4/5): wire to POST /assistant/conversations
-      if (!conversationIdRef.current) {
+      // Reuse the conversation across turns; open one lazily on the first send.
+      let conversationId = conversationIdRef.current
+      if (!conversationId) {
         const conv = await openConversation()
-        conversationIdRef.current = conv.conversation_id
+        conversationId = conv.conversation_id
+        conversationIdRef.current = conversationId
       }
-      const conversationId = conversationIdRef.current
 
-      // TODO(phase4/5): wire to POST /assistant/conversations/{conversation_id}/messages (202)
       const job = await postMessage(conversationId, { content })
 
-      // TODO(phase4/5): wire to GET /assistant/jobs/{job_id} — poll until AssistantTurn
+      // Poll until the turn completes (or we hit the cap → honest timeout).
       let turn = await pollJob(job.job_id, conversationId)
+      let polls = 0
       while ("status" in turn) {
+        if (polls >= MAX_POLLS) {
+          throw new Error("assistant turn timed out")
+        }
         await sleep(POLL_INTERVAL_MS)
         turn = await pollJob(job.job_id, conversationId)
+        polls += 1
       }
 
       const finalTurn = turn // narrowed to AssistantTurn
@@ -230,7 +190,8 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
             ? {
                 ...m,
                 content: finalTurn.content,
-                toolCalls: [{ text: "answer ready", status: "complete" }],
+                blocked: finalTurn.guardrail_decision === "blocked",
+                toolCalls: undefined,
                 timestamp: new Date(finalTurn.created_at).toLocaleTimeString([], {
                   hour: "numeric",
                   minute: "2-digit",
@@ -240,10 +201,16 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
         ),
       )
     } catch {
+      // Honest error state — never a fabricated answer.
       setMessages((prev) =>
         prev.map((m) =>
           m.id === pendingId
-            ? { ...m, content: "Something went wrong. Please try again.", toolCalls: [] }
+            ? {
+                ...m,
+                content: "Couldn't reach the assistant. Please try again.",
+                isError: true,
+                toolCalls: undefined,
+              }
             : m,
         ),
       )
@@ -315,19 +282,29 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-background">
-          {messages.map((message) => (
-            <div key={message.id}>
-              {message.role === "user" ? (
-                <UserMessage content={message.content} />
-              ) : (
-                <AssistantMessage
-                  content={message.content}
-                  agent={message.agent}
-                  toolCalls={message.toolCalls}
-                />
-              )}
+          {messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center px-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Ask about participants, reports, or operations. Answers are grounded and
+                cited; the assistant refuses anything it can&apos;t ground.
+              </p>
             </div>
-          ))}
+          ) : (
+            messages.map((message) => (
+              <div key={message.id}>
+                {message.role === "user" ? (
+                  <UserMessage content={message.content} />
+                ) : (
+                  <AssistantMessage
+                    content={message.content}
+                    blocked={message.blocked}
+                    isError={message.isError}
+                    toolCalls={message.toolCalls}
+                  />
+                )}
+              </div>
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
 

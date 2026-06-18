@@ -2,6 +2,9 @@
 data/raw
 __pycache__/
 *.pyc
+
+# Throwaway local key/connectivity probes — never commit (read secrets from Vault/env at runtime).
+_keytest*
 .venv/
 .ruff_cache/
 .pytest_cache/
