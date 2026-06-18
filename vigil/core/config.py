@@ -84,6 +84,21 @@ class Settings(BaseSettings):
     langfuse_enabled: bool = False
     langfuse_host: str = "https://cloud.langfuse.com"
 
+    # --- notification email / SMTP (Phase 9.6) ---
+    # PII-free serious-risk "doorbell" email, sent from an Arq job (never inline). CI-hermetic:
+    # email_stub defaults TRUE → the StubEmailSender sends NOTHING and needs NO credential (safest
+    # posture; mirrors VIGIL_LLM_STUB/VIGIL_LANGFUSE_ENABLED). The live send is an explicit opt-in
+    # (set VIGIL_EMAIL_STUB=false + the Gmail App Password in Vault). The SMTP host joins the
+    # app-side deny-by-default egress allow-list (specs/isolation.md, specs/infra.md) alongside
+    # api.anthropic.com / openrouter.ai / the Langfuse host. Host/port/sender are non-secret config;
+    # the App Password is the ONLY new secret (Vault vigil/notifications/email_password).
+    email_stub: bool = True
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587  # Gmail SMTP submission (STARTTLS)
+    notify_from_address: str = ""  # the From/login account (non-secret); required for a live send
+    # Base URL of the authenticated app for the at-risk deep link in the email body (no PII).
+    app_base_url: str = "http://localhost:3000"
+
     # --- embeddings (Phase 5) — LOCAL, vendored, OFFLINE (no embedding API, no runtime fetch) ---
     # The single real embedder is sentence-transformers all-MiniLM-L6-v2 (dim 384), loaded from
     # the VENDORED weights in-repo. Relative path binds to the repo root. No lexical fallback.
@@ -122,6 +137,12 @@ class Settings(BaseSettings):
     def langfuse_secret_key(self) -> str:
         """Langfuse secret key. Read only when tracing is enabled + the tracer is built."""
         return self._secrets.get(secret_paths.LANGFUSE_SECRET_KEY)
+
+    @cached_property
+    def notify_email_password(self) -> str:
+        """Gmail App Password for the 9.6 SMTP notifier. Read ONLY when the real SMTP sender is
+        built (email_stub=False); the stub sender never reads it (CI needs no credential)."""
+        return self._secrets.get(secret_paths.NOTIFY_EMAIL_PASSWORD)
 
 
 @lru_cache(maxsize=1)

@@ -43,6 +43,9 @@ jobs:
       # Hermetic tracing: Langfuse OFF in CI → NullTracer, NO Langfuse call/egress, NO key needed
       # (no langfuse SDK import). Tracing is additive/best-effort; real Langfuse is local/demo only.
       VIGIL_LANGFUSE_ENABLED: "false"
+      # Hermetic email (Gate 9.6): stub the SMTP notifier → NO real email, NO credential needed
+      # (no smtplib, no Vault App Password). Live send is a run-once manual check, never a CI gate.
+      VIGIL_EMAIL_STUB: "true"
       # Admin (superuser) DSN runs migrations; the app connects as the least-privilege
       # vigil_app role created by the test harness so RLS actually binds.
       VIGIL_DB_ADMIN_DSN: postgresql+psycopg://vigil:vigil@localhost:55432/vigil

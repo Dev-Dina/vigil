@@ -27,6 +27,7 @@ LLM_API_KEY = "vigil/llm/api_key"  # OpenRouter (fallback provider)
 ANTHROPIC_API_KEY = "vigil/llm/anthropic_api_key"  # Anthropic (primary provider)
 LANGFUSE_PUBLIC_KEY = "vigil/langfuse/public_key"  # Langfuse tracing (Phase 6.3)
 LANGFUSE_SECRET_KEY = "vigil/langfuse/secret_key"  # Langfuse tracing (Phase 6.3)
+NOTIFY_EMAIL_PASSWORD = "vigil/notifications/email_password"  # Gmail App Password (Phase 9.6 SMTP)
 
 
 class SecretNotFoundError(RuntimeError):
@@ -53,6 +54,7 @@ class EnvSecrets:
         ANTHROPIC_API_KEY: "VIGIL_ANTHROPIC_API_KEY",
         LANGFUSE_PUBLIC_KEY: "VIGIL_LANGFUSE_PUBLIC_KEY",
         LANGFUSE_SECRET_KEY: "VIGIL_LANGFUSE_SECRET_KEY",
+        NOTIFY_EMAIL_PASSWORD: "VIGIL_NOTIFY_EMAIL_PASSWORD",
     }
 
     def get(self, name: str) -> str:

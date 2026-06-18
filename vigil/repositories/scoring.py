@@ -216,6 +216,27 @@ def list_crossings_for_participant(
     )
 
 
+def get_crossing(
+    session: Session, crossing_id: uuid.UUID
+) -> RiskCrossing | None:
+    """Load a single crossing by id under the caller's RLS-scoped session (None if out of scope)."""
+    return session.get(RiskCrossing, crossing_id)
+
+
+def mark_crossing_notified(session: Session, crossing_id: uuid.UUID) -> bool:
+    """Flip ``notified`` true for a crossing (Gate 9.6 send-once). Returns False if not visible.
+
+    Called ONLY after a successful email send, so a crossing is notified at most once; a transient
+    SMTP failure leaves it false (the job retries). Runs under the caller's RLS-scoped session.
+    """
+    crossing = session.get(RiskCrossing, crossing_id)
+    if crossing is None:
+        return False
+    crossing.notified = True
+    session.flush()
+    return True
+
+
 def write_score_audit(
     session: Session,
     *,

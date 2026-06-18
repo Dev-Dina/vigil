@@ -712,6 +712,7 @@ async def score_trial(
 
     # 9. Writeback.
     n_scored = 0
+    crossings_to_notify: list[str] = []  # 9.6: enqueue a PII-free doorbell per NEW crossing
     with sponsor_bootstrap_session(sponsor_id) as session:
         from sqlalchemy import update
 
@@ -762,10 +763,31 @@ async def score_trial(
             # no new transition fires; staying high fires nothing). NO email here — that is 9.6.
             pre = prior_band.get(p_snap["id"])  # None when no prior champion point
             if band == "high" and pre != "high":
-                scoring_repo.record_crossing(
+                crossing = scoring_repo.record_crossing(
                     session, score_row=score_row, prior_band=pre
                 )
+                if crossing is not None:
+                    crossings_to_notify.append(str(crossing.id))
             n_scored += 1
+
+    # 9.6 enqueue the PII-free doorbell for each NEW crossing — AFTER the writeback commits (so the
+    # job can load the row), as an Arq job (never inline; like scoring). The send-once guard is the
+    # crossing's `notified` flag, so a best-effort enqueue is safe. A failed enqueue must NOT break
+    # scoring: the crossing is recorded (notified=false) and can be re-driven later.
+    if crossings_to_notify:
+        from vigil.workers.settings import enqueue
+
+        for cid in crossings_to_notify:
+            try:
+                await enqueue(
+                    "send_crossing_notification",
+                    crossing_id=cid,
+                    sponsor_id=sponsor_id,
+                )
+            except Exception:  # noqa: BLE001 - notification enqueue is best-effort, never break scoring
+                log.warning(
+                    "notify.enqueue_failed", extra={"extra": {"crossing_id": cid}}
+                )
 
     # 10. Shadow scoring (B2c): structural GBT runs alongside champion if registered.
     #     Shadow writes participant_score rows ONLY — never touches participant denorm cache.
@@ -887,6 +909,40 @@ async def ping(ctx: dict[str, Any], note: str = "pong") -> dict[str, str]:
     """Trivial job proving the async path end-to-end (enqueue -> worker -> result)."""
     log.info("worker.ping", extra={"extra": {"note": note}})
     return {"status": "ok", "note": note}
+
+
+# ---------------------------------------------------------------------------
+# send_crossing_notification — Gate 9.6 PII-free serious-risk doorbell (SMTP)
+# ---------------------------------------------------------------------------
+
+
+async def send_crossing_notification(
+    ctx: dict[str, Any], *, crossing_id: str, sponsor_id: str
+) -> dict[str, object]:
+    """Send the PII-free doorbell for ONE crossing to its scope-bound recipients, exactly once.
+
+    Thin Arq wrapper over ``notification_service.notify_crossing`` (resolve recipients (9.5) →
+    PII-free body → send → flip ``notified``). A send FAILURE is logged and RE-RAISED so Arq retries
+    (bounded by ``WorkerSettings.max_tries``); ``notified`` is not flipped on failure, so a later
+    try can still deliver. Never inline in the scoring path.
+    """
+    from vigil.services import notification_service
+
+    try:
+        result = notification_service.notify_crossing(
+            crossing_id=crossing_id, sponsor_id=sponsor_id
+        )
+    except Exception:  # noqa: BLE001 - log then re-raise so Arq retries (notified stays false)
+        log.warning(
+            "notify.send_failed",
+            extra={"extra": {"crossing_id": crossing_id, "job_try": ctx.get("job_try")}},
+        )
+        raise
+    log.info(
+        "notify.job_done",
+        extra={"extra": {"crossing_id": crossing_id, **result}},
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

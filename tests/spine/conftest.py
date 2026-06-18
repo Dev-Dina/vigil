@@ -27,6 +27,9 @@ os.environ.setdefault("VIGIL_LLM_STUB", "true")
 # Hermetic tracing: Langfuse OFF so no test makes a Langfuse call (no key, no SDK import, no
 # egress) → NullTracer. Additive/best-effort. Default is already False; set for parity.
 os.environ.setdefault("VIGIL_LANGFUSE_ENABLED", "false")
+# Hermetic email: stub the 9.6 SMTP notifier so no test sends a real email or needs a credential
+# (no smtplib, no Vault App Password) → StubEmailSender. Default is already True; set for parity.
+os.environ.setdefault("VIGIL_EMAIL_STUB", "true")
 
 _ADMIN_DSN = os.environ.get(
     "VIGIL_DB_ADMIN_DSN", "postgresql+psycopg://vigil:vigil@localhost:55432/vigil"
