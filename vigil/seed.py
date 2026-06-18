@@ -445,12 +445,12 @@ def _seed_score(
             site_id=tenant["site"],
             risk_score=0.82 if key == "score_a" else 0.40,
             risk_band="high" if key == "score_a" else "medium",
-            top_factors=["missed_visits", "hba1c_trend", "bmi"]
-            if key == "score_a"
-            else ["missed_calls"],
-            reasons=[{"factor": "missed_visits", "contribution": 0.45}]
-            if key == "score_a"
-            else [{"factor": "missed_calls", "contribution": 0.20}],
+            # Gate 9.7: NO fabricated reasons. top_factors/reasons stay EMPTY until the first
+            # REAL calibrated-champion score (Gate 9.1 attribution) populates them — a seeded
+            # demo row must never surface a hand-authored clinical rationale the model never
+            # produced (specs/scoring.md § Phase 9 honesty rule).
+            top_factors=[],
+            reasons=[],
             model_version="sequence_v1.1:demo",
             model_card_ref="data/models/t2d/model_card.md",
             synthetic=True,
