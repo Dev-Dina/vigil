@@ -154,8 +154,12 @@ def test_calibration_fit_split_disjoint_from_train_and_test() -> None:
 
     assert art["calibration"]["fit_split"] == "val"
     assert val, "calibration fit split (val) is empty"
-    assert val.isdisjoint(test), "LEAK: calibration fit fold overlaps the reported TEST fold"
-    assert val.isdisjoint(train), "LEAK: calibration fit fold overlaps the LSTM's TRAIN fold"
+    assert val.isdisjoint(test), (
+        "LEAK: calibration fit fold overlaps the reported TEST fold"
+    )
+    assert val.isdisjoint(train), (
+        "LEAK: calibration fit fold overlaps the LSTM's TRAIN fold"
+    )
     assert train.isdisjoint(test), "LEAK: train fold overlaps test fold"
 
 
@@ -258,10 +262,14 @@ def test_attribution_real_and_leakage_safe_on_calibrated_champion() -> None:
     art = _load_artifact()
     scorer = LSTMScorer(art)
     pid = "22222222-2222-2222-2222-222222222222"
-    attrib = scorer.attributions(pd.DataFrame([_static_row(pid)]), _heavy_trajectory(pid))[0]
+    attrib = scorer.attributions(
+        pd.DataFrame([_static_row(pid)]), _heavy_trajectory(pid)
+    )[0]
 
     names = [r["feature"] for r in attrib["reasons"]]
-    assert names, "calibrated champion produced no attribution for an observed trajectory"
+    assert names, (
+        "calibrated champion produced no attribution for an observed trajectory"
+    )
     assert set(names) <= set(SEQ_NUMERIC), f"reason features not model inputs: {names}"
     assert_no_outcome_features(names)  # must not raise
     assert "miss_probability" not in names

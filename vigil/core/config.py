@@ -95,7 +95,9 @@ class Settings(BaseSettings):
     email_stub: bool = True
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587  # Gmail SMTP submission (STARTTLS)
-    notify_from_address: str = ""  # the From/login account (non-secret); required for a live send
+    notify_from_address: str = (
+        ""  # the From/login account (non-secret); required for a live send
+    )
     # Base URL of the authenticated app for the at-risk deep link in the email body (no PII).
     app_base_url: str = "http://localhost:3000"
 

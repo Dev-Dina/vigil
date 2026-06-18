@@ -81,16 +81,22 @@ def notify_crossing(*, crossing_id: str, sponsor_id: str) -> dict[str, object]:
         synthetic = bool(crossing.synthetic)
         recipients = resolve_recipients(crossing)
         if not recipients:
-            log.info("notify.no_recipients", extra={"extra": {"crossing_id": crossing_id}})
+            log.info(
+                "notify.no_recipients", extra={"extra": {"crossing_id": crossing_id}}
+            )
             return {"status": "no_recipients"}
 
         deep_link = f"{get_settings().app_base_url.rstrip('/')}/at-risk"
-        subject, body = build_notification_body(deep_link=deep_link, synthetic=synthetic)
+        subject, body = build_notification_body(
+            deep_link=deep_link, synthetic=synthetic
+        )
         # Send first; flip notified ONLY on success (a send failure raises → retry, no flip).
         get_email_sender().send(to=recipients, subject=subject, body=body)
         scoring_repo.mark_crossing_notified(session, cid)
         log.info(
             "notify.sent",
-            extra={"extra": {"crossing_id": crossing_id, "n_recipients": len(recipients)}},
+            extra={
+                "extra": {"crossing_id": crossing_id, "n_recipients": len(recipients)}
+            },
         )
         return {"status": "sent", "n_recipients": len(recipients)}

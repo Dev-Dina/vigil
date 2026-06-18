@@ -42,9 +42,13 @@ from models.t2d.synthetic_data import load_synthetic_t2d
 
 _MODEL_VERSION = "sequence_v1.1:demo"
 _ARTIFACT_PATH = Path("data/models/t2d/sequence_v1.1_demo.pt")
-_TRAINED_PR_AUC = 0.3390  # pre-registered bar PASSED (RAW ranking; unchanged by calibration)
+_TRAINED_PR_AUC = (
+    0.3390  # pre-registered bar PASSED (RAW ranking; unchanged by calibration)
+)
 _FIDELITY_TOLERANCE = 0.001
-_ROC_INVARIANCE_TOLERANCE = 1e-3  # monotonic calibration preserves ranking -> ROC-AUC invariant
+_ROC_INVARIANCE_TOLERANCE = (
+    1e-3  # monotonic calibration preserves ranking -> ROC-AUC invariant
+)
 _SERIOUS_THRESHOLD = 0.6
 
 
@@ -98,14 +102,18 @@ def main() -> None:
     print("Training sequence model (deterministic, MODEL_SEED)...")
     seq = train_sequence_model(synth, split)
     seq_pr_auc: float = seq["panel"]["test"]["overall"]["pr_auc"]
-    print(f"  test PR-AUC (raw ranking): {seq_pr_auc:.4f}  (trained bar {_TRAINED_PR_AUC})")
+    print(
+        f"  test PR-AUC (raw ranking): {seq_pr_auc:.4f}  (trained bar {_TRAINED_PR_AUC})"
+    )
 
     model: LSTMClassifier = seq["model"]
     test_t = seq["test_tensors"]
     cfg = seq["cfg"]
 
     # --- fit the isotonic calibrator on the VAL fold ONLY (disjoint from train + test) ---------
-    print("Fitting isotonic output calibrator on the VAL fold (disjoint from train + test)...")
+    print(
+        "Fitting isotonic output calibrator on the VAL fold (disjoint from train + test)..."
+    )
     calibration, cal_report = fit_isotonic_calibrator(
         model,
         synth,

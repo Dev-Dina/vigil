@@ -216,9 +216,7 @@ def list_crossings_for_participant(
     )
 
 
-def get_crossing(
-    session: Session, crossing_id: uuid.UUID
-) -> RiskCrossing | None:
+def get_crossing(session: Session, crossing_id: uuid.UUID) -> RiskCrossing | None:
     """Load a single crossing by id under the caller's RLS-scoped session (None if out of scope)."""
     return session.get(RiskCrossing, crossing_id)
 

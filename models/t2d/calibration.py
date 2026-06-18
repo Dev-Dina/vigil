@@ -32,7 +32,9 @@ class Calibration(TypedDict):
     method: str  # "isotonic"
     fit_split: str  # "val"
     x: list[float]  # isotonic X_thresholds_ (raw probability knots, ascending)
-    y: list[float]  # isotonic y_thresholds_ (calibrated probability knots, non-decreasing)
+    y: list[
+        float
+    ]  # isotonic y_thresholds_ (calibrated probability knots, non-decreasing)
 
 
 def apply_calibration(

@@ -738,7 +738,9 @@ async def score_trial(
 
     # 9. Writeback.
     n_scored = 0
-    crossings_to_notify: list[str] = []  # 9.6: enqueue a PII-free doorbell per NEW crossing
+    crossings_to_notify: list[
+        str
+    ] = []  # 9.6: enqueue a PII-free doorbell per NEW crossing
     with sponsor_bootstrap_session(sponsor_id) as session:
         from sqlalchemy import update
 
@@ -961,7 +963,9 @@ async def send_crossing_notification(
     except Exception:  # noqa: BLE001 - log then re-raise so Arq retries (notified stays false)
         log.warning(
             "notify.send_failed",
-            extra={"extra": {"crossing_id": crossing_id, "job_try": ctx.get("job_try")}},
+            extra={
+                "extra": {"crossing_id": crossing_id, "job_try": ctx.get("job_try")}
+            },
         )
         raise
     log.info(

@@ -183,7 +183,9 @@ def test_send_once_and_no_resend(migrated_db: dict[str, str], monkeypatch) -> No
     )
     assert r1["status"] == "sent" and r1["n_recipients"] == 1
     assert len(sender.sent) == 1, "the sender must be invoked exactly once"
-    assert _notified(sponsor_a, crossing_id) is True, "notified must flip true on a send"
+    assert _notified(sponsor_a, crossing_id) is True, (
+        "notified must flip true on a send"
+    )
 
     # Re-run (a re-fire / retried job) must NOT re-send — the notified guard.
     r2 = notification_service.notify_crossing(
@@ -213,7 +215,9 @@ def test_no_recipient_no_send(migrated_db: dict[str, str], monkeypatch) -> None:
     )
     assert r["status"] == "no_recipients"
     assert sender.sent == [], "no send when there is no in-scope recipient"
-    assert _notified(sponsor_a, crossing_id) is False, "no recipient → notified stays false"
+    assert _notified(sponsor_a, crossing_id) is False, (
+        "no recipient → notified stays false"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -309,7 +313,9 @@ def test_send_is_scope_bound(migrated_db: dict[str, str], monkeypatch) -> None: 
 # ---------------------------------------------------------------------------
 
 
-def test_send_failure_does_not_flip_notified(migrated_db: dict[str, str], monkeypatch) -> None:  # type: ignore[no-untyped-def]
+def test_send_failure_does_not_flip_notified(
+    migrated_db: dict[str, str], monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
     from vigil.services.email_sender import EmailSendError
     from vigil.workers.tasks import send_crossing_notification
 
@@ -333,7 +339,9 @@ def test_send_failure_does_not_flip_notified(migrated_db: dict[str, str], monkey
     try:
         asyncio.get_event_loop().run_until_complete(
             send_crossing_notification(
-                {"job_try": 1}, crossing_id=str(crossing_id), sponsor_id=ids["sponsor_a"]
+                {"job_try": 1},
+                crossing_id=str(crossing_id),
+                sponsor_id=ids["sponsor_a"],
             )
         )
     except EmailSendError:
