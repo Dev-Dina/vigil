@@ -126,7 +126,9 @@ def test_summary_scope_bound_excludes_other_site_and_tenant(
 
     before = _summary(client, tok)
     own = _high_participant(migrated_db, own_site=True)  # in coord.a's scope
-    _other = _high_participant(migrated_db, own_site=False)  # cross-SITE (sponsor A, new site)
+    _other = _high_participant(
+        migrated_db, own_site=False
+    )  # cross-SITE (sponsor A, new site)
     _btenant = _high_participant(  # cross-TENANT (sponsor B)
         migrated_db, own_site=False, sponsor_b=True
     )
