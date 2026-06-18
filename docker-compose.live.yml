@@ -1,0 +1,61 @@
+# Live-LLM override (Gate L1) — DEV-ONLY, EXPLICIT OPT-IN. Real Anthropic calls cost real tokens.
+#
+# Points the containerized app at the PERSISTENT Vault (the `vault` service, file storage — NOT the
+# in-memory `vault-dev`) and flips the LLM stub off, so a REAL Anthropic (primary, claude-haiku-4-5)
+# call runs through the stack. The Anthropic key (and the rest of the app secret set) lives in the
+# persistent Vault, seeded ONCE by hand (docs/RUNBOOK.md §1.B) — NO .env, NO key-seeding sidecar,
+# NO key in this file. The DEFAULT stack (docker-compose.dev.yml alone) is untouched: dev Vault,
+# VIGIL_LLM_STUB=true, hermetic — and CI/the spine never load this override.
+#
+# Pre-conditions (the user manages these): the persistent Vault is initialized + UNSEALED + has KV
+# v2 at `secret`, and holds the four app secrets the containerized app reads — jwt_signing_key, the
+# IN-CONTAINER db/dsn (…@postgres:5432/vigil), the OpenRouter fallback llm/api_key, and
+# llm/anthropic_api_key. (One Vault supplies ALL secrets — there is no per-secret routing.)
+#
+# Bring-up (one command; the scoped read-only token comes from the shell, never committed):
+#   export VAULT_TOKEN=<scoped-read-token>     # minted once against the persistent Vault (RUNBOOK §1.B)
+#   docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app up -d --build vault api worker
+# Naming `vault api worker` (+ their postgres/redis deps) starts exactly those; the !override on
+# depends_on drops vault-seed, so vault-dev/vault-seed do NOT start on the live path.
+services:
+  # The persistent Vault — make it active under `--profile app` on the LIVE path (the base file
+  # leaves it `prod-vault`-only, so api/worker's depends_on would be "undefined" under --profile app).
+  # This profile change applies ONLY when this override is loaded; the default stack keeps `vault`
+  # out of the app profile. Add a healthcheck so depends_on means "Vault is UNSEALED": `vault status`
+  # exits 0 only when unsealed → a sealed Vault keeps this unhealthy and blocks the app from starting
+  # against a Vault it can't read (instead of a fail-loud SecretNotFoundError mid-request).
+  vault:
+    profiles: ["app", "prod-vault"]
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    environment:
+      VAULT_ADDR: http://vault:8200
+      # Scoped read-only token for the persistent Vault, from the shell; `:?` = fail loud if unset.
+      VAULT_TOKEN: ${VAULT_TOKEN:?Set VAULT_TOKEN to a scoped read token for the persistent Vault — see docs/RUNBOOK.md §1.B}
+      VIGIL_LLM_STUB: "false"
+    # Replace the base deps (drops vault-seed/vault-dev) — the live path uses the persistent Vault.
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+
+  worker:
+    environment:
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:?Set VAULT_TOKEN to a scoped read token for the persistent Vault — see docs/RUNBOOK.md §1.B}
+      VIGIL_LLM_STUB: "false"
+    depends_on: !override
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy

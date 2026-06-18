@@ -66,6 +66,63 @@ coordinator sees only their own site (RLS + SEC-1 intact, served by the containe
 > flow in **1.1–1.5** below. Phase 8 (k8s) replaces it with raft HA + KMS/transit auto-unseal.
 > `frontend` (D2) + `guide` (D3, profile `guide`) are **not** in the app stack yet.
 
+### 1.B Live-LLM bring-up against the PERSISTENT Vault — DEV ONLY, OPT-IN (Gate L1, real tokens)
+The §1.A stack is **stubbed by default** (`VIGIL_LLM_STUB=true` → deterministic `StubLLMClient`, no
+network, no key — the hermetic posture CI also uses). To run a **REAL Anthropic** (primary,
+`claude-haiku-4-5`) call through the containerized stack, layer the **live override**
+(`docker-compose.live.yml`): it repoints `api`+`worker` at the **persistent Vault** (the `vault`
+service, file storage — not the in-memory `vault-dev`) and sets `VIGIL_LLM_STUB=false`. The Anthropic
+key (and the rest of the app secret set) lives in the persistent Vault, **seeded once by hand** so it
+persists across restarts — **no `.env`, no key in any committed file**.
+
+> **Why the full secret set?** The app builds ONE Vault client from a single `VAULT_ADDR`/`VAULT_TOKEN`
+> (`vigil/core/config.py`) — there is no per-secret Vault routing. Pointing `api`/`worker` at the
+> persistent Vault means **that** Vault supplies *every* secret they read, so it must hold all four:
+> `jwt_signing_key`, the **in-container** `db/dsn` (`…@postgres:5432/vigil`), the OpenRouter fallback
+> `llm/api_key`, and `llm/anthropic_api_key`. (The host/uv flow's `db/dsn` is `localhost:55432` — a
+> different value; for host runs use the env shim, §1.3.)
+
+**Pre-conditions (you manage these):** the persistent Vault is **initialized + UNSEALED** (§1.2,
+3-of-5 keys) and has **KV v2 at `secret`** (`vault secrets enable -version=2 -path=secret kv` once if
+not). The override's healthcheck (`vault status`) gates `api`/`worker` on *unsealed* — a sealed Vault
+cleanly blocks startup instead of crashing mid-request.
+
+**Step 1 — seed the persistent Vault ONCE (root token; never committed).** Run via `docker exec`
+into `vigil-vault-1` (KV v2, mount `secret`, field `value`):
+```bash
+ROOT=<persistent-vault-root-token>   # from `operator init`; in your password manager, never in the repo
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/llm/anthropic_api_key value=sk-ant-..."
+# the other three the containerized app reads (skip any already present with the CONTAINER db/dsn):
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/auth/jwt_signing_key value=<signing-key>"
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/db/dsn value=postgresql+psycopg://vigil_app:vigil_app_pw@postgres:5432/vigil"
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/llm/api_key value=<openrouter-key-or-placeholder>"
+```
+
+**Step 2 — mint a scoped READ-ONLY token ONCE** (least-privilege; the app never gets the root token):
+```bash
+docker exec -i vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault policy write vigil-app-ro -" <<'HCL'
+path "secret/data/vigil/*" { capabilities = ["read"] }
+HCL
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault token create -policy=vigil-app-ro -ttl=720h -field=token"
+# → copy the printed token; it's what you export below. Re-mint when the TTL lapses.
+```
+
+**Step 3 — bring up the live stack (ONE command; the token comes from the shell, never committed):**
+```bash
+export VAULT_TOKEN=<scoped-read-token-from-step-2>
+docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app up -d --build vault api worker
+```
+Naming `vault api worker` (+ their postgres/redis deps) starts exactly those; the override's
+`depends_on` drops `vault-seed`, so `vault-dev`/`vault-seed` do **not** start. Make a turn
+(`POST /api/v1/assistant/conversations` → a message → poll the job) and confirm the persisted
+`message_events` row records `provider_model = anthropic/...` with a non-zero
+`latency_ms`/`token_cost_estimate` (a grounded/router refusal makes no generation call and stays
+honest-zero — correct). This **costs real tokens** and is opt-in only; the default
+`docker compose -f docker-compose.dev.yml --profile app up` (no override) stays **stubbed** against
+`vault-dev`, and CI/the spine never load the override. The Guide's live LLM (`VIGIL_GUIDE_LLM_STUB`)
+is **not** wired here — the Guide is its own isolated service on `guide-net` (no Vault route); a live
+Guide turn is a later (D3) gate (see §4c for the host/uv path).
+
 ### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
 ```bash
 docker compose -f docker-compose.dev.yml up -d postgres redis

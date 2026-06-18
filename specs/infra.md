@@ -68,6 +68,18 @@ Everything runs locally on **kind/minikube** — no paid cluster. Two deployment
 reach Postgres/Redis/Vault — the boundary holds locally too. One `make up` / `docker compose up`
 gives a runnable two-surface stack.
 
+**LLM posture — stubbed by default, live behind an explicit opt-in (Gate L1).** The default app
+stack runs **`VIGIL_LLM_STUB=true`** against the in-memory dev Vault (deterministic `StubLLMClient`,
+no network, no key — the same hermetic posture as CI), so the committed default and CI are always
+key-free and cost nothing. A **REAL** primary-LLM (Anthropic) bring-up is an explicit opt-in via a
+committed override (`docker-compose.live.yml`): it repoints `api`+`worker` at the **persistent
+Vault** (the `vault` service, file storage) and sets `VIGIL_LLM_STUB=false`. The Anthropic key (and
+the rest of the app secret set) lives in the **persistent Vault, seeded once by hand** — **no `.env`,
+no key in any committed file**. The app authenticates with a **scoped read-only Vault token** read
+from `${VAULT_TOKEN}` at up-time (never committed, never the root token in the app containers); the
+key still reaches the app only through Vault, and no LLM/secrets code changes. The default stack and
+CI never load the override (`docs/RUNBOOK.md` §1.B).
+
 ### `deploy/k8s/` (kind/minikube)
 Plain manifests (kustomize base + overlays), applied to a local kind cluster:
 - **Deployments**: `api`, `worker`, `scheduler`, `guide`; StatefulSets/Deployments for `postgres`,

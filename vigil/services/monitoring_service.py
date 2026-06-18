@@ -226,7 +226,9 @@ class DriftPointView:
     reference_n: int
     current_n: int
     synthetic: bool  # the cohort the distribution came from is synthetic
-    constructed_demo: bool  # the current window was a constructed shift (NOT observed drift)
+    constructed_demo: (
+        bool  # the current window was a constructed shift (NOT observed drift)
+    )
     note: str
     ts: datetime
 
