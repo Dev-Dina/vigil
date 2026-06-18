@@ -31,7 +31,7 @@ from vigil.repositories import observability as obs_repo
 from vigil.repositories.session import platform_session, sponsor_bootstrap_session
 from vigil.workers.tasks import run_assistant_turn
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _CARD = "data/models/t2d/model_card.md"
 
 # Controlled stub usage (6.2b): a turn's cost/latency = router-classify + agent-generation.
@@ -301,7 +301,7 @@ def test_models_reflects_routing_state_and_role_gated(
     assert r.status_code == 200, r.text
     items = r.json()["items"]
     champ = next(i for i in items if i["regime"] == "t2d" and i["role"] == "champion")
-    assert champ["version"] == "sequence_v1.0:demo"  # the seeded champion projection
+    assert champ["version"] == "sequence_v1.1:demo"  # the seeded champion projection
     assert any(i["role"] == "shadow" for i in items)
 
     for email in ("coord.a@vigil.example", "cra@vigil.example"):

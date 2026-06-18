@@ -16,7 +16,7 @@ from pathlib import Path
 from vigil.core.scope import Scope, ScopeTuple
 from vigil.domain import Role
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _SHADOW_MV = "structural_v1.0:t2d"
 _CARD = "data/models/t2d/model_card.md"
 _SHADOW_CARD = "data/models/t2d/model_card_structural.md"

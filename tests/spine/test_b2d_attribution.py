@@ -5,7 +5,7 @@ the model's OWN inputs), honestly labelled with the method + the synthetic flag 
 invented/fixed reason list. The empty-`top_factors=[]` gap is closed for the real LSTM champion.
 
 Marked slow (torch) like the other B2b LSTM tests so torch never leaks into the fast/check_specs/
-golden gates. Requires: live Postgres, data/models/t2d/sequence_v1.0_demo.pt.
+golden gates. Requires: live Postgres, data/models/t2d/sequence_v1.1_demo.pt.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
-_ARTIFACT_PATH = Path("data/models/t2d/sequence_v1.0_demo.pt")
-_CHAMPION_MV = "sequence_v1.0:demo"
+_ARTIFACT_PATH = Path("data/models/t2d/sequence_v1.1_demo.pt")
+_CHAMPION_MV = "sequence_v1.1:demo"
 
 
 def _static_row(pid: str) -> dict:

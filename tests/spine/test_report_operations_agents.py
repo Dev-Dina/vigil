@@ -23,7 +23,7 @@ from vigil.db.models import MessageEvent, Participant, Site, Trial
 from vigil.repositories.session import platform_session, sponsor_bootstrap_session
 from vigil.workers.tasks import run_assistant_turn
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _SHADOW_MV = "structural_v1.0:t2d"
 _CARD = "data/models/t2d/model_card.md"
 

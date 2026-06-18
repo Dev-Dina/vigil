@@ -30,7 +30,7 @@ from vigil.workers.tasks import run_assistant_turn
 _EVAL_PATH = (
     Path(__file__).resolve().parents[2] / "tests/eval/local_assistant_eval.json"
 )
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _CARD = "data/models/t2d/model_card.md"
 
 

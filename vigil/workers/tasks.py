@@ -30,7 +30,8 @@ from vigil.core.logging import get_logger
 log = get_logger("vigil.worker")
 
 # Sentinel model version used in demo mode when no real artifact exists.
-_DEMO_MODEL_VERSION = "sequence_v1.0:demo"
+# Gate 9.7a: the champion is the isotonic-CALIBRATED sequence model (sequence_v1.1:demo).
+_DEMO_MODEL_VERSION = "sequence_v1.1:demo"
 
 # Default model card reference path.
 _DEFAULT_MODEL_CARD = "data/models/t2d/model_card.md"
@@ -44,12 +45,19 @@ _DEFAULT_MODEL_CARD = "data/models/t2d/model_card.md"
 
 
 class LSTMScorer:
-    """Wraps a loaded sequence_v1.0_demo.pt artifact for live inference.
+    """Wraps a loaded sequence_v1.1_demo.pt artifact for live inference.
 
     __init__ and __call__ import torch lazily so the module-level import of
     vigil.workers.tasks does NOT load torch (light-suite isolation).
     Invariant 9: feature assembly uses models.t2d.sequence._seq_feature_frame,
     the same function used at training time — no parallel scoring-only builder.
+
+    Gate 9.7a: if the artifact carries a ``calibration`` map (the monotonic isotonic output
+    calibrator fit on the held-out VAL fold), ``__call__`` applies it so emitted scores span a
+    usable probability range and ``> 0.6`` is reachable from the REAL model. The calibrator is a
+    monotone post-hoc re-map of the probability SCALE only — it preserves ranking (discrimination
+    unchanged). Attribution is computed on the model's OWN (pre-calibration) output (see
+    ``attributions``). An artifact with no ``calibration`` key scores exactly as before (identity).
     """
 
     def __init__(self, artifact: dict) -> None:
@@ -67,6 +75,8 @@ class LSTMScorer:
         self._seq_means = artifact["seq_means"]
         self._seq_stds = artifact["seq_stds"]
         self._cfg = artifact["cfg"]
+        # Gate 9.7a: monotonic output calibrator (None for a legacy uncalibrated artifact).
+        self._calibration = artifact.get("calibration")
         # Suppress unused-import warning; torch is needed for no-grad context.
         self._torch = torch
 
@@ -130,6 +140,12 @@ class LSTMScorer:
             out[i] = float(probs[i, n_v - 1]) if n_v > 0 else 0.5
         return out
 
+    def _calibrate(self, probs: Any) -> Any:
+        """Apply the monotonic isotonic output calibrator (identity if the artifact has none)."""
+        from models.t2d.calibration import apply_calibration  # noqa: PLC0415 — numpy-only
+
+        return apply_calibration(probs, self._calibration)
+
     def __call__(self, participant_df: Any, eng_df: Any) -> list[float]:
         """Score each participant from their engagement trajectory.
 
@@ -137,10 +153,15 @@ class LSTMScorer:
           Columns: participant_id, age_years, hba1c_pct, bmi, sex, arm_type,
                    n_sites, planned_duration_days, phase.
         eng_df: engagement rows for all participants; must have participant_id col.
-        Returns: list[float] — final-step risk probability per participant.
+        Returns: list[float] — final-step CALIBRATED risk probability per participant (Gate 9.7a:
+          the monotonic isotonic calibrator re-maps the scale so ``> 0.6`` is reachable; ranking,
+          hence discrimination, is unchanged).
         """
         seq, static_input, last_obs = self._assemble(participant_df, eng_df)
-        return [float(v) for v in self._final_probs(seq, static_input, last_obs)]
+        return [
+            float(v)
+            for v in self._calibrate(self._final_probs(seq, static_input, last_obs))
+        ]
 
     def attributions(
         self, participant_df: Any, eng_df: Any, *, top_k: int = 3
@@ -155,6 +176,11 @@ class LSTMScorer:
         provenance field — those are not in the sequence at all). On synthetic data the planted
         signal (consecutive missed visits) surfaces here because it is what the model used.
         Participants with no observed trajectory get NO reasons (honest: nothing to attribute).
+
+        Gate 9.7a: the deltas are computed on the model's OWN (pre-calibration) output — the
+        quantity the LSTM actually produces — NOT the calibrated probability. This keeps the
+        deltas meaningful (a monotone isotonic flat region never zeroes them) and the calibrator,
+        being monotone, does not reorder feature importances; attribution is invariant to it.
 
         Returns one dict per participant (aligned to ``participant_df`` row order):
         ``{"top_factors": [name,...], "reasons": [{"feature","contribution","method"},...]}``.

@@ -21,7 +21,7 @@ from vigil.api.app import create_app
 from vigil.domain import InterventionKind
 from vigil.services import recommended_actions as ra
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _CARD = "data/models/t2d/model_card.md"
 
 # Tokens that must NEVER appear in an operational action (this layer gives no clinical advice).

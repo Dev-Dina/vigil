@@ -8,7 +8,7 @@ Invariants covered:
 
 All tests are marked slow (torch dependency) so they are excluded from the fast suite
 (TORCH ISOLATION: torch must not leak into check_specs / golden / fast-suite gates).
-Requires: live Postgres, data/models/t2d/sequence_v1.0_demo.pt.
+Requires: live Postgres, data/models/t2d/sequence_v1.1_demo.pt.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import pytest
 
 pytestmark = pytest.mark.slow
 
-_ARTIFACT_PATH = Path("data/models/t2d/sequence_v1.0_demo.pt")
+_ARTIFACT_PATH = Path("data/models/t2d/sequence_v1.1_demo.pt")
 _TRAINED_PR_AUC = 0.3390398896276865  # from data/models/t2d/sequence_metrics.json
 _FIDELITY_TOLERANCE = 0.001
 
@@ -32,7 +32,7 @@ _FIDELITY_TOLERANCE = 0.001
 
 
 def test_artifact_file_exists() -> None:
-    """sequence_v1.0_demo.pt must exist at the canonical path before scoring can run."""
+    """sequence_v1.1_demo.pt must exist at the canonical path before scoring can run."""
     assert _ARTIFACT_PATH.exists(), (
         f"LSTM artifact not found at {_ARTIFACT_PATH}. "
         "Run: uv run python scripts/persist_sequence_artifact.py"
@@ -117,7 +117,7 @@ def test_scoreability_score_trial_end_to_end(migrated_db: dict[str, str]) -> Non
     assert result["n_scored"] == 1, (
         f"Expected 1 participant scored, got {result['n_scored']}"
     )
-    assert result["model_version"] == "sequence_v1.0:demo"
+    assert result["model_version"] == "sequence_v1.1:demo"
 
     # Verify score is in range via participant read-back.
     from vigil.db.models import Participant
@@ -161,9 +161,9 @@ def test_invariant_8_synthetic_propagation(migrated_db: dict[str, str]) -> None:
             session, uuid.UUID(ids["participant_a"])
         )
 
-    score_row = next((r for r in rows if r.model_version == "sequence_v1.0:demo"), None)
+    score_row = next((r for r in rows if r.model_version == "sequence_v1.1:demo"), None)
     assert score_row is not None, (
-        "No score row for sequence_v1.0:demo after score_trial"
+        "No score row for sequence_v1.1:demo after score_trial"
     )
     assert score_row.synthetic is True, (
         f"Invariant 8 violated: seeded engagement is synthetic=True but "
@@ -332,7 +332,7 @@ def test_lstm_scorer_loaded_not_demo_scorer(migrated_db: dict[str, str]) -> None
     """_load_scorer returns LSTMScorer (real artifact), not _demo_scorer (rng fallback)."""
     from vigil.workers.tasks import LSTMScorer, _load_scorer, _demo_scorer
 
-    scorer, mv = _load_scorer("sequence_v1.0:demo", ctx={})
+    scorer, mv = _load_scorer("sequence_v1.1:demo", ctx={})
     assert isinstance(scorer, LSTMScorer), (
         f"Expected LSTMScorer from artifact, got {type(scorer).__name__} "
         "(artifact may be missing or _load_scorer fell through to _demo_scorer)"
@@ -340,4 +340,4 @@ def test_lstm_scorer_loaded_not_demo_scorer(migrated_db: dict[str, str]) -> None
     assert scorer is not _demo_scorer, (
         "_load_scorer returned _demo_scorer; real artifact not loaded"
     )
-    assert mv == "sequence_v1.0:demo"
+    assert mv == "sequence_v1.1:demo"

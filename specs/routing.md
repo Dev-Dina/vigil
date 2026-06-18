@@ -6,7 +6,7 @@
   tables" and "model registry pointers" as ConfigMap contents but defines no schema or protocol;
   that contract lives here.
 - **The resolver does not exist yet.** `score_trial(model_version=None)` currently resolves to
-  the sentinel constant `"sequence_v1.0:demo"` (`vigil/workers/tasks.py:23`), not a DB lookup.
+  the sentinel constant `"sequence_v1.1:demo"` (`vigil/workers/tasks.py:23`), not a DB lookup.
   `specs/scoring.md:152`'s phrase "registered champion at job time" is aspirational. This spec
   defines the contract that implementation will satisfy.
 - **`audit_log` is immutable transition history; the routing-state table is current projection.**
@@ -76,8 +76,8 @@ set by routing code until that spec is ratified.
 3. If no champion row exists for the regime, raise a hard error — there is no silent default.
 
 **Current reality:** this query does not exist. `_load_scorer` uses `_DEMO_MODEL_VERSION =
-"sequence_v1.0:demo"` as the sentinel. The resolver query is the implementation obligation this
-spec creates.
+"sequence_v1.1:demo"` as the sentinel (Gate 9.7a: the calibrated champion). The resolver query is
+the implementation obligation this spec creates.
 
 ## Champion / challenger / shadow
 

@@ -409,7 +409,7 @@ def seed() -> dict[str, str]:
             RoutingState(
                 regime="t2d",
                 role="champion",
-                model_version="sequence_v1.0:demo",
+                model_version="sequence_v1.1:demo",
                 model_card_ref="data/models/t2d/model_card.md",
             )
         )
@@ -422,7 +422,7 @@ def seed() -> dict[str, str]:
             )
         )
         session.flush()
-    ids["routing_t2d_champion"] = "sequence_v1.0:demo"
+    ids["routing_t2d_champion"] = "sequence_v1.1:demo"
     ids["routing_t2d_shadow"] = "structural_v1.0:t2d"
 
     log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
@@ -451,7 +451,7 @@ def _seed_score(
             reasons=[{"factor": "missed_visits", "contribution": 0.45}]
             if key == "score_a"
             else [{"factor": "missed_calls", "contribution": 0.20}],
-            model_version="sequence_v1.0:demo",
+            model_version="sequence_v1.1:demo",
             model_card_ref="data/models/t2d/model_card.md",
             synthetic=True,
         )
@@ -459,7 +459,7 @@ def _seed_score(
             session,
             sponsor_id=sponsor_id,
             participant_id=tenant["participant"],
-            model_version="sequence_v1.0:demo",
+            model_version="sequence_v1.1:demo",
             synthetic=True,
         )
     ids[key] = str(row.id)

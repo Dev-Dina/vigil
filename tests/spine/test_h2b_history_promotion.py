@@ -282,7 +282,7 @@ def test_history_excludes_nonchampion_during_tenure(
 
 def test_history_no_promotion_unchanged(migrated_db: dict[str, str]) -> None:
     """Single-champion regime (the demo t2d champion) → same trajectory as before."""
-    champion = "sequence_v1.0:demo"
+    champion = "sequence_v1.1:demo"
     shadow = "structural_v1.0:t2d"
     pid = _fresh_participant(migrated_db, "h2b-noprom")
     base = datetime.now(tz=timezone.utc)
@@ -326,7 +326,7 @@ def test_history_no_promotion_unchanged(migrated_db: dict[str, str]) -> None:
 
 
 def test_history_out_of_scope_still_404(migrated_db: dict[str, str]) -> None:
-    champion = "sequence_v1.0:demo"
+    champion = "sequence_v1.1:demo"
     pid = _fresh_participant(migrated_db, "h2b-scope")
     _insert_score(
         migrated_db,

@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 _SHADOW_ARTIFACT_PATH = Path("data/models/t2d/structural_v1.0_t2d.pkl")
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _SHADOW_MV = "structural_v1.0:t2d"
 
 

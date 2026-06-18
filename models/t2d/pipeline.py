@@ -125,10 +125,10 @@ def run_t2d_pipeline(
     seq_pr_auc = panel["test"]["overall"]["pr_auc"]
     median_lead = panel["lead_time"]["median_lead_time_visits"]
 
-    # Persist the LSTM artifact so the scoring worker can load it.
-    # Artifact name: sequence_v1.0:demo → sequence_v1.0_demo.pt (colon→underscore).
+    # Persist the calibrated LSTM artifact so the scoring worker can load it.
+    # Artifact name: sequence_v1.1:demo → sequence_v1.1_demo.pt (colon→underscore).
     # The version string is documented here; workers/tasks.py must match _DEMO_MODEL_VERSION.
-    _persist_sequence_artifact(seq, seq_pr_auc, out_root)
+    _persist_sequence_artifact(seq, seq_pr_auc, synth, split, out_root)
 
     # sequence plots
     seq_plots: dict[str, str] = {}
@@ -251,6 +251,8 @@ def _write_card(
             "dropout_visit_index/dropout_reason (outcome), ids",
         ],
         "metrics": {
+            "model_version": "sequence_v1.1:demo",
+            "calibration_method": "isotonic on held-out val fold (disjoint from train+test)",
             "1a_real_floor_gbt_pr_auc": real_gbt["pr_auc"],
             "1a_real_floor_gbt_mae": real_gbt["mae"],
             "1a_real_floor_logit_pr_auc": real["test"]["logit"]["pr_auc"],
@@ -289,7 +291,19 @@ def _write_card(
             f"Sequence Brier (test, decision points) = {seq['brier']:.4f}; 1b structural Brier = "
             f"{sb['brier']:.4f}; 1a real GBT Brier = {real_gbt['brier']:.4f}. See calib_*.png. "
             "The planted trajectory->dropout relationship is noisy + non-separable (AUC~0.77 by "
-            "construction), so neither model is expected to be near-perfect."
+            "construction), so neither model is expected to be near-perfect. "
+            "GATE 9.7a OUTPUT CALIBRATION: the champion (sequence_v1.1:demo) carries a MONOTONIC "
+            "ISOTONIC output calibrator fit on the held-out VAL fold ONLY (temporal, "
+            "group-disjoint-by-nct_id; disjoint from BOTH the LSTM's train fold AND the reported "
+            "test fold). The raw LSTM outputs are compressed (top ~0.54), so the operational >0.6 "
+            "HIGH band was unreachable; the calibrator re-maps the probability SCALE so >0.6 is "
+            "reachable by the REAL model — WITHOUT changing the threshold and WITHOUT an override. "
+            "This is a CALIBRATION (probability-scale) change, NOT a discrimination change: "
+            "calibration is monotonic, so test ROC-AUC is invariant and per-decision-point PR-AUC "
+            "over the preserved ranking is unchanged. It does NOT manufacture discrimination — the "
+            ">0.6 mapping is HONEST because the highest raw-score decision points have an empirical "
+            "dropout rate ~0.74. Attribution (top_factors/reasons) is computed on the model's OWN "
+            "pre-calibration output, so it stays meaningful and leakage-safe."
         ),
         "limitations": [
             "SYNTHETIC cohort: generated per-participant sequences calibrated to real T2D AACT "
@@ -309,6 +323,10 @@ def _write_card(
             "per-visit mask still enforces decision-time censoring for the sequence labels.",
             "No rebalancing anywhere (per the Evaluation contract); scalers/encoders fit on TRAIN "
             "only; the forbidden-feature assertion fires before every fit.",
+            "Gate 9.7a output calibration (isotonic, val-fold) re-maps the probability SCALE only; "
+            "it preserves ranking (discrimination UNCHANGED) and uses NO outcome at score time. It "
+            "is fit on a split disjoint from train+test and does NOT improve the model's ability to "
+            "discriminate — only the probability meaning of the >0.6 band.",
         ],
     }
     card = render_model_card(meta)
@@ -318,21 +336,40 @@ def _write_card(
 def _persist_sequence_artifact(
     seq: dict[str, Any],
     seq_pr_auc: float,
+    synth: SyntheticT2D,
+    split: Any,
     out_root: Path,
 ) -> Path:
-    """Save the trained LSTM to disk and verify the reload reproduces the PR-AUC.
+    """Save the calibrated LSTM to disk and verify reload reproduces the RAW PR-AUC.
+
+    Gate 9.7a: fit a monotonic isotonic output calibrator on the held-out VAL fold (disjoint from
+    train + test) and persist it WITH the artifact, so the scoring worker emits calibrated
+    probabilities. Calibration is monotone => ranking (discrimination) is preserved. The frozen
+    fold ids make the disjointness hermetically assertable.
 
     Artifact dict schema (consumed by vigil/workers/tasks.py LSTMScorer):
-      state_dict, cfg, static_enc, seq_means, seq_stds, seq_dim, static_dim, test_pr_auc
+      state_dict, cfg, static_enc, seq_means, seq_stds, seq_dim, static_dim, test_pr_auc,
+      model_version, calibration, calibration_report, train_nct_ids, val_nct_ids, test_nct_ids
     """
     import torch
 
+    from models.t2d.calibration import fit_isotonic_calibrator
     from models.t2d.metrics import classifier_panel
     from models.t2d.sequence import LSTMClassifier, _decision_point_eval, _predict_steps
 
-    artifact_path = out_root / "sequence_v1.0_demo.pt"
+    artifact_path = out_root / "sequence_v1.1_demo.pt"
     model: LSTMClassifier = seq["model"]
     test_t = seq["test_tensors"]
+
+    calibration, cal_report = fit_isotonic_calibrator(
+        model,
+        synth,
+        split,
+        static_enc=seq["static_enc"],
+        seq_means=seq["seq_means"],
+        seq_stds=seq["seq_stds"],
+        cfg=seq["cfg"],
+    )
 
     artifact = {
         "state_dict": model.state_dict(),
@@ -343,10 +380,16 @@ def _persist_sequence_artifact(
         "seq_dim": int(test_t.seq.shape[2]),
         "static_dim": int(test_t.static.shape[1]),
         "test_pr_auc": float(seq_pr_auc),
+        "model_version": "sequence_v1.1:demo",
+        "calibration": calibration,
+        "calibration_report": cal_report,
+        "train_nct_ids": sorted(split.train_ids),
+        "val_nct_ids": sorted(split.val_ids),
+        "test_nct_ids": sorted(split.test_ids),
     }
     torch.save(artifact, artifact_path)
 
-    # Verify reload: reconstruct model and re-score test fold.
+    # Verify reload: reconstruct model and re-score test fold (RAW ranking; unchanged by calib).
     reloaded = torch.load(str(artifact_path), weights_only=False)
     model_ck = LSTMClassifier(
         reloaded["seq_dim"], reloaded["static_dim"], reloaded["cfg"]

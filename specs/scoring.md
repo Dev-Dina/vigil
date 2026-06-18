@@ -56,6 +56,45 @@ class ParticipantScore(BaseModel):
 `reasons` / `top_factors` map to `RiskExplanation.factors` in `/specs/api.md`; the scoring job
 populates them from the model's temporal attribution at scoring time.
 
+### Output calibration (Gate 9.7a — ratified)
+The champion sequence model's **raw** sigmoid outputs are **compressed** (the trained LSTM
+discriminates correctly but its per-decision-point probabilities top out near ~0.54, so the
+`> 0.6` HIGH band is never reachable from the real model). The champion therefore carries a
+**monotonic probability calibrator** persisted **with the model artifact** and applied at score
+time, so the emitted `risk_score` spans a usable probability range and `> 0.6` is reachable from
+the real model — **without changing the threshold and without an override**.
+
+Fixed decisions:
+- **Method: isotonic regression** (monotonic, non-parametric). Platt/logistic was evaluated and
+  rejected for this champion: the LSTM is already globally near-calibrated (ECE ≈ 0.008, Platt
+  slope ≈ 1.06), so a global sigmoid cannot stretch the compressed top past 0.6. Isotonic
+  corrects the **local under-confidence at the top of the score range** (the highest raw-score
+  decision points have an empirical dropout rate ≈ 0.74, well above their raw ≈ 0.5), which is
+  what makes `> 0.6` both reachable **and honest**.
+- **Fit split: the held-out `val` fold ONLY** — the temporal, group-disjoint-by-`nct_id` fold
+  that sits between train and test (`/specs/data.md` "Evaluation contract"). The calibrator is
+  fit on data **disjoint from both the LSTM's training fold AND the reported test fold**; the
+  artifact freezes `train_nct_ids` / `val_nct_ids` / `test_nct_ids` so the disjointness is
+  asserted hermetically. The calibrator consumes **no outcome at score time** — it is a fixed
+  `raw_prob → calibrated_prob` map fit once at build time.
+- **Discrimination is UNCHANGED.** Calibration is monotonic, so it preserves ranking: test
+  ROC-AUC is invariant (Δ ≈ −5e-5) and the per-decision-point PR-AUC over the preserved ranking
+  is unchanged. Calibration **re-maps the probability scale; it does not manufacture
+  discrimination.** A material AUC move would mean a non-calibration change leaked in and is a
+  hard stop. This is the honesty invariant of this gate.
+- **Attribution is on the model's own (pre-calibration) output.** The `top_factors` / `reasons`
+  occlusion deltas (§ Phase 9, Gate 9.1) are computed on the LSTM's raw output — the quantity the
+  network actually produces — so they stay meaningful (isotonic flat regions never zero them) and
+  leakage-safe (only the model's `SEQ_NUMERIC` input channels are perturbed). Calibration is a
+  monotone post-hoc remap that does not reorder feature importances.
+- **Version bump (required).** Calibrating the output changes the probability semantics of every
+  score row, so the calibrated champion is a **new model version** (`sequence_v1.1:demo`),
+  recorded in the t2d model card with the method, the fit split, and the
+  discrimination-vs-calibration framing. The HIGH/MEDIUM thresholds (`> 0.6` / `> 0.3`) are
+  **unchanged**; a threshold change would still require its own card update + version bump.
+- **Synthetic provenance unchanged.** This is the synthetic-demo regime; a calibrated score on
+  synthetic engagement is still stamped `synthetic = True`.
+
 ## Writeback
 
 ### `participant_score` table — APPENDED history (not upsert-over-current)
@@ -450,7 +489,9 @@ threshold and no new band. A **serious-risk crossing** is a champion-point trans
 non-`high` band to `high` across a participant's champion-of-record history (the latest champion
 point is `high` and the immediately-prior champion point was `medium`/`low`/absent). This reuses
 the band logic already fixed in § Scoring contract; a threshold change still requires a model-card
-update + version bump.
+update + version bump. As of Gate 9.7a the `> 0.6` crossing is reachable by the **real calibrated
+champion** (`sequence_v1.1:demo`, see § Output calibration) on a heavy-disengagement trajectory —
+no scorer override is required to drive a genuine crossing.
 
 ### Reasons / `top_factors` = REAL model attributions (fixed; 9.1 implements)
 `top_factors` / `reasons` MUST be **genuine attributions from the scoring model**, never invented

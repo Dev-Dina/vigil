@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 
 from vigil.api.app import create_app
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _SHADOW_MV = "structural_v1.0:t2d"
 _CARD = "data/models/t2d/model_card.md"
 

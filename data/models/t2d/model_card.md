@@ -16,6 +16,8 @@
 
 ## Metrics
 
+- model_version: sequence_v1.1:demo
+- calibration_method: isotonic on held-out val fold (disjoint from train+test)
 - 1a_real_floor_gbt_mae: 0.1206
 - 1a_real_floor_gbt_pr_auc: 0.3425
 - 1a_real_floor_logit_pr_auc: 0.3375
@@ -46,6 +48,17 @@
 
 Sequence Brier (test, decision points) = 0.0753; 1b structural Brier = 0.1258; 1a real GBT Brier = 0.2169. See calib_*.png. The planted trajectory->dropout relationship is noisy + non-separable (AUC~0.77 by construction), so neither model is expected to be near-perfect.
 
+### Gate 9.7a — output calibration (isotonic, val-fold)
+
+The champion (`sequence_v1.1:demo`) carries a MONOTONIC ISOTONIC output calibrator fit on the held-out VAL fold ONLY (temporal, group-disjoint-by-`nct_id`; disjoint from BOTH the LSTM's train fold AND the reported test fold). The raw LSTM outputs are compressed (decision-point probabilities top out near ~0.54), so the operational `> 0.6` HIGH band was unreachable from the real model. The calibrator re-maps the probability SCALE so `> 0.6` is reachable by the REAL model — WITHOUT changing the threshold and WITHOUT an override.
+
+- This is a CALIBRATION (probability-scale) change, NOT a discrimination change. Calibration is monotonic, so it preserves ranking: test ROC-AUC is invariant (raw 0.790114 → calibrated 0.790061, Δ ≈ −5.3e-5) and per-decision-point PR-AUC over the preserved ranking is unchanged (raw 0.3390). It does NOT manufacture discrimination.
+- The `> 0.6` mapping is HONEST: the highest raw-score decision points (raw ∈ [0.5, 0.6)) have an EMPIRICAL dropout rate ≈ 0.74 on the test fold — the model is locally under-confident there, and isotonic corrects exactly that. (Platt/logistic was rejected: the model is already globally near-calibrated, ECE ≈ 0.008 / slope ≈ 1.06, so a global sigmoid cannot lift the compressed top past 0.6.)
+- Calibration quality (test decision points): ECE 0.00780 → 0.00750; Brier 0.075257 → 0.075027 — a modest honest improvement; the win is unlocking the HIGH band, not a large calibration gain.
+- The calibrator consumes NO outcome at score time (a fixed `raw_prob → calibrated_prob` isotonic knot map, persisted with the artifact and applied via `np.interp`).
+- Attribution (`top_factors` / `reasons`) is computed on the model's OWN pre-calibration output, so the occlusion deltas stay meaningful and leakage-safe; the monotone calibrator does not reorder feature importances.
+- Version bump rationale: calibrating the output changes the probability semantics of every score row, so the calibrated champion is a new version (`sequence_v1.0:demo` → `sequence_v1.1:demo`). The HIGH/MEDIUM thresholds (`> 0.6` / `> 0.3`) are UNCHANGED.
+
 ## LIMITATIONS
 
 - SYNTHETIC cohort: generated per-participant sequences calibrated to real T2D AACT aggregates + literature priors — NOT real participants, NO PHI, method-validity only.
@@ -55,3 +68,4 @@ Sequence Brier (test, decision points) = 0.0753; 1b structural Brier = 0.1258; 1
 - Sponsor-level leakage is an ACCEPTED limitation: the split is group-disjoint by nct_id, not by sponsor (sponsor identity is never a feature).
 - No early right-censoring exists in this cohort (censored==observed completer); the per-visit mask still enforces decision-time censoring for the sequence labels.
 - No rebalancing anywhere (per the Evaluation contract); scalers/encoders fit on TRAIN only; the forbidden-feature assertion fires before every fit.
+- Gate 9.7a output calibration (isotonic, val-fold) re-maps the probability SCALE only; it preserves ranking (discrimination UNCHANGED) and uses NO outcome at score time. It is fit on a split disjoint from train+test and does NOT improve the model's ability to discriminate — only the probability meaning of the `> 0.6` band.

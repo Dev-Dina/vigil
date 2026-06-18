@@ -23,7 +23,7 @@ from vigil.db.models import Participant, Site, Trial
 from vigil.repositories import documents as doc_repo
 from vigil.repositories.session import platform_session, sponsor_bootstrap_session
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _SHADOW_MV = "structural_v1.0:t2d"
 _CARD = "data/models/t2d/model_card.md"
 

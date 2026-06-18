@@ -16,7 +16,7 @@ import uuid
 
 from vigil.services import notification_service
 
-_CHAMPION_MV = "sequence_v1.0:demo"
+_CHAMPION_MV = "sequence_v1.1:demo"
 _CARD = "data/models/t2d/model_card.md"
 
 

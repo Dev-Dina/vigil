@@ -96,9 +96,9 @@ def test_routing_state_platform_access_sponsor_blocked(
 
 
 def test_demo_regime_no_regression(migrated_db: dict[str, str]) -> None:
-    """t2d champion resolves to sequence_v1.0:demo via routing_state (no sentinel path).
+    """t2d champion resolves to sequence_v1.1:demo via routing_state (no sentinel path).
 
     Proves the seed row is present and the resolver uses it, not the old sentinel.
     """
-    assert _resolve_champion_version("t2d") == "sequence_v1.0:demo"
-    assert migrated_db["routing_t2d_champion"] == "sequence_v1.0:demo"
+    assert _resolve_champion_version("t2d") == "sequence_v1.1:demo"
+    assert migrated_db["routing_t2d_champion"] == "sequence_v1.1:demo"
