@@ -131,6 +131,7 @@ class CohortRow(BaseModel):
     risk_band: Literal["high", "medium", "low"]
     top_factors: list[str]                  # explanation tags
     updated_at: datetime
+    enrolled_at: datetime                   # trial enrollment start; drives "days enrolled"
     synthetic: bool                         # from participant_score.synthetic; always surfaced
 class CohortSummary(BaseModel):
     total: int

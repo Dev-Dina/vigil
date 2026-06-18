@@ -154,6 +154,10 @@ def _seed_engagement(
 
         p = session.get(Participant, participant_id)
         assert p is not None, f"demo participant {participant_id} not found in seed"
+        # FIX-5: anchor enrolled_at to the trajectory START (== visit_index 0 timestamp), not the
+        # DB default now(). Without this, enrolled_at defaults to the seed-run moment, so the
+        # detail page's "Days Enrolled" reads ~0 even though the visit history spans months.
+        p.enrolled_at = enrollment_date
         p.age_years = (
             float(par_row["age_years"]) if pd.notna(par_row["age_years"]) else None
         )

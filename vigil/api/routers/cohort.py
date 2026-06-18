@@ -24,6 +24,7 @@ class CohortRow(BaseModel):
     risk_band: str
     top_factors: list[str] = []
     updated_at: datetime
+    enrolled_at: datetime
     synthetic: bool
 
 
@@ -70,6 +71,7 @@ async def list_cohort(
             risk_band=r.risk_band,
             top_factors=r.top_factors,
             updated_at=r.updated_at,
+            enrolled_at=r.enrolled_at,
             synthetic=r.synthetic,
         ).model_dump()
         for r in rows

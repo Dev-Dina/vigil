@@ -8,6 +8,7 @@ import { MetricCard } from "@/components/vigil/metric-card"
 import { PulseDivider } from "@/components/vigil/pulse-divider"
 import { DemoLoop } from "@/components/vigil/demo-loop"
 import { getCohort, getCohortSummary, ApiError } from "@/lib/api"
+import { daysSince } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
 import type { CohortRow, CohortSummary } from "@/lib/types"
@@ -25,15 +26,15 @@ function humanizeFactor(tag: string): string {
 }
 
 // Adapt a CohortRow (api.md) to the TriageTable display shape.
-// NOTE: `riskTrend` (sparkline) and `daysEnrolled` have no field in CohortRow;
-// they are display-only placeholders until a backing endpoint exists.
+// NOTE: `riskTrend` (sparkline) still has no CohortRow field (needs a risk-history endpoint);
+// `daysEnrolled` is REAL, derived from the row's enrolled_at.
 function toRow(r: CohortRow): Participant {
   return {
     id: r.participant_id,
     riskScore: Math.round(r.risk_score * 100),
     riskTrend: [], // TODO(phase5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",
-    daysEnrolled: 0, // TODO(phase5): no CohortRow field; comes from ParticipantDetail.enrolled_at
+    daysEnrolled: daysSince(r.enrolled_at),
   }
 }
 

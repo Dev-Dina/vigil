@@ -20,6 +20,7 @@ import {
   ApiError,
 } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
+import { daysSince } from "@/lib/utils"
 import { PLATFORM_ROLES, CAN_LOG_INTERVENTIONS } from "@/lib/role-gates"
 import type {
   ParticipantDetail,
@@ -31,10 +32,6 @@ import type {
 
 function humanizeFactor(tag: string): string {
   return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function daysSince(iso: string): number {
-  return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
 }
 
 export default function ParticipantDetailPage() {

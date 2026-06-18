@@ -12,21 +12,22 @@ import {
 } from "@/components/vigil"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getCohort, getCohortSummary, ApiError } from "@/lib/api"
+import { daysSince } from "@/lib/utils"
 import type { CohortRow, CohortSummary } from "@/lib/types"
 
 function humanizeFactor(tag: string): string {
   return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-// Adapt CohortRow (api.md) to the TriageTable display shape. `riskTrend` and
-// `daysEnrolled` have no CohortRow field — display-only placeholders.
+// Adapt CohortRow (api.md) to the TriageTable display shape. `riskTrend` still has no
+// CohortRow field (needs a risk-history endpoint); `daysEnrolled` is REAL from enrolled_at.
 function toRow(r: CohortRow): TriageParticipant {
   return {
     id: r.participant_id,
     riskScore: Math.round(r.risk_score * 100),
     riskTrend: [], // TODO(phase4/5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",
-    daysEnrolled: 0, // TODO(phase4/5): no CohortRow field; from ParticipantDetail.enrolled_at
+    daysEnrolled: daysSince(r.enrolled_at),
   }
 }
 

@@ -63,6 +63,7 @@ export interface CohortRow {
   risk_band: RiskBand
   top_factors: string[] // explanation tags
   updated_at: string // ISO datetime
+  enrolled_at: string // ISO datetime; trial enrollment start (drives "days enrolled")
   synthetic: boolean // from participant_score.synthetic; always surfaced
 }
 

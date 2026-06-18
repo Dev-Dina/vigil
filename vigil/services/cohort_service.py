@@ -34,6 +34,7 @@ class CohortRow:
     risk_band: str
     top_factors: list[str]
     updated_at: datetime
+    enrolled_at: datetime
     synthetic: bool
 
 
@@ -100,6 +101,7 @@ def list_cohort(
                     # top_factors/synthetic: champion participant_score row (champion-only read).
                     top_factors=list(champ.top_factors) if champ is not None else [],
                     updated_at=p.created_at,
+                    enrolled_at=p.enrolled_at,
                     synthetic=champ.synthetic if champ is not None else True,
                 )
             )
