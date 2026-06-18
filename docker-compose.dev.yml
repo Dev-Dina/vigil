@@ -36,6 +36,11 @@ services:
   # use the shim (VIGIL_SECRETS_BACKEND=env). Config in infra/vault/vault.hcl (no secrets there).
   vault:
     image: hashicorp/vault:1.17
+    # PROD-SHAPED Vault: persistent file storage + manual Shamir unseal. Gated behind the
+    # `prod-vault` profile (Gate D1) so the dev app stack uses the auto-unsealed `vault-dev`
+    # instead; start this one explicitly with `--profile prod-vault` when exercising the prod
+    # unseal lifecycle (operator init/unseal — see docs/RUNBOOK.md / README.md).
+    profiles: ["prod-vault"]
     # Run as the NON-ROOT vault user (uid 100, gid 1000 in the image). We bypass the image's
     # docker-entrypoint.sh (entrypoint: ["vault"]) and invoke vault directly with our single
     # file config — that wrapper, on the `server` branch, injects `-config=/vault/config` +
@@ -59,6 +64,9 @@ services:
   # vault, which live on the compose default network. Builds the guide/ package alone (no vigil/).
   # Its secret set is just its own LLM key (unused in 7.1); no DB DSN, no Vault token, no Redis.
   guide:
+    # Gated behind the `guide` profile (Gate D1) so it does not start with the dev app stack;
+    # the Guide is its own (D3) gate. Start with `--profile guide` when needed.
+    profiles: ["guide"]
     build:
       context: .
       dockerfile: guide/Dockerfile
@@ -68,6 +76,139 @@ services:
       - guide-net
     environment:
       VIGIL_GUIDE_LOG_LEVEL: INFO
+
+# --- Dockerized app stack (Gate D1) — DEV-ONLY, profile "app" --------------------------------
+# `docker compose -f docker-compose.dev.yml --profile app up -d --build` brings up:
+#   postgres + redis (un-profiled, always) + vault-dev + vault-seed + api + worker.
+# The API + worker share ONE image (./Dockerfile). They READ SECRETS FROM VAULT (vault-dev) and
+# connect to Postgres BY SERVICE NAME as the non-superuser vigil_app under RLS — the security model
+# is unchanged; only the secret SOURCE (a dev Vault) and the host (service name) differ.
+
+  # Dev-mode Vault: auto-unsealed, in-memory, FIXED root token. DEV-ONLY. The PROD model is the
+  # persistent Shamir-sealed `vault` service (profile prod-vault) + infra/vault/vault.hcl.
+  vault-dev:
+    image: hashicorp/vault:1.17
+    profiles: ["app"]
+    cap_add: ["IPC_LOCK"]
+    entrypoint: ["vault"]
+    command: ["server", "-dev", "-dev-listen-address=0.0.0.0:8200", "-dev-root-token-id=vigil-dev-root"]
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  # Seed the dev Vault with the app secrets — crucially the IN-CONTAINER DB DSN (postgres:5432,
+  # NOT the host localhost:55432) so the localhost->service-name + 55432->5432 difference is
+  # resolved in the secret value itself. One-off; exits 0.
+  vault-seed:
+    image: hashicorp/vault:1.17
+    profiles: ["app"]
+    depends_on:
+      vault-dev:
+        condition: service_healthy
+    environment:
+      VAULT_ADDR: http://vault-dev:8200
+      VAULT_TOKEN: vigil-dev-root
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        vault kv put secret/vigil/db/dsn value="postgresql+psycopg://vigil_app:vigil_app_pw@postgres:5432/vigil" &&
+        vault kv put secret/vigil/auth/jwt_signing_key value="dev-jwt-signing-key-not-for-production-0123456789abcdef" &&
+        vault kv put secret/vigil/llm/api_key value="dev-llm-key-placeholder" &&
+        echo "vault-dev seeded: db/dsn(in-container), jwt_signing_key, llm/api_key"
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vigil-app:dev
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-seed:
+        condition: service_completed_successfully
+    environment:
+      VIGIL_SECRETS_BACKEND: vault
+      VAULT_ADDR: http://vault-dev:8200
+      VAULT_TOKEN: vigil-dev-root
+      VIGIL_REDIS_URL: redis://redis:6379/0
+      VIGIL_LLM_STUB: "true"
+      VIGIL_CORS_ALLOW_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vigil-app:dev
+    profiles: ["app"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-seed:
+        condition: service_completed_successfully
+    environment:
+      VIGIL_SECRETS_BACKEND: vault
+      VAULT_ADDR: http://vault-dev:8200
+      VAULT_TOKEN: vigil-dev-root
+      VIGIL_REDIS_URL: redis://redis:6379/0
+      VIGIL_LLM_STUB: "true"
+    command: ["arq", "vigil.workers.settings.WorkerSettings"]
+    volumes:
+      - ./data:/app/data:ro
+
+  # One-off DDL/seed (profile "tools"; run via `docker compose ... run --rm`). They need only
+  # Postgres. Migrations run as the OWNER (vigil) via VIGIL_DB_ADMIN_DSN; the seed runs as the
+  # non-superuser vigil_app (env-backend DSN) — the same role split as the host flow.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vigil-app:dev
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VIGIL_DB_ADMIN_DSN: postgresql+psycopg://vigil:vigil@postgres:5432/vigil
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+
+  seed:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vigil-app:dev
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VIGIL_SECRETS_BACKEND: env
+      VIGIL_DB_DSN: postgresql+psycopg://vigil_app:vigil_app_pw@postgres:5432/vigil
+      VIGIL_JWT_SIGNING_KEY: dev-jwt-signing-key-not-for-production-0123456789abcdef
+      VIGIL_REDIS_URL: redis://redis:6379/0
+      VIGIL_LLM_STUB: "true"
+    volumes:
+      - ./data:/app/data:ro
+    command: ["python", "-m", "vigil.seed"]
 
 volumes:
   vault-data:

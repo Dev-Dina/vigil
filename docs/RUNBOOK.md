@@ -27,9 +27,49 @@ The repo's dev services are defined in `docker-compose.dev.yml` (postgres, redis
 
 ## 1. Service bring-up (ordered)
 
-### 1.1 Start the dev stack
+> **Two ways to run the app.** Section **1.A** is the **Dockerized app stack** (Gate D1) — the
+> quickest dev path: API + worker run as containers against an **auto-unsealed dev Vault**, no
+> manual unseal. Sections **1.1–1.5** are the **host/uv flow** against the **prod-shaped,
+> manually-unsealed Vault** — the model that mirrors production. Pick one. The security model is
+> identical in both: the app reads secrets from Vault and connects to Postgres as the non-superuser
+> `vigil_app` under RLS.
+
+### 1.A Dockerized app stack — DEV ONLY (Gate D1, quickest path)
+The API + worker share one image (`./Dockerfile`); they read secrets from a **dev-mode Vault**
+(`vault-dev`, auto-unsealed, fixed root token `vigil-dev-root`, **in-memory — dev only**) and
+reach Postgres/Redis **by service name** on the compose network. The dev Vault is seeded on
+bring-up with the **in-container** DB DSN (`…@postgres:5432/vigil`, resolving the host
+`localhost:55432` → service-name `postgres:5432` difference inside the secret value).
+
 ```bash
-docker compose -f docker-compose.dev.yml up -d postgres redis vault
+# one command: builds the image, starts postgres + redis + vault-dev + vault-seed + api + worker.
+docker compose -f docker-compose.dev.yml --profile app up -d --build
+```
+`depends_on` ordering guarantees the app waits for **Postgres healthy + the dev Vault seeded**
+before starting (no manual sequencing). The API is on **localhost:8000**.
+
+First-time / fresh-volume DB only (the existing dev volume already has these) — create the
+`vigil_app` role + grants once, then migrate (as the owner) + seed (as `vigil_app`):
+```bash
+docker compose -f docker-compose.dev.yml exec -T postgres \
+  psql -U vigil -d vigil -v app_password=vigil_app_pw -f - < scripts/bootstrap_db.sql  # role+grants
+docker compose -f docker-compose.dev.yml --profile tools run --rm migrate              # alembic (owner)
+docker compose -f docker-compose.dev.yml --profile tools run --rm seed                 # vigil.seed (vigil_app)
+```
+Verify: `curl localhost:8000/healthz` → `{"status":"ok"}`; then log in (`POST /api/v1/auth/login`,
+e.g. `coord.a@vigil.example` / `vigil-dev-password`) and `GET /api/v1/cohort` with the token — the
+coordinator sees only their own site (RLS + SEC-1 intact, served by the container as `vigil_app`).
+
+> **DEV vs PROD Vault.** `vault-dev` is **dev-only** (in-memory, auto-unsealed, fixed token). The
+> **production model is the persistent, Shamir-sealed `vault` service** (profile `prod-vault`,
+> `infra/vault/vault.hcl`) with **manual `operator init`/`operator unseal`** — exactly the host
+> flow in **1.1–1.5** below. Phase 8 (k8s) replaces it with raft HA + KMS/transit auto-unseal.
+> `frontend` (D2) + `guide` (D3, profile `guide`) are **not** in the app stack yet.
+
+### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
+```bash
+docker compose -f docker-compose.dev.yml up -d postgres redis
+docker compose -f docker-compose.dev.yml --profile prod-vault up -d vault   # prod-shaped Vault
 ```
 Postgres listens on **localhost:55432**, Redis on **localhost:6379**, Vault on **localhost:8200**.
 
@@ -241,7 +281,8 @@ Present the system in this order — each step states its own honesty boundary:
 | Guide | http://localhost:8080 | `uv run uvicorn guide.app:app --port 8080` |
 | Postgres | localhost:55432 | `docker compose -f docker-compose.dev.yml up -d postgres` |
 | Redis | localhost:6379 | `docker compose -f docker-compose.dev.yml up -d redis` |
-| Vault | http://localhost:8200 | `docker compose -f docker-compose.dev.yml up -d vault` (+ unseal) |
+| Vault (prod-shaped) | http://localhost:8200 | `docker compose -f docker-compose.dev.yml --profile prod-vault up -d vault` (+ unseal) |
+| Dockerized app (api+worker+vault-dev) | API localhost:8000 | `docker compose -f docker-compose.dev.yml --profile app up -d --build` (Gate D1, dev-only auto-unseal) |
 
 Make targets: `make db-up`, `make migrate`, `make seed`, `make api`, `make worker`,
 `make check-specs`, `make leakage`, `make guide-isolation-proof`.

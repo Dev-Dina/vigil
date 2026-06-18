@@ -46,6 +46,20 @@ dev = [
 [tool.uv]
 package = false
 
+# CPU-only PyTorch (Gate D1): there is no GPU on the dev host, the CI runners, or the Docker image,
+# so the default Linux PyPI torch (a multi-GB CUDA wheel + nvidia-* stack) is the wrong artifact.
+# Only Linux is affected — Windows + macOS PyPI torch are already CPU-only — so we redirect ONLY
+# the Linux resolution to the PyTorch CPU index (the ~200MB +cpu wheel, no nvidia-* deps). CPU
+# torch runs LSTM inference + training + sentence-transformers fully (only GPU acceleration is
+# absent). The index is `explicit` so it is used solely for the package(s) that reference it.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu", marker = "sys_platform == 'linux'" }
+
 [tool.ruff]
 target-version = "py312"
 

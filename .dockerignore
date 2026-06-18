@@ -1,0 +1,26 @@
+# Keep the build context small + the image lean. The app image needs ONLY the Python packages
+# (vigil/, models/, ingestion/, scripts/, alembic.ini, pyproject/uv.lock). Everything below is
+# either bind-mounted at runtime (data/), not part of the app (frontend/, guide/), or build cruft.
+.git
+.gitignore
+.venv
+data/
+frontend/
+guide/
+tests/
+docs/
+specs/
+deploy/
+infra/
+.env
+.ruff_cache
+.pytest_cache
+**/__pycache__/
+*.pyc
+*.pyo
+*.tsbuildinfo
+**/__marimo__/
+*.md
+docker-compose*.yml
+Dockerfile
+.dockerignore
