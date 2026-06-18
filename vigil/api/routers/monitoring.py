@@ -187,25 +187,37 @@ async def list_models(scope: Scope = ScopeDep) -> Page:
 
 
 # ---------------------------------------------------------------------------
-# GET /monitoring/drift — HONEST-EMPTY read surface (real drift DEFERRED)
+# GET /monitoring/drift — REAL computed PSI/KS points (Gate M1); platform/auditor only
+# POST /monitoring/drift/run — trigger the producer job (platform_admin only)
 # ---------------------------------------------------------------------------
 
 
 class DriftPointOut(BaseModel):
+    """A computed PSI/KS drift point (Gate M1). Carries provenance: ``synthetic`` (synthetic
+    cohort) + ``constructed_demo`` (the current window was a constructed shift, NOT observed drift).
+    """
+
     model_name: str
-    metric: str
+    distribution: str
+    metric: str  # 'psi' | 'ks'
     value: float
     threshold: float
     breached: bool
+    reference_n: int
+    current_n: int
+    synthetic: bool
+    constructed_demo: bool
+    note: str
     ts: datetime
 
 
 @router.get("/drift", response_model=Page)
 async def list_drift(scope: Scope = ScopeDep) -> Page:
-    """GET /monitoring/drift — drift read surface (PLATFORM/AUDITOR ONLY).
+    """GET /monitoring/drift — REAL computed PSI/KS points (PLATFORM/AUDITOR ONLY).
 
-    HONEST-EMPTY: drift is not computed/stored yet (real drift is a deferred TODO), so this
-    returns an empty page rather than fabricating numbers. 403 for sponsor/site roles.
+    Returns the drift points the producer computed (``compute_drift`` job → ``drift_metric``);
+    empty when none computed yet (honest-empty by data state, never fabricated). 403 for
+    sponsor/site roles. Each point labels its provenance (synthetic cohort / constructed demo).
     """
     try:
         views = monitoring_service.list_drift_points(scope)
@@ -215,6 +227,44 @@ async def list_drift(scope: Scope = ScopeDep) -> Page:
         ) from exc
     items = [DriftPointOut(**asdict(v)).model_dump() for v in views]
     return Page(items=items, next_cursor=None, total=len(items))
+
+
+class DriftRunIn(BaseModel):
+    regime: str = "t2d"
+    # A non-zero shift constructs a labelled breach DEMONSTRATION (not observed drift).
+    demo_shift: float = Field(default=0.0, ge=-1.0, le=1.0)
+
+
+class DriftRunOut(BaseModel):
+    job_id: str
+    regime: str
+    demo_shift: float
+    constructed_demo: bool
+
+
+@router.post(
+    "/drift/run", response_model=DriftRunOut, status_code=status.HTTP_202_ACCEPTED
+)
+async def run_drift(body: DriftRunIn, scope: Scope = ScopeDep) -> DriftRunOut:
+    """POST /monitoring/drift/run — enqueue the drift producer (PLATFORM_ADMIN ONLY).
+
+    On-demand mirror of the scheduled cron run. 403 for non-platform_admin (auditor included —
+    triggering a job is an action, not a read). Returns the enqueued job id (202).
+    """
+    try:
+        job_id = await monitoring_service.trigger_drift_run(
+            scope, regime=body.regime, demo_shift=body.demo_shift
+        )
+    except MonitoringPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    return DriftRunOut(
+        job_id=job_id,
+        regime=body.regime,
+        demo_shift=body.demo_shift,
+        constructed_demo=body.demo_shift != 0.0,
+    )
 
 
 class ModelPromoteIn(BaseModel):

@@ -310,20 +310,25 @@ def test_models_reflects_routing_state_and_role_gated(
 
 
 # ---------------------------------------------------------------------------
-# 4. /monitoring/drift — honest-empty (never fabricated); platform/auditor only
+# 4. /monitoring/drift — real points or empty (never fabricated); platform/auditor only
 # ---------------------------------------------------------------------------
 
 
-def test_drift_honest_empty_and_role_gated(migrated_db: dict[str, str]) -> None:
+def test_drift_surface_role_gated(migrated_db: dict[str, str]) -> None:
+    """Gate M1: drift is now a REAL computed surface (PSI/KS), so it may be empty OR carry points;
+    the sacred guarantees are (a) it's a valid page of NON-fabricated points and (b) it stays
+    platform/auditor-only. The producer→persist→read + provenance is proven in test_m1_drift.py."""
     client = _client()
     r = client.get(
         "/api/v1/monitoring/drift", headers=_h(_token(client, "auditor@vigil.example"))
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["items"] == [] and body["total"] == 0, (
-        "drift must be honest-empty (no fabricated points) until real drift is built"
-    )
+    assert isinstance(body["items"], list) and body["total"] == len(body["items"])
+    # Any point present is a real computed metric (psi|ks) with provenance — never fabricated.
+    for it in body["items"]:
+        assert it["metric"] in ("psi", "ks")
+        assert "synthetic" in it and "constructed_demo" in it
 
     for email in ("coord.a@vigil.example", "pi.a@vigil.example"):
         rd = client.get("/api/v1/monitoring/drift", headers=_h(_token(client, email)))

@@ -15,6 +15,7 @@ from datetime import datetime
 
 from vigil.core.scope import Scope
 from vigil.domain import PLATFORM_ROLES
+from vigil.repositories import drift as drift_repo
 from vigil.repositories import observability as obs_repo
 from vigil.repositories import routing as routing_repo
 from vigil.repositories.session import platform_session, scoped_session
@@ -216,25 +217,66 @@ def list_model_status(scope: Scope) -> list[ModelStatusView]:
 
 @dataclass(frozen=True, slots=True)
 class DriftPointView:
-    model_name: str
-    metric: str
+    model_name: str  # the champion model_version the distribution came from
+    distribution: str  # what was compared (carries a provenance suffix on a demo)
+    metric: str  # 'psi' | 'ks'
     value: float
     threshold: float
     breached: bool
+    reference_n: int
+    current_n: int
+    synthetic: bool  # the cohort the distribution came from is synthetic
+    constructed_demo: bool  # the current window was a constructed shift (NOT observed drift)
+    note: str
     ts: datetime
 
 
-def list_drift_points(scope: Scope) -> list[DriftPointView]:
-    """Drift read surface — PLATFORM/AUDITOR ONLY; HONEST-EMPTY (always ``[]`` today).
+def list_drift_points(scope: Scope, *, limit: int = 50) -> list[DriftPointView]:
+    """Drift read surface — PLATFORM/AUDITOR ONLY. Returns the REAL computed PSI/KS points.
 
-    Drift is NOT computed or stored anywhere yet — B3 deferred the drift SOURCE to a future
-    phase; routing only CONSUMES an opaque breach signal (routing_service.handle_breach). This
-    is the read surface only: it returns an empty list rather than fabricating drift numbers
-    (specs/observability.md § Drift read-surface only).
-
-    TODO(drift): real drift computation (rolling PSI / AUC / prediction-drift writing drift rows
-    + this surface reading them) is DEFERRED future work, NOT Phase 6. Until that exists this
-    function is honestly empty by construction.
+    Backed by the Gate M1 producer (``compute_drift`` job → ``drift_metric``): each point is a real
+    PSI or KS value over the champion score distribution. Empty list when no run has computed any
+    points yet (honest-empty by data state, never a fabricated number). Provenance travels with
+    every point — ``synthetic`` (synthetic cohort) and ``constructed_demo`` (a deliberately-shifted
+    demonstration of the detector, not observed drift). ``drift_metric`` is a platform-tier table
+    (no tenant data); read under ``platform_session`` (the role gate above is the access guard).
     """
     _require_platform(scope, "drift")
-    return []
+    with platform_session() as session:
+        rows = drift_repo.list_recent_drift_points(session, limit=limit)
+        return [
+            DriftPointView(
+                model_name=r.model_version,
+                distribution=r.distribution,
+                metric=r.metric,
+                value=r.value,
+                threshold=r.threshold,
+                breached=r.breached,
+                reference_n=r.reference_n,
+                current_n=r.current_n,
+                synthetic=r.synthetic,
+                constructed_demo=r.constructed_demo,
+                note=r.note,
+                ts=r.computed_at,
+            )
+            for r in rows
+        ]
+
+
+async def trigger_drift_run(
+    scope: Scope, *, regime: str = "t2d", demo_shift: float = 0.0
+) -> str:
+    """Enqueue the drift producer (Gate M1) — PLATFORM_ADMIN ONLY. Returns the job id.
+
+    The on-demand path mirroring the scheduled cron run. ``demo_shift != 0`` enqueues a CONSTRUCTED
+    breach demonstration (labelled in the persisted points), never presented as observed drift.
+    Auditor (read-only) is denied — triggering a job is an action, not a read.
+    """
+    from vigil.domain import Role
+    from vigil.workers.settings import enqueue
+
+    if scope.role is not Role.PLATFORM_ADMIN:
+        raise MonitoringPermissionError(
+            f"drift run trigger denied: role {scope.role!r} is not platform_admin"
+        )
+    return await enqueue("compute_drift", regime=regime, demo_shift=demo_shift)

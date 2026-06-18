@@ -69,13 +69,11 @@ because the agent answer drops usage; the cost surface (`GET /monitoring/cost`) 
 captured cost or honest-zero/absent — NEVER a fabricated cost number**. Capturing usage is a
 Phase-6 build item; rollups are computed only from real persisted values.
 
-### Drift read-surface only (real drift deferred)
-Drift signals are **not computed or stored today** — B3 deferred the drift *source* to the
-observability phase (it only consumes an opaque breach signal). Phase 6 builds the `GET
-/monitoring/drift` **READ SURFACE ONLY**: it returns **honest-empty** ("no drift data computed
-yet") when none exists — **never fabricated drift numbers**. Real drift computation (rolling PSI /
-AUC / prediction-drift metrics writing drift rows) is an explicit **DEFERRED TODO**, future work,
-NOT Phase 6.
+### Drift read-surface (Gate M1 — now backed by a real producer)
+Phase 6 shipped `GET /monitoring/drift` as a **READ SURFACE ONLY** (honest-empty, never fabricated)
+while the drift *source* was deferred. **Gate M1 builds the producer** — see **§ Drift detection
+(Gate M1)** below. The surface now returns **real computed PSI/KS points** (or empty when no run has
+computed any yet — still never a fabricated number), platform/auditor-gated as before.
 
 ### Langfuse
 Langfuse holds the **full per-turn trace** (a real instance); `message_events` is the durable,
@@ -99,3 +97,34 @@ model, guardrail, latency, cost) the event row carries; raw text has no path to 
 - **Vault keys:** `secret/vigil/langfuse/public_key` and `secret/vigil/langfuse/secret_key` (KV v2,
   field `value`) — read only when tracing is enabled; never in code/repo/.env. Local-dev env shim:
   `VIGIL_LANGFUSE_PUBLIC_KEY` / `VIGIL_LANGFUSE_SECRET_KEY`.
+
+## Drift detection (Gate M1)
+The **producer** behind `GET /monitoring/drift` — step 1 of the human-in-the-loop MLOps loop (M2 =
+alert the ML engineer on breach; M3 = governed promotion — later). It computes **real** distribution
+drift; it **never fabricates** a drift number.
+
+- **What drifts.** The **champion prediction distribution** — the `risk_score` values of the
+  champion model's `participant_score` rows. A **reference** window (older scores) is compared to a
+  **current** window (recent scores), split by `computed_at`. (Feature drift over the engagement
+  covariates is a future extension; M1 ships prediction drift.)
+- **Statistics (correct, asserted).** **PSI** (population stability index; reference-quantile bins;
+  `>0.2` = significant shift) and **two-sample KS** (`scipy.stats.ks_2samp`; breach at the α=0.05
+  critical value `D_crit = 1.358·√((n+m)/(n·m))`, equivalently `p<0.05`). Each point is
+  `value / threshold / breached` (uniform `breached ⇔ value > threshold`); the KS p-value rides in
+  the note. The math is unit-asserted against hand-computed / scipy values (`tests/models/test_drift.py`).
+- **Cross-tenant aggregation, security preserved.** `participant_score` is sponsor-RLS (no platform
+  bypass), so the model's output distribution can't be platform-read in one query. The worker job
+  enumerates sponsors (the sponsor table IS platform-readable) and reads each sponsor's champion
+  scores via `sponsor_bootstrap_session` (the same trusted infra path scoring uses), then pools ONLY
+  the scalar scores. The result is a **model-level** statistic.
+- **Storage.** A **platform-tier `drift_metric` table — RLS-EXEMPT** (same class as `routing_state`):
+  it carries **no tenant key and no tenant data**, only the scalar metric + provenance, so no RLS
+  predicate fits and none is needed. The read surface is **platform/auditor-only** (the existing
+  role gate); the **trigger** (`POST /monitoring/drift/run`) is **platform_admin-only**.
+- **Schedulable + triggerable.** An Arq job (`compute_drift`) runs on a **cron schedule**
+  (`WorkerSettings.cron_jobs`) and is **manually triggerable** on demand (`POST /monitoring/drift/run`).
+- **HONESTY (non-negotiable).** Every point carries `synthetic` (the cohort the distribution came
+  from is synthetic) and `constructed_demo`. To DEMONSTRATE a breach firing, a `demo_shift` run sets
+  the current window to the reference shifted by a constant — a **CONSTRUCTED demonstration of the
+  detector**, labelled `constructed_demo=true` + a note, **NOT observed production drift**. With
+  `demo_shift=0` the numbers are real PSI/KS on the real (unshifted) windows.

@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from arq import create_pool
+from arq import create_pool, cron
 from arq.connections import RedisSettings
 
 from vigil.core.config import get_settings
 from vigil.workers.tasks import (
+    compute_drift,
     ping,
     run_assistant_turn,
     score_trial,
@@ -28,7 +29,16 @@ def _redis_settings() -> RedisSettings:
 class WorkerSettings:
     """Consumed by ``arq vigil.workers.settings.WorkerSettings``."""
 
-    functions = [ping, score_trial, run_assistant_turn, send_crossing_notification]
+    functions = [
+        ping,
+        score_trial,
+        run_assistant_turn,
+        send_crossing_notification,
+        compute_drift,  # Gate M1: also manually enqueued by POST /monitoring/drift/run
+    ]
+    # Gate M1: scheduled drift detection — hourly at minute 0, real windows (demo_shift defaults 0).
+    # The same job is manually triggerable on demand (POST /monitoring/drift/run) for the demo.
+    cron_jobs = [cron(compute_drift, minute=0, run_at_startup=False)]
     redis_settings = _redis_settings()
     max_jobs = 10  # bounded concurrency / backpressure
     max_tries = 5

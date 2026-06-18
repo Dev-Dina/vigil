@@ -231,7 +231,8 @@ All `/monitoring/*` reads are **platform/auditor only** (`403` for sponsor/site 
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
 | `GET /monitoring/models` | — | `Page[ModelStatus]` | champion/challenger, version, regime (from `routing_state`) |
-| `GET /monitoring/drift` | `DriftQuery` | `Page[DriftPoint]` | drift signals over time. **Read surface only** — drift is not computed/stored yet (B3 deferred the source); returns **honest-empty** when none exists, **never fabricated** numbers. Real drift computation is a deferred TODO (`/specs/observability.md` § Phase 6 contracts). |
+| `GET /monitoring/drift` | `DriftQuery` | `Page[DriftPoint]` | **REAL** computed PSI/KS drift points (Gate M1 producer → `drift_metric`); empty when none computed yet, **never fabricated**. Each point carries provenance: `synthetic` (synthetic cohort) + `constructed_demo` (a deliberately-shifted demonstration, NOT observed drift). PLATFORM/AUDITOR only (`/specs/observability.md` § Drift detection (Gate M1)). |
+| `POST /monitoring/drift/run` | `DriftRunIn` | `DriftRunOut` (202) | trigger the drift producer job, **platform_admin only** (403 otherwise — auditor included; triggering a job is an action). `demo_shift != 0` enqueues a CONSTRUCTED breach demonstration (labelled), never observed drift. Also runs on a cron schedule. |
 | `GET /monitoring/cost` | `CostQuery` | `CostReport` | token/cost rollups from **real** persisted `latency_ms`/`token_cost_estimate` only — honest-zero/absent if not captured, never faked (`/specs/observability.md` § Phase 6 contracts). |
 | `GET /monitoring/messages` | `MessageQuery` | `Page[MessageEventOut]` | redacted `message_events` (admin observability page). **PLATFORM/AUDITOR ONLY** (403 for sponsor/site roles); runs under `scoped_session` (RLS-bound, never widens the cross-tenant-by-role boundary); **redacted fields only** — no raw column exists (`/specs/observability.md` § Inspect endpoint scope contract). |
 | `POST /monitoring/models/promote` | `ModelPromoteIn` | `ModelPromoteOut` | manual champion promotion, **platform_admin only** (403 otherwise); audited (`model_promote`, non-null actor); honesty-hooked `eval_provenance` (synthetic → `architecture_validation`); non-null `model_card_ref` (specs/routing.md § Audited promotion) |
@@ -244,15 +245,29 @@ class ModelStatus(BaseModel):
     regime: str
     health: Literal["healthy", "degraded", "fallback"]
     promoted_at: datetime | None
-class DriftPoint(BaseModel):
-    model_name: str
-    metric: str
+class DriftPoint(BaseModel):                 # Gate M1: a REAL computed PSI/KS point
+    model_name: str                         # the champion model_version compared
+    distribution: str                       # what drifted, e.g. "champion_risk_score"
+    metric: Literal["psi", "ks"]
     value: float
     threshold: float
-    breached: bool
+    breached: bool                          # breached ⇔ value > threshold
+    reference_n: int
+    current_n: int
+    synthetic: bool                         # provenance: synthetic cohort
+    constructed_demo: bool                  # current window was a constructed shift (NOT observed)
+    note: str
     ts: datetime
-# DriftQuery: optional filters (model_name | since/until); read surface only — honest-empty
-# today (no drift computed/stored), so /monitoring/drift returns Page[DriftPoint] with items=[].
+class DriftRunIn(BaseModel):
+    regime: str = "t2d"
+    demo_shift: float = 0.0                  # != 0 → CONSTRUCTED breach demonstration (labelled)
+class DriftRunOut(BaseModel):
+    job_id: str
+    regime: str
+    demo_shift: float
+    constructed_demo: bool
+# DriftQuery: optional filters (model_name | since/until). /monitoring/drift returns the most
+# recent computed Page[DriftPoint] (empty until a run computes points — never fabricated).
 class CostQuery(BaseModel):                 # /monitoring/cost filters
     surface: Literal["local_assistant", "public_guide"] | None = None
     since: datetime | None = None           # ts range (UTC)

@@ -83,6 +83,7 @@ REQUIRED: dict[str, list[str]] = {
         "## message_events",
         "## Admin observability",
         "## Phase 6 contracts",
+        "## Drift detection (Gate M1)",
     ],
     "scoring.md": [
         "## Decisions (fixed)",

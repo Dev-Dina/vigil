@@ -976,6 +976,34 @@ async def send_crossing_notification(
 
 
 # ---------------------------------------------------------------------------
+# compute_drift — Gate M1 drift producer (PSI/KS over the champion score distribution)
+# ---------------------------------------------------------------------------
+
+
+async def compute_drift(
+    ctx: dict[str, Any],
+    *,
+    regime: str = "t2d",
+    demo_shift: float = 0.0,
+) -> dict[str, Any]:
+    """Compute + persist PSI/KS drift points for the champion score distribution.
+
+    Schedulable (WorkerSettings.cron_jobs) AND manually triggerable (POST /monitoring/drift/run
+    enqueues this). Thin wrapper over ``drift_service.run_drift_detection`` — that function does the
+    cross-tenant pooling (per-sponsor reads), the reference/current split, the PSI/KS evaluation,
+    and the platform-table persistence. ``demo_shift != 0`` constructs a labelled breach demo (NOT
+    observed drift). Returns the run summary (no PII; aggregate stats only).
+    """
+    from dataclasses import asdict
+
+    from vigil.services import drift_service
+
+    summary = drift_service.run_drift_detection(regime=regime, demo_shift=demo_shift)
+    log.info("drift.job_done", extra={"extra": asdict(summary)})
+    return asdict(summary)
+
+
+# ---------------------------------------------------------------------------
 # run_assistant_turn — the Phase-5 assistant turn (router -> Retention agent)
 # ---------------------------------------------------------------------------
 

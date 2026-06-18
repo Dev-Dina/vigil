@@ -439,6 +439,47 @@ class RoutingState(Base):
     )
 
 
+# ------------------------------------------------------ drift detection (Gate M1)
+class DriftMetric(Base):
+    """A computed distribution-drift point (Gate M1). Platform-scoped, RLS-EXEMPT — same tier as
+    ``routing_state``: it stores ONLY aggregate model statistics (a PSI/KS value over the model's
+    pooled output distribution), NO tenant data — no sponsor_id, no participant, no risk row. The
+    producer (``compute_drift`` worker job) aggregates the champion score distribution ACROSS
+    tenants (model-level monitoring), but persists only the scalar metric here; the read surface
+    (``GET /monitoring/drift``) is platform/auditor-only. No RLS predicate fits (no tenant key) and
+    none is needed — there is nothing tenant-identifying to isolate.
+
+    Honesty columns: ``synthetic`` (the cohort the distribution came from is synthetic), and
+    ``constructed_demo`` (the CURRENT window was a deliberately-shifted demonstration of the
+    detector firing, NOT observed production drift) — both surfaced so a breach is never mistaken
+    for an observed clinical signal. See specs/observability.md § Drift detection (Gate M1).
+    """
+
+    __tablename__ = "drift_metric"
+    __table_args__ = (
+        Index("ix_drift_metric_computed_at", "computed_at"),
+        Index("ix_drift_metric_regime_version", "regime", "model_version"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    regime: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    # The distribution compared, e.g. "champion_risk_score" (+ a provenance suffix on a demo).
+    distribution: Mapped[str] = mapped_column(String(128), nullable=False)
+    metric: Mapped[str] = mapped_column(String(16), nullable=False)  # 'psi' | 'ks'
+    value: Mapped[float] = mapped_column(Float, nullable=False)
+    threshold: Mapped[float] = mapped_column(Float, nullable=False)
+    breached: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    reference_n: Mapped[int] = mapped_column(Integer, nullable=False)
+    current_n: Mapped[int] = mapped_column(Integer, nullable=False)
+    synthetic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    constructed_demo: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    note: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    computed_at: Mapped[datetime] = created_at()
+
+
 # ------------------------------------------------- observability (message_events, Phase 5)
 class MessageEvent(Base):
     """One row per chatbot/assistant turn on BOTH surfaces (specs/observability.md).
