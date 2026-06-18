@@ -27,6 +27,12 @@ class CohortRow(BaseModel):
     synthetic: bool
 
 
+class CohortSummary(BaseModel):
+    total: int
+    by_band: dict[str, int]  # {"high","medium","low"} → count (api.md § cohort)
+    mean_risk: float
+
+
 @router.get("", response_model=Page)
 async def list_cohort(
     sponsor_id: str | None = Query(default=None),
@@ -69,3 +75,34 @@ async def list_cohort(
         for r in rows
     ]
     return Page(items=items, next_cursor=None, total=len(items))
+
+
+@router.get("/summary", response_model=CohortSummary)
+async def cohort_summary(
+    sponsor_id: str | None = Query(default=None),
+    trial_id: str | None = Query(default=None),
+    site_id: str | None = Query(default=None),
+    scope: Scope = ScopeDep,
+) -> CohortSummary:
+    """Counts + mean risk for the caller's scoped cohort (api.md § cohort / CohortSummary).
+
+    Same scope-binding as ``GET /cohort`` (RLS + SEC-1 ``scope_filter`` narrowing): the summary
+    covers ONLY the caller's scoped slice — a coordinator's totals reflect their site only;
+    cross-tenant + cross-site hold exactly as for the list. Platform roles are forbidden.
+    """
+    if scope.role in PLATFORM_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="platform roles may not access participant cohort data",
+        )
+    try:
+        view = cohort_service.summarize_cohort(
+            scope, sponsor_id=sponsor_id, trial_id=trial_id, site_id=site_id
+        )
+    except ScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    return CohortSummary(
+        total=view.total, by_band=view.by_band, mean_risk=view.mean_risk
+    )

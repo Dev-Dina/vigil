@@ -37,11 +37,20 @@ class CohortRow:
     synthetic: bool
 
 
+@dataclass(frozen=True, slots=True)
+class CohortSummaryView:
+    """Aggregate of the caller's SCOPED cohort (api.md § cohort / CohortSummary)."""
+
+    total: int
+    by_band: dict[str, int]  # always carries all three bands (0 when none)
+    mean_risk: float
+
+
 def list_cohort(
     scope: Scope,
     *,
     sponsor_id: str | None = None,
-    limit: int = 50,
+    limit: int | None = 50,
     risk_band: str | None = None,
     sort: str = "risk_desc",
 ) -> list[CohortRow]:
@@ -103,3 +112,33 @@ def list_cohort(
         result = [r for r in result if r.risk_band == risk_band]
     result.sort(key=lambda r: r.risk_score, reverse=(sort != "risk_asc"))
     return result[:limit]
+
+
+def summarize_cohort(
+    scope: Scope,
+    *,
+    sponsor_id: str | None = None,
+    trial_id: str | None = None,
+    site_id: str | None = None,
+) -> CohortSummaryView:
+    """Counts + mean risk over the caller's SCOPED cohort (api.md § cohort / CohortSummary).
+
+    Computed over the SAME scope-bound slice as ``list_cohort`` (RLS + SEC-1 ``scope_filter``
+    narrowing) — never wider — with NO row cap (``limit=None``), so the totals reflect the whole
+    scoped cohort, not a page. ``trial_id`` / ``site_id`` are an ADDITIONAL restriction applied
+    on top of the already-scope-narrowed rows: an out-of-scope id simply matches nothing (empty
+    summary), never widening or leaking. ``by_band`` always carries all three bands (0 when none).
+    """
+    rows = list_cohort(scope, sponsor_id=sponsor_id, limit=None)
+    if trial_id is not None:
+        rows = [r for r in rows if r.trial_id == trial_id]
+    if site_id is not None:
+        rows = [r for r in rows if r.site_id == site_id]
+
+    by_band = {"high": 0, "medium": 0, "low": 0}
+    for r in rows:
+        if r.risk_band in by_band:
+            by_band[r.risk_band] += 1
+    total = len(rows)
+    mean_risk = (sum(r.risk_score for r in rows) / total) if total else 0.0
+    return CohortSummaryView(total=total, by_band=by_band, mean_risk=mean_risk)
