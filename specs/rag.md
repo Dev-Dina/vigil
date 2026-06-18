@@ -1,10 +1,13 @@
 # RAG Spec
 
 ## Decisions (fixed)
-- Local assistant: HYBRID retrieval — structured (Postgres, via MCP) for risk explanations,
-  vector (pgvector) for protocols/SOPs. Answers grounded + cited; no open generation.
+- Local assistant: HYBRID retrieval — structured (Postgres, via a scope-resolved tool) for risk
+  explanations, vector (pgvector) for protocols/SOPs. Answers grounded + cited; no open generation.
 - Public Guide: vector retrieval over APPROVED DOCUMENTS ONLY (see isolation.md).
-- LangGraph orchestration; Langfuse tracing.
+- Orchestration is HAND-ROLLED (an LLM-classify router → scoped agents on a shared grounding
+  spine; `vigil/agents/router.py` + `agent_base.py` + `tools.py`) — an MCP-style/tool-calling
+  PATTERN, NOT the MCP protocol and NOT LangGraph (neither is a dependency or import). Langfuse
+  tracing is optional/best-effort.
 - **Two distinct surfaces — never blurred.** The Phase-5 agents (Retention / Report / Operations
   + the router below) are the **IN-APP, authenticated, scope-bound** assistant (`/assistant`,
   `/specs/api.md`). They are NOT the public Guide — the Guide is a separate, fully-isolated
@@ -88,8 +91,9 @@ and a turn that retrieves nothing relevant refuses rather than improvises. The t
 
 ### Retrieval sources per agent
 **Local assistant (`/assistant`, authenticated, scope-bound)** — HYBRID, two source classes,
-both reached only through MCP tools the agent is explicitly granted:
-- **Structured** (risk explanations, cohort/participant facts): Postgres via the scoped MCP tool.
+both reached only through the scope-resolved tools the agent is explicitly granted (plain Python
+functions in an MCP-style/tool-calling pattern — `vigil/agents/tools.py`; NOT the MCP protocol):
+- **Structured** (risk explanations, cohort/participant facts): Postgres via the scoped tool.
   The tool runs in the caller's **tenant-scoped session** — RLS applies, so retrieval can only see
   participants/trials inside the caller's scope. A `participant_id` outside scope returns nothing
   (never an error that leaks existence). This is the source for "why is X flagged": per-feature

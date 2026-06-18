@@ -104,9 +104,10 @@ test** (create a crossing at site A; assert a coordinator scoped only to site B 
 a recipient), an extension of the sacred cross-tenant + cross-site leakage suite. The sacred
 egress/transport half of this contract lives in `/specs/isolation.md § Phase 9`.
 
-**Seed contract (demo).** The demo coordinator user `coord.a@vigil.example` is **seeded** with the
-notification email `ramezms218@gmail.com` set on that user record. This is **seed data on a single
-user row — NOT a hardcoded global default constant in application code**; the personal address must
-never appear as a committed code constant or a global config default. Production recipients come
-the same way: from each user's own `notification_email` on their record (never from a secret, never
-from code).
+**Seed contract (demo).** The demo coordinator user `coord.a@vigil.example` is **seeded** with a
+notification email sourced from the operator environment (`VIGIL_DEMO_NOTIFY_EMAIL`) at seed time
+(Gate 9.5) and set on that user record. This is **seed data on a single user row — NOT a hardcoded
+global default constant in application code**; the recipient address must **never appear as a
+committed literal anywhere** (code, spec, or config) — it is env-sourced. Production recipients
+come the same way: from each user's own `notification_email` on their record (never from a secret,
+never from code).

@@ -37,7 +37,9 @@ routers (`api/`) -> services (`services/`) -> repositories (`repositories/`) -> 
 - Services: domain logic; orchestrate repositories; enqueue jobs.
 - Repositories: the ONLY place that touches the DB; every call runs in a tenant-scoped session.
 - Cross-cutting: `core/config.py`, `core/security.py`, `core/logging.py`, `core/scope.py`,
-  `workers/` (Arq), `agents/` (LangGraph + MCP tools).
+  `workers/` (Arq), `agents/` (a hand-rolled LLM-classify router dispatching scoped agents on a
+  shared grounding spine; plain scope-resolved tools — champion-only risk facts + RLS-scoped
+  pgvector search — an MCP-style/tool-calling PATTERN, hand-rolled, NOT the MCP protocol or LangGraph).
 
 ## Tenancy & access (fixed decisions)
 - **Sponsor is the hard tenant boundary** (one sponsor never sees another), enforced by

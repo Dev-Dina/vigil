@@ -29,3 +29,6 @@ deploy/k8s/last-proof-transcript.txt
 
 # Frontend TypeScript incremental build cache — a regenerable build artifact, never committed.
 *.tsbuildinfo
+
+# marimo editor session cache (generated; embeds local absolute paths) — never committed.
+__marimo__/

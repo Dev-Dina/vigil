@@ -17,7 +17,7 @@ writes to the app sink; same schema, separate stores (`/specs/infra.md`).
 | `role_or_guest_scope` | str | app: the caller role (e.g. `study_manager`); Guide: `guest` |
 | `surface` | enum | `local_assistant` \| `public_guide` — which surface emitted the row |
 | `ts` | timestamptz | event time (UTC) |
-| `route_or_agent` | str | API route or LangGraph agent/node that handled the turn |
+| `route_or_agent` | str | API route or agent that handled the turn (e.g. `agent:retention`) |
 | `guardrail_decision` | enum | `allowed` \| `blocked` (a refusal is an explicit logged outcome) |
 | `retrieved_chunks` | jsonb | list of citation refs `{source_type, source_id, locator}` (`/specs/rag.md`); `[]` if none |
 | `llm_provider_model` | str | provider + model id used (e.g. `anthropic/claude-...`) |
