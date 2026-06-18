@@ -68,7 +68,12 @@ def _engagement_rows() -> list[dict]:
 
 
 def _make_coordinator(
-    *, email: str, sponsor_id: uuid.UUID, trial_id: uuid.UUID, site_id: uuid.UUID, notif: str
+    *,
+    email: str,
+    sponsor_id: uuid.UUID,
+    trial_id: uuid.UUID,
+    site_id: uuid.UUID,
+    notif: str,
 ) -> uuid.UUID:
     from vigil.core.security import hash_password
     from vigil.db.models import User
@@ -146,8 +151,12 @@ def test_done_when_real_calibrated_model_drives_full_loop(
             )
         )
         session.flush()
-        session.add(Site(id=site1, sponsor_id=sponsor_a, trial_id=trial_id, name="loop-site-1"))
-        session.add(Site(id=site2, sponsor_id=sponsor_a, trial_id=trial_id, name="loop-site-2"))
+        session.add(
+            Site(id=site1, sponsor_id=sponsor_a, trial_id=trial_id, name="loop-site-1")
+        )
+        session.add(
+            Site(id=site2, sponsor_id=sponsor_a, trial_id=trial_id, name="loop-site-2")
+        )
         session.flush()
         session.add(
             Participant(
@@ -229,22 +238,30 @@ def test_done_when_real_calibrated_model_drives_full_loop(
     row = next((x for x in at_risk if x.participant_id == str(pid)), None)
     assert row is not None, "participant must appear on the scope-bound at-risk surface"
     assert row.synthetic is True, "at-risk row must carry the synthetic label"
-    assert row.top_factors, "at-risk row must surface REAL champion attribution reasons (9.1)"
-    assert set(row.top_factors) <= set(SEQ_NUMERIC), "reasons must be the model's OWN inputs"
+    assert row.top_factors, (
+        "at-risk row must surface REAL champion attribution reasons (9.1)"
+    )
+    assert set(row.top_factors) <= set(SEQ_NUMERIC), (
+        "reasons must be the model's OWN inputs"
+    )
 
     view = risk_service.get_participant_risk(scope_c1, str(pid))
     assert view is not None and view.factors, "risk detail must carry real reasons"
     names = [f.feature for f in view.factors]
     assert_no_outcome_features(names)  # leakage-safe surface (must not raise)
     assert view.synthetic is True
-    assert view.recommended_actions, "high-band participant must get recommended actions (9.3)"
+    assert view.recommended_actions, (
+        "high-band participant must get recommended actions (9.3)"
+    )
     assert all(a.action in APPROVED_ACTION_TEXTS for a in view.recommended_actions), (
         "only approved operational action texts may surface (no free/clinical text)"
     )
 
     # --- trajectory endpoint (9.4 sparkline source): per-point synthetic provenance ------------
     points = risk_service.get_participant_risk_history(scope_c1, str(pid))
-    assert points and all(p.synthetic for p in points), "history points must be synthetic-labeled"
+    assert points and all(p.synthetic for p in points), (
+        "history points must be synthetic-labeled"
+    )
     assert points[-1].risk_band == "high"
 
     # --- PII-free scope-bound email doorbell (9.6), send-once ----------------------------------
@@ -256,7 +273,9 @@ def test_done_when_real_calibrated_model_drives_full_loop(
     assert result["status"] == "sent"
     assert len(sender.sent) == 1, "the doorbell sends exactly once"
     to = sender.sent[0]["to"]
-    assert "loop.c1@example.test" in to, "the in-scope site-1 coordinator must be a recipient"
+    assert "loop.c1@example.test" in to, (
+        "the in-scope site-1 coordinator must be a recipient"
+    )
     assert "loop.c2@example.test" not in to, (
         "CROSS-SITE LEAK: a site-2 coordinator must NOT receive a site-1 crossing email"
     )
@@ -293,7 +312,9 @@ def test_seed_writes_no_fabricated_factors(migrated_db: dict[str, str]) -> None:
             session, uuid.UUID(ids["participant_a"])
         )
     assert rows, "expected at least the seeded score row for participant_a"
-    seed_row = min(rows, key=lambda r: r.computed_at)  # the seed row precedes any test rescore
+    seed_row = min(
+        rows, key=lambda r: r.computed_at
+    )  # the seed row precedes any test rescore
     assert seed_row.top_factors == [], (
         f"seed must not write fabricated top_factors; got {seed_row.top_factors}"
     )

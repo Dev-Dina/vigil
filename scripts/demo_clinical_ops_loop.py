@@ -83,11 +83,19 @@ def _resolve_coordinator_scope():  # type: ignore[no-untyped-def]
         if user is None:
             raise SystemExit(f"seed first: {_COORD_EMAIL} not found")
         scope = resolve_scope(session, user)
-        return user.id, scope, user.home_sponsor_id, user.home_trial_id, user.home_site_id
+        return (
+            user.id,
+            scope,
+            user.home_sponsor_id,
+            user.home_trial_id,
+            user.home_site_id,
+        )
 
 
 def main() -> None:
-    _line("Gate 9.7 -- Phase-9 clinical-ops loop (CAPABILITY DEMO on LABELED-SYNTHETIC data)")
+    _line(
+        "Gate 9.7 -- Phase-9 clinical-ops loop (CAPABILITY DEMO on LABELED-SYNTHETIC data)"
+    )
     print(
         "PLANTED-SIGNAL / SYNTHETIC: the trajectory->dropout relationship is a synthetic, "
         "literature-shaped assumption. This demonstrates the operational ARCHITECTURE driven by "
@@ -126,11 +134,15 @@ def main() -> None:
             )
         )
         session.flush()
-    print(f"\nsynthetic participant {pid} created in the coordinator's own site (coded-ref only).")
+    print(
+        f"\nsynthetic participant {pid} created in the coordinator's own site (coded-ref only)."
+    )
 
     all_rows = _engagement_rows(pid)
 
-    _line("Accruing disengagement -> REAL calibrated rescore after each stage (no override)")
+    _line(
+        "Accruing disengagement -> REAL calibrated rescore after each stage (no override)"
+    )
     injected = 0
     for stage, end in enumerate(_STAGE_ENDS, start=1):
         from vigil.db.models import Engagement
@@ -163,13 +175,17 @@ def main() -> None:
         with sponsor_bootstrap_session(str(sponsor_id)) as session:
             row = scoring_repo.get_score(session, pid, "sequence_v1.1:demo")
         last_cons = all_rows[end - 1]["consecutive_missed"]
-        flag = "  <- CROSSED >0.6 (serious)" if row.risk_score > _SERIOUS_THRESHOLD else ""
+        flag = (
+            "  <- CROSSED >0.6 (serious)" if row.risk_score > _SERIOUS_THRESHOLD else ""
+        )
         print(
             f"  stage {stage}: {end:>2} visits (consecutive_missed={last_cons:>2}) -> "
             f"score={row.risk_score:.4f} band={row.risk_band} synthetic={row.synthetic}{flag}"
         )
 
-    _line("Trajectory (/risk/history) -- champion-of-record points, per-point synthetic provenance")
+    _line(
+        "Trajectory (/risk/history) -- champion-of-record points, per-point synthetic provenance"
+    )
     points = risk_service.get_participant_risk_history(scope, str(pid)) or []
     for p in points:
         print(
@@ -186,21 +202,29 @@ def main() -> None:
             f"notified={c.notified}"
         )
 
-    _line("Scope-bound AT-RISK surface (Gate 9.4) -- REAL reasons (9.1) + actions (9.3) + synthetic")
+    _line(
+        "Scope-bound AT-RISK surface (Gate 9.4) -- REAL reasons (9.1) + actions (9.3) + synthetic"
+    )
     rows = cohort_service.list_cohort(scope, risk_band="high", sort="risk_desc")
     me = next((r for r in rows if r.participant_id == str(pid)), None)
     if me is not None:
-        print(f"  at-risk row: {me.participant_id}  band={me.risk_band}  synthetic={me.synthetic}")
+        print(
+            f"  at-risk row: {me.participant_id}  band={me.risk_band}  synthetic={me.synthetic}"
+        )
         print(f"    top_factors (REAL LSTM attribution): {me.top_factors}")
     view = risk_service.get_participant_risk(scope, str(pid))
     if view is not None:
-        print(f"    reasons: {[(f.feature, round(f.contribution, 4)) for f in view.factors]}")
+        print(
+            f"    reasons: {[(f.feature, round(f.contribution, 4)) for f in view.factors]}"
+        )
         print("    recommended actions (operational, NOT clinical):")
         for a in view.recommended_actions:
             print(f"      - {a.action}  [pre-fills intervention={a.intervention_kind}]")
         print(f"    synthetic-demonstration label on the detail: {view.synthetic}")
 
-    _line("PII-FREE scope-bound EMAIL doorbell (Gate 9.6) -- send-once (stub unless configured)")
+    _line(
+        "PII-FREE scope-bound EMAIL doorbell (Gate 9.6) -- send-once (stub unless configured)"
+    )
     if crossings:
         result = notification_service.notify_crossing(
             crossing_id=str(crossings[0].id), sponsor_id=str(sponsor_id)
@@ -211,7 +235,9 @@ def main() -> None:
             "no id / coded_ref / score / factor -- see specs/isolation.md § Email body)"
         )
 
-    _line("Phase-9 DONE-WHEN met -- capability demonstration, labeled-synthetic, end-to-end")
+    _line(
+        "Phase-9 DONE-WHEN met -- capability demonstration, labeled-synthetic, end-to-end"
+    )
     print(
         "Every surface above (trajectory, at-risk row/detail, reasons, email) is "
         "SYNTHETIC-labeled. The crossing was reached by the REAL calibrated LSTM -- NO override."
