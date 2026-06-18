@@ -149,17 +149,17 @@
     "phase_PHASE1/PHASE2": 0.002900798918966641
   },
   "artifacts": {
-    "pr_curve_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\pr_curve_gbt.png",
-    "pr_curve_logit": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\pr_curve_logit.png",
-    "calibration_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\calibration_gbt.png",
-    "calibration_logit": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\calibration_logit.png",
-    "residuals_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\residuals_gbt.png",
-    "mae_by_sponsor_class": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\mae_by_sponsor_class.png",
-    "shap_global": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_global.png",
+    "pr_curve_gbt": "data/models/pr_curve_gbt.png",
+    "pr_curve_logit": "data/models/pr_curve_logit.png",
+    "calibration_gbt": "data/models/calibration_gbt.png",
+    "calibration_logit": "data/models/calibration_logit.png",
+    "residuals_gbt": "data/models/residuals_gbt.png",
+    "mae_by_sponsor_class": "data/models/mae_by_sponsor_class.png",
+    "shap_global": "data/models/shap_global.png",
     "shap_local": [
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_0.png",
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_1.png",
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\shap_local_2.png"
+      "data/models/shap_local_0.png",
+      "data/models/shap_local_1.png",
+      "data/models/shap_local_2.png"
     ]
   }
 }

@@ -54,5 +54,5 @@ testpaths = ["tests"]
 addopts = "-ra -m \"not slow\""
 asyncio_mode = "auto"
 markers = [
-    "slow: full 18k-cohort synthetic regeneration; excluded by default and from CI (run via `make test-slow`)",
+    "slow: torch/LSTM spine tests + the heavy 18k-cohort synthetic regeneration. Excluded from the default fast run (the `-m \"not slow\"` addopts). CI DOES run the slow-inclusive spine (`pytest tests/spine -m \"slow or not slow\"`, Postgres-backed); only the heavy regeneration slow tests outside tests/spine are excluded from CI — run those via `make test-slow`.",
 ]

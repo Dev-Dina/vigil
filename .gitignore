@@ -26,3 +26,6 @@ tests/guide/_built_index.json
 
 # Guide layer-3 proof run artifact (transcript from run-isolation-proof)
 deploy/k8s/last-proof-transcript.txt
+
+# Frontend TypeScript incremental build cache — a regenerable build artifact, never committed.
+*.tsbuildinfo

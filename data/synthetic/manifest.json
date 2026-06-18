@@ -1290,7 +1290,7 @@
     "overall_dropout_rate_participant_weighted": 0.151,
     "provenance": {
       "aact_source": "real hosted AACT snapshot (data/clean/ref_*.parquet); build-time only",
-      "eda_summary_path": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\eda_summary.json",
+      "eda_summary_path": "data/eda/eda_summary.json",
       "note": "Real marginal/overall/reason-mix/sign targets are EDA values (not re-extracted). early_fraction is an ASSUMPTION (AACT has no per-event timing).",
       "source": "captured real EDA over validated ref_* tables",
       "study_count_post_filter": 73073,

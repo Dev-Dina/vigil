@@ -5,8 +5,10 @@
 
 ## Section 1: BREADTH — Pan-indication structural signal (REAL data/clean)
 
-**Pan-indication GBT TEST PR-AUC = 0.697** (REAL `ref_trial` + `ref_arm`, 37k+ arms, all
-modelling phases, temporal split). Source: `data/models/baselines/metrics.json`.
+**Pan-indication GBT TEST PR-AUC = 0.697** (REAL `ref_trial` + `ref_arm`, ~37k trials / ~97k arms,
+all modelling phases, temporal split). Source: `data/models/baselines/metrics.json` (`fold_sizes`
+sum to 37,246 trials; `n_arms` sum to 96,679 arms — the modelling cohort the 0.697 was computed on,
+drawn from the full cleaned 73,073-trial / 182,240-arm `ref_trial`/`ref_arm` tables).
 
 **Base-rate-adjusted reading:** the test base rate (positive prevalence) is **0.474**, so the
 base-rate-adjusted skill = (0.697 − 0.474) / (1 − 0.474) ≈ **0.42** — i.e. the model closes ~42%

@@ -100,15 +100,15 @@
     "cumulative_missed": 0.000899953277821998
   },
   "artifacts": {
-    "pr_sequence": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_sequence.png",
-    "calibration_sequence": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\calib_sequence.png",
-    "lead_time": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\lead_time.png",
-    "per_stratum_pr_auc": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\per_stratum_pr_auc.png",
-    "attr_global": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_global.png",
+    "pr_sequence": "data/models/t2d/pr_sequence.png",
+    "calibration_sequence": "data/models/t2d/calib_sequence.png",
+    "lead_time": "data/models/t2d/lead_time.png",
+    "per_stratum_pr_auc": "data/models/t2d/per_stratum_pr_auc.png",
+    "attr_global": "data/models/t2d/attr_global.png",
     "attr_local": [
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_0.png",
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_1.png",
-      "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\attr_local_2.png"
+      "data/models/t2d/attr_local_0.png",
+      "data/models/t2d/attr_local_1.png",
+      "data/models/t2d/attr_local_2.png"
     ]
   }
 }

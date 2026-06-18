@@ -79,10 +79,10 @@
 - {'covariate': 'blinded(vs open label)', 'blinded_mean_dropout': 0.1618, 'open_mean_dropout': 0.2344, 'n': 72842}
 
 ## Figures
-- dropout_rate_hist: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\dropout_rate_hist.png`
-- dropout_by_phase: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\dropout_by_phase.png`
-- dropout_by_therapeutic_area: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\dropout_by_therapeutic_area.png`
-- dropout_by_enrollment_size: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\dropout_by_enrollment_size.png`
-- enrollment_hist: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\enrollment_hist.png`
-- withdrawal_reason_mix: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\withdrawal_reason_mix.png`
-- missingness: `C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\data\eda\figures\missingness.png`
+- dropout_rate_hist: `data/eda/figures/dropout_rate_hist.png`
+- dropout_by_phase: `data/eda/figures/dropout_by_phase.png`
+- dropout_by_therapeutic_area: `data/eda/figures/dropout_by_therapeutic_area.png`
+- dropout_by_enrollment_size: `data/eda/figures/dropout_by_enrollment_size.png`
+- enrollment_hist: `data/eda/figures/enrollment_hist.png`
+- withdrawal_reason_mix: `data/eda/figures/withdrawal_reason_mix.png`
+- missingness: `data/eda/figures/missingness.png`

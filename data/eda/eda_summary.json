@@ -367,13 +367,13 @@
     "0.99": 3945.5
   },
   "figures": {
-    "dropout_by_enrollment_size": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_enrollment_size.png",
-    "dropout_by_phase": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_phase.png",
-    "dropout_by_therapeutic_area": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_by_therapeutic_area.png",
-    "dropout_rate_hist": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\dropout_rate_hist.png",
-    "enrollment_hist": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\enrollment_hist.png",
-    "missingness": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\missingness.png",
-    "withdrawal_reason_mix": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\eda\\figures\\withdrawal_reason_mix.png"
+    "dropout_by_enrollment_size": "data/eda/figures/dropout_by_enrollment_size.png",
+    "dropout_by_phase": "data/eda/figures/dropout_by_phase.png",
+    "dropout_by_therapeutic_area": "data/eda/figures/dropout_by_therapeutic_area.png",
+    "dropout_rate_hist": "data/eda/figures/dropout_rate_hist.png",
+    "enrollment_hist": "data/eda/figures/enrollment_hist.png",
+    "missingness": "data/eda/figures/missingness.png",
+    "withdrawal_reason_mix": "data/eda/figures/withdrawal_reason_mix.png"
   },
   "missingness_ref_trial": {
     "actual_duration_days": 0.0004,

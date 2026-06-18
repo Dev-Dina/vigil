@@ -154,7 +154,7 @@
     }
   },
   "artifacts": {
-    "pr_synth_structural_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\pr_synth_struct_gbt.png",
-    "calibration_synth_structural_gbt": "C:\\Users\\LEGION\\Desktop\\ThisIsIt\\Codebase\\Vigil\\data\\models\\t2d\\calib_synth_struct_gbt.png"
+    "pr_synth_structural_gbt": "data/models/t2d/pr_synth_struct_gbt.png",
+    "calibration_synth_structural_gbt": "data/models/t2d/calib_synth_struct_gbt.png"
   }
 }
