@@ -11,6 +11,7 @@ import uuid
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -86,6 +87,21 @@ def create_app() -> FastAPI:
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    # CORS — added LAST so it is the OUTERMOST middleware: the browser preflight OPTIONS is
+    # answered here (200/204 + Access-Control-Allow-* headers) instead of falling through to the
+    # routers (which declare no OPTIONS handler → 405). Explicit allow-list (configurable via
+    # VIGIL_CORS_ALLOW_ORIGINS), never "*", because allow_credentials=True (the app authenticates
+    # with a Bearer token in the Authorization header). Server-side callers send no Origin, so this
+    # is inert for them — it only affects browser cross-origin requests.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_allow_origin_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["x-request-id"],
+    )
 
     return app
 

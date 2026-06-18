@@ -101,6 +101,17 @@ class Settings(BaseSettings):
     # Base URL of the authenticated app for the at-risk deep link in the email body (no PII).
     app_base_url: str = "http://localhost:3000"
 
+    # CORS: browser origins allowed to call the API (comma-separated). The local-dev default
+    # covers the Next.js dev server on both host spellings; production sets
+    # VIGIL_CORS_ALLOW_ORIGINS explicitly. Used with allow_credentials=True (Bearer tokens), so
+    # this is an explicit allow-list — never "*". See vigil/api/app.py.
+    cors_allow_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_allow_origin_list(self) -> list[str]:
+        """The configured CORS origins, parsed from the comma-separated setting (blanks dropped)."""
+        return [o.strip() for o in self.cors_allow_origins.split(",") if o.strip()]
+
     # --- embeddings (Phase 5) — LOCAL, vendored, OFFLINE (no embedding API, no runtime fetch) ---
     # The single real embedder is sentence-transformers all-MiniLM-L6-v2 (dim 384), loaded from
     # the VENDORED weights in-repo. Relative path binds to the repo root. No lexical fallback.
