@@ -64,8 +64,9 @@ coordinator sees only their own site (RLS + SEC-1 intact, served by the containe
 > **production model is the persistent, Shamir-sealed `vault` service** (profile `prod-vault`,
 > `infra/vault/vault.hcl`) with **manual `operator init`/`operator unseal`** — exactly the host
 > flow in **1.1–1.5** below. Phase 8 (k8s) replaces it with raft HA + KMS/transit auto-unseal.
-> `frontend` (D2) runs separately; the isolated **`guide`** service is now a first-class compose
-> service under **profile `guide`** on its own **`guide-net`** (Gate D3, §1.C below).
+> The **`frontend`** (D2) and the isolated **`guide`** (D3) are now first-class compose services
+> under **profiles `frontend` / `guide`**; combine all three profiles for the one-command
+> whole-system bring-up (**§1.D below**; the Guide stays on its own **`guide-net`**).
 
 ### 1.B Live-LLM bring-up against the PERSISTENT Vault — DEV ONLY, OPT-IN (Gate L1, real tokens)
 The §1.A stack is **stubbed by default** (`VIGIL_LLM_STUB=true` → deterministic `StubLLMClient`, no
@@ -160,6 +161,40 @@ The live override (`docker-compose.live.yml`) flips `VIGIL_GUIDE_LLM_STUB=false`
 unset). The Guide reads it from its own env — it has **no Vault client** — so there is no shared-secret
 path to the app; its only new egress is `api.anthropic.com`. Default stays stubbed; CI/the spine are
 unaffected (the Guide is not in the test path).
+
+### 1.D Whole-system bring-up in ONE command (Gate D2 — UI included)
+The Next.js frontend is containerized (`frontend/Dockerfile`, a multi-stage **production** build with
+Next **standalone** output) and added to Compose under **profile `frontend`**. Combining the `app`,
+`guide`, and `frontend` profiles brings up the **entire system** — infra + API + worker + isolated
+Guide + UI — in one command:
+
+```bash
+# STUBBED (hermetic, no keys) — infra + app + worker + Guide + UI:
+docker compose -f docker-compose.dev.yml --profile app --profile guide --profile frontend up -d --build
+```
+The **UI is then at http://localhost:3000**, the API at :8000, the Guide at :8080. (Fresh-volume DBs
+still need the one-time role/migrate/seed from §1.A.)
+
+```bash
+# LIVE (real tokens) — layer the live override + export the two keys first (§1.A→1.C pre-conditions):
+export VAULT_TOKEN=<scoped-read-token>          # persistent Vault, RUNBOOK §1.B
+export VIGIL_GUIDE_LLM_API_KEY=sk-ant-...        # the Guide's OWN Anthropic key, §1.C
+docker compose -f docker-compose.dev.yml -f docker-compose.live.yml \
+  --profile app --profile guide --profile frontend up -d --build
+```
+
+**How the frontend is wired (important):** it is *only* an HTTP server for the built UI. The
+**browser** (running on your host) makes the API and Guide calls, so the `NEXT_PUBLIC_*` base URLs are
+**inlined at build time** and point at the **host-published ports** — `NEXT_PUBLIC_API_URL=http://localhost:8000`
+and `NEXT_PUBLIC_GUIDE_URL=http://localhost:8080` (the frontend's own code defaults; overridable as
+build args / shell env). They are **not** compose service names, and the frontend container needs **no**
+app network and **no** `depends_on` — it never reaches app services itself. Full functionality of course
+needs the API (:8000) and Guide (:8080) up too (hence the combined profiles above).
+
+> **This is the containerized full-stack, not a replacement for dev-mode.** Local
+> `cd frontend && npm run dev` (§1.5) is unchanged and remains the development workflow with HMR; the
+> `output: "standalone"` config addition is a **build-only** concern and does not affect `next dev`.
+> The image pins **Node 22** (matching CI's `npm ci` against `frontend/package-lock.json`).
 
 ### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
 ```bash
@@ -386,6 +421,8 @@ Present the system in this order — each step states its own honesty boundary:
 | Redis | localhost:6379 | `docker compose -f docker-compose.dev.yml up -d redis` |
 | Vault (prod-shaped) | http://localhost:8200 | `docker compose -f docker-compose.dev.yml --profile prod-vault up -d vault` (+ unseal) |
 | Dockerized app (api+worker+vault-dev) | API localhost:8000 | `docker compose -f docker-compose.dev.yml --profile app up -d --build` (Gate D1, dev-only auto-unseal) |
+| Containerized frontend (D2) | http://localhost:3000 | `docker compose -f docker-compose.dev.yml --profile frontend up -d --build` (prod build; standalone) |
+| **Whole system (infra+app+worker+Guide+UI)** | UI localhost:3000 | `docker compose -f docker-compose.dev.yml --profile app --profile guide --profile frontend up -d --build` (Gate D2, §1.D) |
 
 Make targets: `make db-up`, `make migrate`, `make seed`, `make api`, `make worker`,
 `make check-specs`, `make leakage`, `make guide-isolation-proof`.

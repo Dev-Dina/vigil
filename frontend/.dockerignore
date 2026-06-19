@@ -1,0 +1,21 @@
+# Keep the frontend build context small + reproducible. The image installs deps from the committed
+# package-lock.json (npm ci), so a host node_modules / prior build output must NOT leak in.
+node_modules
+.next
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.tsbuildinfo
+.DS_Store
+# Environment overrides are passed as build args / compose env, never baked from a host file.
+.env*.local
+# v0 sandbox internal files (see frontend/.gitignore)
+__v0_runtime_loader.js
+__v0_devtools.tsx
+__v0_jsx-dev-runtime.ts
+.snowflake/
+.v0-trash/
+.vercel/
+# The pnpm lockfile is not the canonical one (CI + this image use npm/package-lock.json).
+pnpm-lock.yaml

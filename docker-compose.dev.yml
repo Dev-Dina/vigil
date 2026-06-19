@@ -229,6 +229,32 @@ services:
       - ./data:/app/data:ro
     command: ["python", "-m", "vigil.seed"]
 
+  # --- Next.js frontend (Gate D2) — PRODUCTION build, profile "frontend" ------------------------
+  # Completes the one-command whole-system bring-up:
+  #   docker compose -f docker-compose.dev.yml --profile app --profile guide --profile frontend up -d --build
+  # The frontend is JUST an HTTP server serving the built UI on :3000. The BROWSER (on the host) calls
+  # the app API (:8000) and the isolated Guide (:8080) at their HOST-published ports — so the
+  # NEXT_PUBLIC_* are BUILD-time host URLs, and this container needs NO app network and NO depends_on
+  # (it never reaches app services itself). Out of the default stack — only under --profile frontend.
+  frontend:
+    profiles: ["frontend"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Host-published ports (the browser calls these), overridable from the shell. NOT service names.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_GUIDE_URL: ${NEXT_PUBLIC_GUIDE_URL:-http://localhost:8080}
+    image: vigil-frontend:local
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
 volumes:
   vault-data:
 
