@@ -19,7 +19,11 @@ from vigil.core.schemas import Page
 from vigil.core.scope import Scope
 from vigil.services import monitoring_service, routing_service
 from vigil.services.monitoring_service import MonitoringPermissionError
-from vigil.services.routing_service import PromotionError, RoutingPermissionError
+from vigil.services.routing_service import (
+    PromotionError,
+    RegistrationError,
+    RoutingPermissionError,
+)
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
@@ -319,3 +323,94 @@ async def promote_model(
         actor_user_id=result.actor_user_id,
         audit_id=result.audit_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# Gate M3 — model registry: register validated weights (challenger/shadow) + list
+# ---------------------------------------------------------------------------
+
+
+class ModelRegisterIn(BaseModel):
+    """Register an OFFLINE-validated version. ``metrics`` are the supplied validation metrics
+    (recorded, never computed in-app); ``provenance`` labels them (no clinical claim)."""
+
+    regime: str
+    model_version: str = Field(min_length=1)
+    artifact_ref: str = Field(min_length=1)
+    model_card_ref: str = Field(min_length=1)
+    metrics: dict = Field(default_factory=dict)
+    provenance: str = Field(min_length=1)
+    status: str = "challenger"  # 'challenger' | 'shadow' — never auto-champion
+    notes: str = ""
+
+
+class ModelRegisterOut(BaseModel):
+    regime: str
+    model_version: str
+    status: str
+    provenance: str
+    actor_user_id: str
+    registry_id: str
+    audit_id: str
+
+
+@router.post(
+    "/models/register",
+    response_model=ModelRegisterOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def register_model(
+    body: ModelRegisterIn, scope: Scope = ScopeDep
+) -> ModelRegisterOut:
+    """POST /monitoring/models/register — register a validated version (platform_admin only).
+
+    Enters the catalog as challenger/shadow (NEVER auto-champion). 403 for any non-platform_admin
+    caller; 400 on a governance/honesty violation (missing card/metrics/provenance, clinical claim,
+    duplicate version).
+    """
+    try:
+        result = routing_service.register_model(
+            scope,
+            regime=body.regime,
+            model_version=body.model_version,
+            artifact_ref=body.artifact_ref,
+            model_card_ref=body.model_card_ref,
+            metrics=body.metrics,
+            provenance=body.provenance,
+            status=body.status,
+            notes=body.notes,
+        )
+    except RoutingPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except RegistrationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    return ModelRegisterOut(
+        regime=result.regime,
+        model_version=result.model_version,
+        status=result.status,
+        provenance=result.provenance,
+        actor_user_id=result.actor_user_id,
+        registry_id=result.registry_id,
+        audit_id=result.audit_id,
+    )
+
+
+@router.get("/registry", response_model=Page)
+async def list_registry(scope: Scope = ScopeDep, regime: str | None = None) -> Page:
+    """GET /monitoring/registry — registered versions + supplied metrics/provenance.
+
+    PLATFORM/AUDITOR ONLY (the informed-decision surface before a promotion). 403 for sponsor/site
+    roles. Honest-empty until a version is registered.
+    """
+    try:
+        views = routing_service.list_registrations(scope, regime=regime)
+    except RoutingPermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    items = [asdict(v) for v in views]
+    return Page(items=items, next_cursor=None, total=len(items))

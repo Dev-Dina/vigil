@@ -439,6 +439,54 @@ class RoutingState(Base):
     )
 
 
+class ModelRegistry(Base):
+    """The model registry (Gate M3): the CATALOG of registered model versions + the OFFLINE
+    validation metrics + provenance SUPPLIED with each. Platform-scoped, RLS-EXEMPT (same tier as
+    ``routing_state`` / ``drift_metric``): global model-governance infrastructure, no tenant data.
+
+    The human-in-the-loop loop is drift → alert (M2) → the ML engineer retrains OFFLINE → ships
+    VALIDATED weights → GOVERNED promotion (M3). This table is where a validated version is brought
+    IN: its identifier, its artifact reference (where the trained weights live), the offline
+    validation ``metrics`` it was supplied with (we RECORD them, never compute in-app), and its
+    ``provenance`` label (e.g. ``architecture_validation`` for synthetic-cohort method validity, or
+    ``demonstration`` for a demo registration — NEVER a fabricated clinical claim).
+
+    ``status`` is the lifecycle: a version is registered as ``challenger`` or ``shadow`` (never
+    auto-champion); ``promote`` flips the chosen version to ``champion`` and RETAINS the prior
+    champion as ``retired`` (reversible — old versions stay in the catalog with their metrics). The
+    current champion/challenger/shadow PROJECTION still lives in ``routing_state``; this is the
+    durable catalog the projection is drawn from. ``audit_log`` records every transition.
+    """
+
+    __tablename__ = "model_registry"
+    __table_args__ = (
+        UniqueConstraint("regime", "model_version", name="uq_model_registry_version"),
+        Index("ix_model_registry_regime_status", "regime", "status"),
+    )
+
+    id: Mapped[uuid.UUID] = pk()
+    regime: Mapped[str] = mapped_column(String(128), nullable=False)
+    model_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Lifecycle: 'challenger' | 'shadow' (at registration) | 'champion' | 'retired' (after promote).
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="challenger"
+    )
+    # Where the trained weights live (a reference, e.g. an artifact path) — the app never retrains.
+    artifact_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    model_card_ref: Mapped[str] = mapped_column(String(512), nullable=False)
+    # The OFFLINE validation metrics SUPPLIED with the version (recorded, never computed in-app).
+    metrics: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # Provenance label — e.g. 'architecture_validation' (synthetic method validity) | 'demonstration'.
+    provenance: Mapped[str] = mapped_column(String(128), nullable=False)
+    notes: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    registered_by: Mapped[uuid.UUID | None] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    registered_at: Mapped[datetime] = created_at()
+
+
 # ------------------------------------------------------ drift detection (Gate M1)
 class DriftMetric(Base):
     """A computed distribution-drift point (Gate M1). Platform-scoped, RLS-EXEMPT — same tier as

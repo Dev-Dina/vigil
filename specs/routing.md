@@ -199,6 +199,68 @@ promotion record MUST assert `model_card_ref` is non-null (hard error otherwise)
   violation. Promotion MUST be triggered via an authenticated platform_admin API call, never
   by the scoring worker or a drift signal alone.
 
+## Model registry (Gate M3)
+
+The **final** step of the human-in-the-loop MLOps loop: drift (M1) → alert the ML engineer (M2) →
+the engineer **retrains OFFLINE** (considering phase/indication mix) → ships **VALIDATED** weights →
+**GOVERNED** promotion. M3 builds the "bring a validated new model version IN + promote it under
+governance" path. There is **NO in-app retraining** and **NO in-app metric computation** — the app
+**records** the metrics supplied with the validated model and governs the promotion.
+
+### `model_registry` table (prose schema)
+
+The durable **catalog** of registered versions and the offline validation metrics + provenance
+supplied with each. Platform-scoped; RLS-exempt (global/infrastructure tier, same class as
+`routing_state` / `drift_metric`). `routing_state` remains the **current projection**; this is the
+catalog the projection is drawn from.
+
+```
+model_registry(
+  id             uuid PK,
+  regime         text NOT NULL,
+  model_version  text NOT NULL,
+  status         text NOT NULL CHECK (status IN ('challenger','shadow','champion','retired')),
+  artifact_ref   text NOT NULL,   -- where the OFFLINE-trained weights live (a reference)
+  model_card_ref text NOT NULL,
+  metrics        jsonb NOT NULL,  -- the SUPPLIED offline validation metrics (recorded, not computed)
+  provenance     text NOT NULL,   -- 'architecture_validation' (synthetic) | 'demonstration'
+  notes          text NOT NULL DEFAULT '',
+  registered_by  uuid REFERENCES user(id) ON DELETE SET NULL,
+  registered_at  timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (regime, model_version)
+)
+```
+
+### Register (platform_admin only)
+
+`POST /monitoring/models/register` → `routing_service.register_model`. Enters a version as
+`challenger` or `shadow` (**NEVER auto-champion**); inserts the catalog row, reflects the version in
+the `routing_state` projection for that role (so `GET /monitoring/models` shows it), and writes a
+`model_register` `audit_log` row. **Honesty (fail loud):** `model_card_ref`, `artifact_ref`,
+`provenance`, and a **non-empty `metrics`** object are required; a `clinical` provenance claim is
+rejected (synthetic eval → `architecture_validation`; a demo → `demonstration`); a duplicate
+`(regime, model_version)` is a hard error. Tenant roles are forbidden (403).
+
+### Governed promote (extends `## Audited promotion`)
+
+`POST /monitoring/models/promote` is unchanged in contract — it **reuses** the existing audited,
+reversible champion machinery. When the promoted version **is registered**, the promotion is
+*informed*: the validated card travels with it, the catalog flips that version to `champion`, and the
+**prior champion is retained as `retired`** (reversible — old versions stay in the catalog with their
+metrics). An **unregistered** version is still promotable (backward-compatible with the B3 contract);
+the registry only enriches when present. The old champion is also recoverable via `audit_log` history
+(the existing fallback/last-known-good machinery). `GET /monitoring/registry` (platform/auditor)
+surfaces the catalog + metrics so the decision is informed, never blind. **Champion-only surfacing is
+preserved:** a registered challenger/shadow version is never in the champion allowlist, so it can
+never reach clinical reads until it is promoted.
+
+### `model_register` is NOT a champion transition
+
+`model_register` audit rows carry `to_version` but set a challenger/shadow role, so they are **not**
+in `ROUTING_ACTIONS` and never participate in `last_known_good_champion` / `champion_version_intervals`
+(those read only `model_promote` / `model_fallback`). The champion timeline is unaffected by
+registrations.
+
 ## Tenancy
 
 - The routing-state table is platform-scoped (no `sponsor_id` column). It belongs to the

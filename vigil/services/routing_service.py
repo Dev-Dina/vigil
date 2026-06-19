@@ -21,8 +21,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from vigil.core.scope import Scope
-from vigil.db.models import RoutingState
+from vigil.db.models import ModelRegistry, RoutingState
 from vigil.domain import Role
+from vigil.repositories import registry as registry_repo
 from vigil.repositories import routing as routing_repo
 from vigil.repositories.session import platform_session
 
@@ -33,6 +34,10 @@ class RoutingPermissionError(PermissionError):
 
 class PromotionError(Exception):
     """Raised when a promotion violates the safety/honesty rules (specs/routing.md)."""
+
+
+class RegistrationError(Exception):
+    """Raised when a model registration violates the governance/honesty rules (Gate M3)."""
 
 
 def get_champion(scope: Scope, *, regime: str) -> RoutingState:
@@ -229,11 +234,23 @@ def promote(
     with platform_session() as session:
         current = routing_repo.get_champion(session, regime=regime)
         from_version = current.model_version if current is not None else None
+        # Gate M3: if this version is in the registry, this is a GOVERNED promotion of a registered,
+        # offline-validated version — the validated card travels WITH it. An UNregistered version is
+        # still promotable (backward-compatible with the B3 audited-promotion contract); the registry
+        # only ENRICHES when present (it never blocks the existing path).
+        registration = registry_repo.get_registration(
+            session, regime=regime, model_version=model_version
+        )
+        card = (
+            registration.model_card_ref
+            if registration is not None and registration.model_card_ref
+            else model_card_ref
+        )
         champion = routing_repo.set_champion(
             session,
             regime=regime,
             model_version=model_version,
-            model_card_ref=model_card_ref,
+            model_card_ref=card,
             promoted_by=actor,
         )
         audit = routing_repo.write_routing_audit(
@@ -246,8 +263,15 @@ def promote(
             to_version=model_version,
             reason=reason,
             eval_provenance=eval_provenance,
-            model_card_ref=model_card_ref,
+            model_card_ref=card,
         )
+        # Reflect the promotion in the catalog: this version → champion; the PRIOR champion is
+        # RETAINED as 'retired' (reversible). Only done for registered versions (the catalog is the
+        # governed surface); unregistered legacy promotions leave the catalog untouched.
+        if registration is not None:
+            registry_repo.mark_champion(
+                session, regime=regime, model_version=model_version
+            )
         return PromotionResult(
             regime=regime,
             from_version=from_version,
@@ -255,3 +279,190 @@ def promote(
             actor_user_id=str(actor),
             audit_id=str(audit.id),
         )
+
+
+# ---------------------------------------------------------------------------
+# Model registry (Gate M3) — register validated weights → governed promotion
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class RegistrationResult:
+    regime: str
+    model_version: str
+    status: str  # 'challenger' | 'shadow'
+    provenance: str
+    actor_user_id: str
+    registry_id: str
+    audit_id: str
+
+
+def register_model(
+    scope: Scope,
+    *,
+    regime: str,
+    model_version: str,
+    artifact_ref: str,
+    model_card_ref: str,
+    metrics: dict,
+    provenance: str,
+    status: str = "challenger",
+    notes: str = "",
+) -> RegistrationResult:
+    """Register a new, offline-validated model VERSION as a challenger/shadow (Gate M3).
+
+    The ML/platform engineer brings a version IN: its identifier, its artifact reference (where the
+    OFFLINE-trained weights live), the supplied OFFLINE validation ``metrics`` (RECORDED, never
+    computed in-app), and a ``provenance`` label. It enters the catalog as ``challenger`` or
+    ``shadow`` (NEVER auto-champion — promotion is the separate audited step) and is reflected in the
+    ``routing_state`` projection so ``GET /monitoring/models`` shows it. The registration is audited.
+
+    Governance + honesty (fail LOUD):
+      - platform_admin ONLY (``RoutingPermissionError`` otherwise); tenant roles cannot register.
+      - ``status`` must be ``challenger`` or ``shadow`` (registration never makes a champion).
+      - ``model_card_ref`` + ``provenance`` required; a ``clinical`` provenance claim is rejected
+        (synthetic-cohort eval is method validity → ``architecture_validation``; a demo is
+        ``demonstration``) — consistent with the promotion honesty hook.
+      - ``metrics`` must be a non-empty dict — a registered model carries its REAL supplied
+        validation metrics; we never fabricate or compute them here.
+      - a version already registered for the regime is a hard error (no silent overwrite).
+    """
+    if scope.role is not Role.PLATFORM_ADMIN:
+        raise RoutingPermissionError(
+            f"model registration denied: role {scope.role!r} is not platform_admin; the registry "
+            "is a platform/ML-engineer surface (specs/routing.md § Model registry)"
+        )
+    if not scope.user_id:
+        raise RegistrationError("registration requires a non-null actor_user_id")
+    if status not in ("challenger", "shadow"):
+        raise RegistrationError(
+            f"register enters {status!r} but only 'challenger' or 'shadow' are allowed; "
+            "registration NEVER makes a champion (promotion is the separate audited step)"
+        )
+    if not model_card_ref:
+        raise RegistrationError("registration requires a non-null model_card_ref")
+    if not artifact_ref:
+        raise RegistrationError(
+            "registration requires an artifact_ref (where the trained weights live)"
+        )
+    if not provenance:
+        raise RegistrationError(
+            "registration requires provenance (synthetic eval → 'architecture_validation'; "
+            "a demo → 'demonstration')"
+        )
+    if "clinical" in provenance.lower():
+        raise RegistrationError(
+            "provenance claims clinical validation; only synthetic/architecture validation is "
+            "available for T2D (specs/routing.md § Model registry honesty)"
+        )
+    if not isinstance(metrics, dict) or not metrics:
+        raise RegistrationError(
+            "registration requires the supplied OFFLINE validation metrics (a non-empty object); "
+            "we RECORD the metrics shipped with the validated model, never compute them in-app"
+        )
+
+    import uuid as _uuid
+
+    actor = _uuid.UUID(scope.user_id)
+    with platform_session() as session:
+        if (
+            registry_repo.get_registration(
+                session, regime=regime, model_version=model_version
+            )
+            is not None
+        ):
+            raise RegistrationError(
+                f"model_version {model_version!r} is already registered for regime {regime!r}"
+            )
+        reg = registry_repo.insert_registration(
+            session,
+            regime=regime,
+            model_version=model_version,
+            status=status,
+            artifact_ref=artifact_ref,
+            model_card_ref=model_card_ref,
+            metrics=metrics,
+            provenance=provenance,
+            registered_by=actor,
+            notes=notes,
+        )
+        # Reflect the new version in the routing projection (challenger/shadow) so the monitoring
+        # surface shows it. Champion-only surfacing is preserved: a challenger/shadow version is
+        # never in the champion allowlist, so it cannot reach clinical reads.
+        routing_repo.upsert_role_version(
+            session,
+            regime=regime,
+            role=status,
+            model_version=model_version,
+            model_card_ref=model_card_ref,
+            promoted_by=actor,
+        )
+        audit = routing_repo.write_routing_audit(
+            session,
+            action="model_register",
+            actor_user_id=actor,
+            target_id=str(reg.id),
+            regime=regime,
+            from_version=None,
+            to_version=model_version,
+            reason=f"register:{status}",
+            eval_provenance=provenance,
+            model_card_ref=model_card_ref,
+        )
+        return RegistrationResult(
+            regime=regime,
+            model_version=model_version,
+            status=status,
+            provenance=provenance,
+            actor_user_id=str(actor),
+            registry_id=str(reg.id),
+            audit_id=str(audit.id),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RegistrationView:
+    regime: str
+    model_version: str
+    status: str
+    artifact_ref: str
+    model_card_ref: str
+    metrics: dict
+    provenance: str
+    notes: str
+    registered_by: str | None
+    registered_at: str
+
+
+def list_registrations(
+    scope: Scope, *, regime: str | None = None
+) -> list[RegistrationView]:
+    """List registered versions + their supplied metrics/provenance (PLATFORM/AUDITOR read).
+
+    The informed-decision surface: an engineer sees each version's OFFLINE validation metrics and
+    provenance BEFORE promoting. ``routing_state`` has no RLS, so the platform/auditor gate is the
+    sole guard (mirrors ``get_champion`` / the monitoring reads).
+    """
+    if not scope.is_platform:
+        raise RoutingPermissionError(
+            f"model registry read denied: role {scope.role!r} is not platform-scoped; only "
+            "platform_admin and auditor may read the registry (specs/routing.md § Model registry)"
+        )
+    with platform_session() as session:
+        rows = registry_repo.list_registrations(session, regime=regime)
+        return [_to_registration_view(r) for r in rows]
+
+
+def _to_registration_view(r: ModelRegistry) -> RegistrationView:
+    return RegistrationView(
+        regime=r.regime,
+        model_version=r.model_version,
+        status=r.status,
+        artifact_ref=r.artifact_ref,
+        model_card_ref=r.model_card_ref,
+        metrics=dict(r.metrics),
+        provenance=r.provenance,
+        notes=r.notes,
+        registered_by=str(r.registered_by) if r.registered_by is not None else None,
+        registered_at=r.registered_at.isoformat(),
+    )

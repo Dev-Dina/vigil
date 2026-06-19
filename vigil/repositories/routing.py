@@ -186,6 +186,48 @@ def set_champion(
     return row
 
 
+def upsert_role_version(
+    session: Session,
+    *,
+    regime: str,
+    role: str,
+    model_version: str,
+    model_card_ref: str,
+    promoted_by: uuid.UUID | None,
+) -> RoutingState:
+    """Create-or-update the ``routing_state`` row for a ``(regime, role)`` to ``model_version``.
+
+    Used by the Gate M3 register path to reflect a newly-registered version as the current
+    challenger/shadow PROJECTION (the seed creates champion + shadow, but a regime may have no
+    challenger row yet — UNIQUE(regime, role) means there is at most one per role, so we upsert).
+    NEVER call this with ``role='champion'`` — champion changes go through the audited ``promote`` /
+    ``set_champion`` path only.
+    """
+    row = session.execute(
+        select(RoutingState).where(
+            RoutingState.regime == regime, RoutingState.role == role
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        row = RoutingState(
+            regime=regime,
+            role=role,
+            model_version=model_version,
+            model_card_ref=model_card_ref,
+            health="healthy",
+            promoted_by=promoted_by,
+        )
+        session.add(row)
+    else:
+        row.model_version = model_version
+        row.model_card_ref = model_card_ref
+        row.promoted_by = promoted_by
+        row.promoted_at = datetime.now(tz=timezone.utc)
+        row.health = "healthy"
+    session.flush()
+    return row
+
+
 def set_health(
     session: Session, *, regime: str, role: str, health: str
 ) -> RoutingState:
