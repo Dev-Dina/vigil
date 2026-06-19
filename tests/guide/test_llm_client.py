@@ -153,3 +153,63 @@ def test_factory_default_provider_is_openai_compatible(monkeypatch) -> None:  # 
 
     monkeypatch.setattr(llm_mod, "get_config", lambda: _cfg())
     assert isinstance(get_guide_llm_client(), OpenRouterGuideClient)
+
+
+# ----------------------------------------------------- env-driven factory (the regression gap)
+# The tests above patch get_config with a namespace — they prove the BRANCH logic but NOT that the
+# real VIGIL_GUIDE_LLM_* env vars flow through GuideConfig into the factory (the exact path the live
+# container uses). These exercise the REAL config so a misnamed field / wrong env prefix / a routing
+# regression to the OpenAI /chat/completions path against Anthropic is caught.
+
+
+def _reset_guide_config_cache() -> None:
+    from guide.config import get_config
+
+    get_config.cache_clear()  # GuideConfig is @lru_cache — force a re-read of the patched env
+
+
+def test_env_provider_anthropic_routes_to_v1_messages(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_STUB", "false")
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_BASE_URL", "https://api.anthropic.com")
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_MODEL", "claude-haiku-4-5")
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_API_KEY", "sk-ant-dummy")
+    _reset_guide_config_cache()
+    try:
+        client = get_guide_llm_client()
+        assert isinstance(client, AnthropicGuideClient)  # real env → field → factory
+
+        captured: dict = {}
+
+        def _fake_post(url, *, json, headers, timeout):  # type: ignore[no-untyped-def]
+            captured["url"] = url
+            return _FakeResponse({"content": [{"text": "ok"}]})
+
+        monkeypatch.setattr(httpx, "post", _fake_post)
+        client.complete([GuideLLMMessage("user", "hi")])
+        # Regression guard: native Messages endpoint, NEVER the OpenAI /chat/completions path.
+        assert captured["url"].endswith("/v1/messages")
+        assert "/chat/completions" not in captured["url"]
+    finally:
+        _reset_guide_config_cache()  # restore the conftest-stubbed config for other tests
+
+
+def test_env_provider_default_is_openai_compatible(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_STUB", "false")
+    monkeypatch.delenv("VIGIL_GUIDE_LLM_PROVIDER", raising=False)  # unset → field default
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_API_KEY", "key")
+    _reset_guide_config_cache()
+    try:
+        assert isinstance(get_guide_llm_client(), OpenRouterGuideClient)
+    finally:
+        _reset_guide_config_cache()
+
+
+def test_env_stub_true_wins_over_provider(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_STUB", "true")
+    monkeypatch.setenv("VIGIL_GUIDE_LLM_PROVIDER", "anthropic")
+    _reset_guide_config_cache()
+    try:
+        assert isinstance(get_guide_llm_client(), StubGuideLLMClient)
+    finally:
+        _reset_guide_config_cache()
