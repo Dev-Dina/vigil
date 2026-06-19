@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from guide.cache import ResponseCache
 from guide.config import get_config
 from guide.embeddings import get_embedder
 from guide.llm import get_guide_llm_client
@@ -93,11 +94,18 @@ def create_app(
     resources: Callable[[], Resources] | None = None,
     *,
     rate_limiter: RateLimiter | None = None,
+    response_cache: ResponseCache | None = None,
 ) -> FastAPI:
+    cfg = get_config()
     provider = resources or _default_resources
     # Per-app in-memory per-IP throttle (isolation-safe: NO Redis/app coupling; resets on restart).
     # A deploy-layer gateway limit is the durable multi-replica control (see RUNBOOK).
     limiter = rate_limiter or RateLimiter()
+    # Per-app in-memory response cache (Gate GUIDE-CACHE) — bounded LRU, isolation-safe (stdlib, NO
+    # Redis/app coupling, resets on restart). Built only when enabled; None disables caching.
+    cache = response_cache
+    if cache is None and cfg.response_cache_enabled:
+        cache = ResponseCache(max_size=cfg.response_cache_max_size)
     app = FastAPI(title="Vigil Guide", version="0.3.0")
 
     @app.get("/healthz")
@@ -122,7 +130,12 @@ def create_app(
             )
         engine, index, embedder, llm = provider()
         result = run_guide_turn(
-            body.question, index=index, embedder=embedder, llm=llm, sink_engine=engine
+            body.question,
+            index=index,
+            embedder=embedder,
+            llm=llm,
+            sink_engine=engine,
+            cache=cache,
         )
         return AskOut(
             answer=result.content,

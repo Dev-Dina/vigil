@@ -42,6 +42,9 @@ _ALLOWED_FIELDS = {
     # semantic topical guardrail toggles (non-secret; Gate GUIDE-TOPICAL)
     "topical_guard_enabled",
     "topical_guard_fail_open",
+    # in-memory response cache (non-secret; Gate GUIDE-CACHE) — bounded LRU, no external store
+    "response_cache_enabled",
+    "response_cache_max_size",
 }
 
 # Substrings that would betray a deny-listed CREDENTIAL or internal/admin ROUTE on a field name.

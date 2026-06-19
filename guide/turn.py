@@ -22,6 +22,7 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from guide.cache import CachedAnswer, ResponseCache, normalize_key
 from guide.config import get_config
 from guide.guardrails import guard_inbound
 from guide.llm import compute_cost, provider_cost_rates
@@ -82,8 +83,17 @@ def run_guide_turn(
     sink_engine: Engine | None = None,
     conversation_id: str | None = None,
     request_id: str = "guide-turn",
+    cache: ResponseCache | None = None,
 ) -> TurnResult:
-    """Run one Guide turn and write its redacted event row (best-effort) to the Guide's sink."""
+    """Run one Guide turn and write its redacted event row (best-effort) to the Guide's sink.
+
+    ``cache`` (Gate GUIDE-CACHE): an OPTIONAL in-memory LRU consulted ONLY on the allowed path,
+    AFTER the keyword + topical guards — it can never bypass a guard. A HIT returns the cached
+    answer without retrieval or an answer-LLM call and is recorded as a zero-cost ``"cache"`` turn;
+    only allowed, SUCCESSFUL (``status == "ok"``) answers are stored. ``None`` (or the toggle off)
+    disables it entirely (every allowed question runs the answer step), so existing callers are
+    unchanged.
+    """
     conv = conversation_id or str(uuid.uuid4())
     guard = guard_inbound(question)  # redact + content guardrail
     redacted_user = guard.redacted_text
@@ -99,15 +109,33 @@ def run_guide_turn(
         redacted_assistant: str,
         route: str,
         citations: list[Any],
+        cache_hit: bool = False,
     ) -> None:
         # Best-effort: a sink failure must never break the turn (the audit row is additive to the
         # returned answer/refusal). Redacted-only — there is no raw column to write. Records the
         # turn's REAL summed tokens (classify + answer), model, latency, and the Guide's OWN
         # split-rate cost; a keyword/topical block (no answer call) records what actually ran.
+        # A CACHE HIT (Gate GUIDE-CACHE) records honest ZEROS with the ``"cache"`` marker — the
+        # expensive answer step was served from memory, so /metrics/cost shows it cost nothing.
         if sink_engine is None:
             return
-        in_rate, out_rate = provider_cost_rates(cfg)
-        cost = compute_cost(rec.prompt_tokens, rec.completion_tokens, in_rate, out_rate)
+        if cache_hit:
+            model, latency, prompt_tokens, completion_tokens, cost = (
+                "cache",
+                0,
+                0,
+                0,
+                0.0,
+            )
+        else:
+            in_rate, out_rate = provider_cost_rates(cfg)
+            cost = compute_cost(
+                rec.prompt_tokens, rec.completion_tokens, in_rate, out_rate
+            )
+            model = rec.model
+            latency = rec.latency_ms
+            prompt_tokens = rec.prompt_tokens
+            completion_tokens = rec.completion_tokens
         try:
             with Session(sink_engine) as session:
                 write_message_event(
@@ -120,11 +148,11 @@ def run_guide_turn(
                     redacted_assistant_msg=redacted_assistant,
                     route_or_agent=route,
                     retrieved_chunks=citations,
-                    llm_provider_model=rec.model,
-                    latency_ms=rec.latency_ms,
+                    llm_provider_model=model,
+                    latency_ms=latency,
                     token_cost_estimate=cost,
-                    prompt_tokens=rec.prompt_tokens,
-                    completion_tokens=rec.completion_tokens,
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
                 )
                 session.commit()
         except Exception:  # noqa: BLE001 — best-effort audit; never break the turn
@@ -169,9 +197,36 @@ def run_guide_turn(
             )
             return TurnResult(message, [], "blocked", "refused", route)
 
+    # 1.75 Response cache (Gate GUIDE-CACHE) — ONLY on the allowed path, AFTER the keyword +
+    #      topical guards (so a cached answer can NEVER bypass a guard). Exact-match on the
+    #      normalized REDACTED question. A HIT returns the cached answer WITHOUT retrieval or an
+    #      answer-LLM call, recorded as a zero-cost ``"cache"`` turn. Toggle-gated; when the cache is
+    #      absent or disabled, every allowed question runs the answer step (no caching).
+    cache_active = cache is not None and cfg.response_cache_enabled
+    cache_key = normalize_key(redacted_user) if cache_active else None
+    if cache_active and cache_key is not None:
+        hit = cache.get(cache_key)
+        if hit is not None:
+            route = "guide:cache"
+            _emit(
+                decision="allowed",
+                status="ok",
+                redacted_assistant=redact(hit.content),
+                route=route,
+                citations=hit.citations,
+                cache_hit=True,
+            )
+            return TurnResult(hit.content, list(hit.citations), "allowed", "ok", route)
+
     # 2. Allowed → retrieve + grounded/cited answer or sound (relevance) refusal.
     ans = answer_question(redacted_user, index=index, embedder=embedder, llm=rec)
     route = "guide:rag" if ans.status == "ok" else "guide:refuse"
+    # Cache ONLY a successful grounded answer (status == "ok"); a relevance/zero-retrieval refusal is
+    # never cached (it is an allowed-but-refused turn, and refusals are never served from cache).
+    if cache_active and cache_key is not None and ans.status == "ok":
+        cache.set(
+            cache_key, CachedAnswer(content=ans.content, citations=list(ans.citations))
+        )
     _emit(
         decision="allowed",
         status=ans.status,

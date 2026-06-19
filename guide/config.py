@@ -83,6 +83,14 @@ class GuideConfig(BaseSettings):
     topical_guard_enabled: bool = True
     topical_guard_fail_open: bool = True
 
+    # --- response cache (Gate GUIDE-CACHE) — in-memory LRU on ALLOWED answers, NON-secret ---
+    # A small bounded LRU (``guide.cache``) caches allowed, successful answers AFTER the guards so a
+    # repeat question skips retrieval + the answer LLM (cost/latency win). In-memory only (stdlib;
+    # NO Redis/app coupling — isolation preserved), per-process, resets on restart. When disabled,
+    # every allowed question runs the answer step (no caching).
+    response_cache_enabled: bool = True
+    response_cache_max_size: int = 256
+
 
 @lru_cache(maxsize=1)
 def get_config() -> GuideConfig:
