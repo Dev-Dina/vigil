@@ -286,7 +286,7 @@ def list_drift_points(scope: Scope, *, limit: int = 50) -> list[DriftPointView]:
 async def trigger_drift_run(
     scope: Scope, *, regime: str = "t2d", demo_shift: float = 0.0
 ) -> str:
-    """Enqueue the drift producer (Gate M1) — PLATFORM_ADMIN ONLY. Returns the job id.
+    """Enqueue the drift producer (Gate M1) — MLOPS_WRITE only. Returns the job id.
 
     The on-demand path mirroring the scheduled cron run. ``demo_shift != 0`` enqueues a CONSTRUCTED
     breach demonstration (labelled in the persisted points), never presented as observed drift.

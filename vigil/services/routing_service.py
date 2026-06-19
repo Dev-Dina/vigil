@@ -8,8 +8,9 @@ Two transition paths (specs/routing.md):
   champion DOWN to the last-known-good prior version, or suspends the regime if none.
   Exposed as a CALLABLE that consumes an opaque breach signal — routing does not compute,
   store, or define drift (that is observability). The signal DELIVERY mechanism is deferred.
-- **Audited promotion** (`promote`): manual, platform_admin only. Rolls a version UP to
-  champion. NEVER automatic, never by the worker or a drift signal. Honesty-hooked.
+- **Audited promotion** (`promote`): manual, MLOPS_WRITE (platform_admin + mlops_engineer; Gate
+  RBAC-OPS). Rolls a version UP to champion. NEVER automatic, never by the worker or a drift
+  signal. Honesty-hooked.
 
 Every transition updates routing_state AND appends an audit_log row — nothing changes
 silently. audit_log is read only to find a prior rollback target, never to source the
@@ -179,7 +180,7 @@ def handle_breach(breach: BreachSignal) -> FallbackResult:
 
 
 # ---------------------------------------------------------------------------
-# Audited promotion (manual, platform_admin only)
+# Audited promotion (manual, MLOPS_WRITE: platform_admin + mlops_engineer)
 # ---------------------------------------------------------------------------
 
 
@@ -201,10 +202,11 @@ def promote(
     eval_provenance: str,
     reason: str = "manual_promotion",
 ) -> PromotionResult:
-    """Promote ``model_version`` to champion for a regime (manual, platform_admin only).
+    """Promote ``model_version`` to champion (manual; MLOPS_WRITE: platform_admin + mlops_engineer).
 
-    Safety rule (specs/routing.md § Decisions): promotion is ALWAYS manual and initiated by
-    a platform_admin; ``actor_user_id`` is the admin's UUID and is NEVER NULL. Honesty hook:
+    Safety rule (specs/routing.md § Decisions): promotion is ALWAYS manual and initiated by a
+    model-lifecycle engineer (platform_admin or mlops_engineer); ``actor_user_id`` is that user's
+    UUID and is NEVER NULL. Honesty hook:
     ``eval_provenance`` MUST be declared; synthetic-cohort eval is 'architecture_validation'
     (method, not clinical) — a record claiming clinical validation is rejected.
     ``model_card_ref`` MUST be non-null (enforced in the repository).
@@ -319,7 +321,8 @@ def register_model(
     ``routing_state`` projection so ``GET /monitoring/models`` shows it. The registration is audited.
 
     Governance + honesty (fail LOUD):
-      - platform_admin ONLY (``RoutingPermissionError`` otherwise); tenant roles cannot register.
+      - MLOPS_WRITE: platform_admin + mlops_engineer (``RoutingPermissionError`` otherwise); auditor /
+        llmops_engineer / tenant roles cannot register.
       - ``status`` must be ``challenger`` or ``shadow`` (registration never makes a champion).
       - ``model_card_ref`` + ``provenance`` required; a ``clinical`` provenance claim is rejected
         (synthetic-cohort eval is method validity → ``architecture_validation``; a demo is

@@ -1,7 +1,8 @@
 """monitoring router (api.md /monitoring) — model routing administration.
 
-Platform-scoped. The model-promotion endpoint is the manual, platform_admin-only path for
-champion/challenger/shadow promotion (specs/routing.md § Audited promotion). Drift-triggered
+Platform-scoped. The model-promotion endpoint is the manual MLOPS_WRITE path (platform_admin +
+mlops_engineer, Gate RBAC-OPS) for champion/challenger/shadow promotion (specs/routing.md §
+Audited promotion; specs/domain.md § Operational roles). Drift-triggered
 fallback is NOT here — it is automatic and system-initiated (routing_service.handle_breach),
 consuming an opaque breach signal whose delivery is deferred to the observability phase.
 """
@@ -201,8 +202,8 @@ async def list_models(scope: Scope = ScopeDep) -> Page:
 
 
 # ---------------------------------------------------------------------------
-# GET /monitoring/drift — REAL computed PSI/KS points (Gate M1); platform/auditor only
-# POST /monitoring/drift/run — trigger the producer job (platform_admin only)
+# GET /monitoring/drift — REAL computed PSI/KS points (Gate M1); MLOPS_READ (platform/auditor/mlops)
+# POST /monitoring/drift/run — trigger the producer job (MLOPS_WRITE: platform_admin + mlops_engineer)
 # ---------------------------------------------------------------------------
 
 
@@ -260,10 +261,11 @@ class DriftRunOut(BaseModel):
     "/drift/run", response_model=DriftRunOut, status_code=status.HTTP_202_ACCEPTED
 )
 async def run_drift(body: DriftRunIn, scope: Scope = ScopeDep) -> DriftRunOut:
-    """POST /monitoring/drift/run — enqueue the drift producer (PLATFORM_ADMIN ONLY).
+    """POST /monitoring/drift/run — enqueue the drift producer (MLOPS_WRITE; Gate RBAC-OPS).
 
-    On-demand mirror of the scheduled cron run. 403 for non-platform_admin (auditor included —
-    triggering a job is an action, not a read). Returns the enqueued job id (202).
+    Allowed for platform_admin + mlops_engineer; 403 for auditor (read-only), llmops_engineer, and
+    every tenant role — triggering a job is a model-lifecycle action, not a read. On-demand mirror of
+    the scheduled cron run. Returns the enqueued job id (202).
     """
     try:
         job_id = await monitoring_service.trigger_drift_run(
@@ -305,9 +307,10 @@ class ModelPromoteOut(BaseModel):
 async def promote_model(
     body: ModelPromoteIn, scope: Scope = ScopeDep
 ) -> ModelPromoteOut:
-    """POST /monitoring/models/promote — manual champion promotion (platform_admin only).
+    """POST /monitoring/models/promote — manual champion promotion (MLOPS_WRITE; Gate RBAC-OPS).
 
-    403 for any non-platform_admin caller; 400 on honesty/safety violations.
+    Allowed for platform_admin + mlops_engineer; 403 for auditor / llmops_engineer / tenant roles;
+    400 on honesty/safety violations.
     """
     try:
         result = routing_service.promote(
@@ -372,11 +375,11 @@ class ModelRegisterOut(BaseModel):
 async def register_model(
     body: ModelRegisterIn, scope: Scope = ScopeDep
 ) -> ModelRegisterOut:
-    """POST /monitoring/models/register — register a validated version (platform_admin only).
+    """POST /monitoring/models/register — register a validated version (MLOPS_WRITE; Gate RBAC-OPS).
 
-    Enters the catalog as challenger/shadow (NEVER auto-champion). 403 for any non-platform_admin
-    caller; 400 on a governance/honesty violation (missing card/metrics/provenance, clinical claim,
-    duplicate version).
+    Allowed for platform_admin + mlops_engineer. Enters the catalog as challenger/shadow (NEVER
+    auto-champion). 403 for auditor / llmops_engineer / tenant roles; 400 on a governance/honesty
+    violation (missing card/metrics/provenance, clinical claim, duplicate version).
     """
     try:
         result = routing_service.register_model(
