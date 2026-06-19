@@ -87,7 +87,9 @@ def _seed_champion(regime: str, version: str) -> None:
 
 def test_register_and_promote_action_boundary(migrated_db: dict[str, str]) -> None:
     regime = f"rbac_action_{uuid.uuid4().hex[:8]}"
-    _seed_champion(regime, "v_rbac_start")  # a champion to update on promote (test_m3 pattern)
+    _seed_champion(
+        regime, "v_rbac_start"
+    )  # a champion to update on promote (test_m3 pattern)
     client = _client()
     mlops = _h(_token(client, "mlops@vigil.example"))
     llmops = _h(_token(client, "llmops@vigil.example"))
