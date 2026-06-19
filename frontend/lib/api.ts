@@ -21,6 +21,7 @@ import type {
   ModelStatus,
   Page,
   ParticipantDetail,
+  RegistryEntry,
   RiskExplanation,
   RiskHistory,
 } from "./types"
@@ -174,8 +175,19 @@ export async function getModels(): Promise<Page<ModelStatus>> {
 }
 
 export async function getDrift(): Promise<Page<DriftPoint>> {
-  // Honest-empty read surface (6.2): items === [] until real drift computation exists.
+  // Real computed PSI/KS points (Gate M1); items === [] until the scheduled detector has
+  // evaluated a window (honest-empty by data state, never fabricated). Each point carries
+  // provenance (synthetic cohort / constructed demo).
   return apiFetch<Page<DriftPoint>>("/api/v1/monitoring/drift")
+}
+
+export async function getRegistry(regime?: string): Promise<Page<RegistryEntry>> {
+  // GET /monitoring/registry — registered versions + supplied metrics/provenance (Gate M3).
+  // PLATFORM/AUDITOR only (403 otherwise). Honest-empty until a version is registered.
+  const qs = new URLSearchParams()
+  if (regime) qs.set("regime", regime)
+  const query = qs.toString() ? `?${qs.toString()}` : ""
+  return apiFetch<Page<RegistryEntry>>(`/api/v1/monitoring/registry${query}`)
 }
 
 export interface MessageQuery {

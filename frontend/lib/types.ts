@@ -245,10 +245,35 @@ export interface CostRollup {
   total_cost: number
   total_latency_ms: number
   avg_latency_ms: number
+  // Gate COST-1: REAL summed token counts per (surface, model) from message_events.
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
 }
 
 export interface CostReport {
   total_turns: number
   total_cost: number
+  // Gate COST-1: REAL aggregate token usage across all rollups (honest-zero, never fabricated).
+  total_prompt_tokens: number
+  total_completion_tokens: number
+  total_tokens: number
   rollups: CostRollup[]
+}
+
+// ---- model registry (Gate M3, GET /monitoring/registry) ----
+// Registered, OFFLINE-validated model versions — the PLATFORM/AUDITOR read surface (the
+// informed-decision view before a governed promotion). Mirrors routing_service.RegistrationView.
+// Registration enters challenger/shadow ONLY; promotion to champion is a separate audited action.
+export interface RegistryEntry {
+  regime: string
+  model_version: string
+  status: string // 'challenger' | 'shadow' | 'champion' | 'retired'
+  artifact_ref: string
+  model_card_ref: string
+  metrics: Record<string, unknown> // supplied OFFLINE validation metrics (recorded, never computed)
+  provenance: string // e.g. 'architecture_validation' | 'demonstration' — never a clinical claim
+  notes: string
+  registered_by: string | null
+  registered_at: string // ISO datetime
 }

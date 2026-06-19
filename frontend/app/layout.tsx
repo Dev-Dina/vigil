@@ -18,9 +18,9 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Vigil - Clinical Trial Dropout Prediction',
-  description: 'AI-powered dropout prediction platform for clinical trials',
-  generator: 'v0.app',
+  title: 'Vigil — Clinical Trial Retention Intelligence',
+  description:
+    'Retention intelligence for clinical trials — surfaces and explains dropout risk early so teams can intervene before a participant disengages.',
   icons: {
     icon: [
       { url: '/vigil-mark-32.png', sizes: '32x32', type: 'image/png' },

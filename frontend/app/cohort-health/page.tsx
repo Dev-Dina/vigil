@@ -431,16 +431,25 @@ function PlatformAnalytics() {
           <CardTitle className="text-sm font-medium text-foreground">Cost &amp; Latency</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="mb-5 grid grid-cols-3 gap-4">
+          <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
             <MetricCard label="Total Turns" value={cost ? totalTurns : "—"} />
             <MetricCard label="Total Cost (USD)" value={cost ? usd(cost.total_cost) : "—"} />
+            <MetricCard
+              label="Total Tokens"
+              value={cost ? cost.total_tokens.toLocaleString() : "—"}
+              subtitle={
+                cost
+                  ? `${cost.total_prompt_tokens.toLocaleString()} prompt · ${cost.total_completion_tokens.toLocaleString()} completion`
+                  : undefined
+              }
+            />
             <MetricCard label="Avg Latency" value={cost ? `${overallAvgLatency}ms` : "—"} />
           </div>
 
           {cost && cost.total_cost === 0 && (
             <p className="mb-4 text-xs text-muted-foreground">
               Cost is $0.0000 — token usage is captured per turn, but no per-1k rate is configured
-              yet, so dollar cost is honestly zero. Turn counts and latency below are real.
+              yet, so dollar cost is honestly zero. Turn counts, tokens, and latency below are real.
             </p>
           )}
 
@@ -458,7 +467,8 @@ function PlatformAnalytics() {
                       {r.surface} · {r.llm_provider_model || "—"}
                     </span>
                     <span className="text-muted-foreground">
-                      {Math.round(r.avg_latency_ms)}ms · {r.turns} turn{r.turns === 1 ? "" : "s"}
+                      {Math.round(r.avg_latency_ms)}ms · {r.turns} turn{r.turns === 1 ? "" : "s"} ·{" "}
+                      {r.total_tokens.toLocaleString()} tok
                     </span>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -515,6 +525,11 @@ function DriftPanel({ points }: { points: DriftPoint[] }) {
                       <span className="uppercase">{d.metric}</span>
                     </span>
                     <span className="flex items-center gap-2">
+                      {d.breached && (
+                        <span className="rounded bg-status-risk/10 px-1.5 py-0.5 text-[10px] font-semibold text-status-risk">
+                          BREACH · ML ENGINEER ALERTED
+                        </span>
+                      )}
                       {d.synthetic && (
                         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
                           SYNTHETIC
@@ -553,6 +568,13 @@ function DriftPanel({ points }: { points: DriftPoint[] }) {
                 </div>
               )
             })}
+            {points.some((d) => d.breached) && (
+              <p className="pt-1 text-[11px] text-muted-foreground">
+                A breach enqueues a PII-free alert to the ML engineer (email + structured log) and
+                marks the drift point notified. Per-point alert-delivery state isn&apos;t exposed by
+                the API yet; this badge reflects breach state.
+              </p>
+            )}
           </div>
         )}
       </CardContent>

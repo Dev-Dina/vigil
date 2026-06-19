@@ -23,7 +23,7 @@ import {
 const TRIAGE_BANDS: { status: StatusType; label: string; copy: string }[] = [
   { status: "calm", label: "Calm", copy: "On track — retention signals look healthy." },
   { status: "watch", label: "Watch", copy: "Emerging risk — worth a closer look." },
-  { status: "risk", label: "Risk", copy: "Needs triage — high dropout probability." },
+  { status: "risk", label: "Risk", copy: "Needs triage — elevated dropout risk." },
 ]
 
 function OverviewTab() {
@@ -31,8 +31,9 @@ function OverviewTab() {
     <div className="space-y-6">
       <p className="max-w-2xl text-[15px] leading-relaxed text-foreground">
         Vigil is a clinical-trial <span className="font-medium">retention intelligence</span>{" "}
-        platform. It predicts participant dropout, ranks the cohort for triage, and explains every
-        flag — so coordinators act on the right participants, early, with the reason in hand.
+        platform. It surfaces and explains dropout risk early, ranks the cohort for triage, and
+        grounds every flag in its reason — so coordinators can intervene before a participant
+        disengages, with the why in hand.
       </p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {TRIAGE_BANDS.map((b) => (
@@ -55,8 +56,8 @@ function OverviewTab() {
 const STEPS: { n: string; title: string; copy: string }[] = [
   {
     n: "01",
-    title: "Predict",
-    copy: "A deep-learning signal scores dropout risk from engagement, visit, and adherence patterns.",
+    title: "Surface",
+    copy: "A deep-learning signal scores dropout risk early from engagement, visit, and adherence patterns.",
   },
   {
     n: "02",
@@ -134,7 +135,7 @@ export default function WelcomePage() {
             className="-ml-2 h-auto w-[200px] sm:w-[228px]"
           />
           <h1 className="mt-6 text-3xl font-semibold leading-tight tracking-tight text-foreground sm:text-4xl">
-            Predict dropout. Triage the cohort.
+            Surface risk early. Triage the cohort.
             <br className="hidden sm:block" /> Explain every flag.
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">

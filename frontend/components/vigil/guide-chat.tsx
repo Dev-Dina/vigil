@@ -42,7 +42,7 @@ function CitationChips({ citations }: { citations: GuideCitation[] }) {
 
 const SUGGESTIONS = [
   "What does Vigil do?",
-  "How does it predict dropout?",
+  "How does it surface dropout risk?",
   "How is participant data protected?",
 ]
 
@@ -145,7 +145,7 @@ export function GuideChat({ className }: { className?: string }) {
               <span className="relative inline-flex h-3 w-3 rounded-full bg-status-calm" />
             </span>
             <p className="text-sm text-muted-foreground">
-              Ask anything about Vigil — what it does, how it predicts dropout, how it stays safe.
+              Ask anything about Vigil — what it does, how it surfaces dropout risk, how it stays safe.
               Answers are grounded in approved public documents and cited; the Guide refuses anything
               it can&apos;t ground.
             </p>

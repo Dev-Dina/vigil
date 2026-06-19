@@ -64,11 +64,20 @@ export default function CostRoutingPage() {
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-3 gap-4">
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard label="Total Turns" value={report?.total_turns ?? "—"} />
           <MetricCard
             label="Total Cost (USD)"
             value={report ? usd(report.total_cost) : "—"}
+          />
+          <MetricCard
+            label="Total Tokens"
+            value={report ? report.total_tokens.toLocaleString() : "—"}
+            subtitle={
+              report
+                ? `${report.total_prompt_tokens.toLocaleString()} prompt · ${report.total_completion_tokens.toLocaleString()} completion`
+                : undefined
+            }
           />
           <MetricCard label="Rollup Buckets" value={rollups.length || "—"} />
         </div>
@@ -107,6 +116,15 @@ export default function CostRoutingPage() {
                       Turns
                     </TableHead>
                     <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Prompt Tok
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Completion Tok
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Total Tok
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                       Total Cost
                     </TableHead>
                     <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -128,6 +146,15 @@ export default function CostRoutingPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm text-foreground">
                         {r.turns}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                        {r.prompt_tokens.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                        {r.completion_tokens.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm text-foreground">
+                        {r.total_tokens.toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right font-mono text-sm text-foreground">
                         {usd(r.total_cost)}
