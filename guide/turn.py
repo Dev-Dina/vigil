@@ -32,6 +32,11 @@ _BLOCKED_MSG = (
     "I can't help with that. I'm a public guide that only explains the Vigil project from "
     "approved materials — I don't give medical, security, or out-of-scope answers."
 )
+# A fixed, terse refusal for individual/participant-data asks — the Guide is public and has no
+# access to any real participant; they are HARD-blocked before retrieval or the LLM.
+_PARTICIPANT_MSG = (
+    "Participant information is restricted. The Guide only answers general questions about Vigil."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,17 +92,23 @@ def run_guide_turn(
         except Exception:  # noqa: BLE001 — best-effort audit; never break the turn
             pass
 
-    # 1. Guardrail block (clinical/injection/secret/redaction) → refuse BEFORE retrieval/LLM.
+    # 1. Guardrail block (clinical/injection/secret/participant/redaction) → refuse BEFORE
+    #    retrieval/LLM. Participant-data asks get the fixed, terse restricted-information message.
     if guard.result.decision == "blocked":
         route = f"guardrail:{guard.result.category}"
+        message = (
+            _PARTICIPANT_MSG
+            if guard.result.category == "participant"
+            else _BLOCKED_MSG
+        )
         _emit(
             decision="blocked",
             status="refused",
-            redacted_assistant=redact(_BLOCKED_MSG),
+            redacted_assistant=redact(message),
             route=route,
             citations=[],
         )
-        return TurnResult(_BLOCKED_MSG, [], "blocked", "refused", route)
+        return TurnResult(message, [], "blocked", "refused", route)
 
     # 2. Allowed → retrieve + grounded/cited answer or sound (relevance) refusal.
     ans = answer_question(redacted_user, index=index, embedder=embedder, llm=llm)

@@ -16,7 +16,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
@@ -25,6 +25,7 @@ from guide.config import get_config
 from guide.embeddings import get_embedder
 from guide.llm import get_guide_llm_client
 from guide.observability import create_sink_engine, init_sink
+from guide.ratelimit import RateLimiter
 from guide.retrieval import IndexedChunk, load_index
 from guide.turn import run_guide_turn
 
@@ -35,7 +36,9 @@ Resources = tuple[Engine, list[IndexedChunk], object, object]
 
 
 class AskIn(BaseModel):
-    question: str = Field(min_length=1, max_length=4000)
+    # Cheap abuse guard: cap the input so a giant prompt can't waste tokens (over-length → 422,
+    # rejected before retrieval/LLM). 2000 chars is ample for a question about the project.
+    question: str = Field(min_length=1, max_length=2000)
 
 
 class AskOut(BaseModel):
@@ -55,8 +58,15 @@ def _default_resources() -> Resources:
     return engine, index, get_embedder(), get_guide_llm_client()
 
 
-def create_app(resources: Callable[[], Resources] | None = None) -> FastAPI:
+def create_app(
+    resources: Callable[[], Resources] | None = None,
+    *,
+    rate_limiter: RateLimiter | None = None,
+) -> FastAPI:
     provider = resources or _default_resources
+    # Per-app in-memory per-IP throttle (isolation-safe: NO Redis/app coupling; resets on restart).
+    # A deploy-layer gateway limit is the durable multi-replica control (see RUNBOOK).
+    limiter = rate_limiter or RateLimiter()
     app = FastAPI(title="Vigil Guide", version="0.3.0")
 
     @app.get("/healthz")
@@ -69,7 +79,16 @@ def create_app(resources: Callable[[], Resources] | None = None) -> FastAPI:
         return FileResponse(_STATIC_DIR / "index.html", media_type="text/html")
 
     @app.post("/ask", response_model=AskOut)
-    async def ask(body: AskIn) -> AskOut:
+    async def ask(body: AskIn, request: Request) -> AskOut:
+        # Per-IP rate limit FIRST — a 429 costs no retrieval or LLM call. Public abuse/cost guard.
+        client_ip = request.client.host if request.client else "unknown"
+        allowed, retry_after = limiter.check(client_ip)
+        if not allowed:
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded. Please slow down and try again shortly.",
+                headers={"Retry-After": str(retry_after)},
+            )
         engine, index, embedder, llm = provider()
         result = run_guide_turn(
             body.question, index=index, embedder=embedder, llm=llm, sink_engine=engine
