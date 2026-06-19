@@ -108,7 +108,8 @@ def test_anthropic_empty_key_fails_loud() -> None:
             model="claude-haiku-4-5",
             timeout_seconds=1,
             max_tokens=8,
-            cost_per_1k_tokens=0.0,
+            input_cost_per_1k_tokens=0.0,
+            output_cost_per_1k_tokens=0.0,
         )
 
 
@@ -120,11 +121,13 @@ def _settings(**over) -> SimpleNamespace:  # type: ignore[no-untyped-def]
         anthropic_api_key="ak",
         anthropic_base_url="https://api.anthropic.com",
         anthropic_model="claude-haiku-4-5",
-        anthropic_cost_per_1k_tokens=0.0,
+        anthropic_input_cost_per_1k_tokens=0.0,
+        anthropic_output_cost_per_1k_tokens=0.0,
         llm_api_key="ok",
         llm_base_url="https://openrouter.ai/api/v1",
         llm_model="meta-llama/llama-3.3-70b-instruct:free",
-        llm_cost_per_1k_tokens=0.0,
+        llm_input_cost_per_1k_tokens=0.0,
+        llm_output_cost_per_1k_tokens=0.0,
         llm_timeout_seconds=30.0,
         llm_max_tokens=1024,
     )

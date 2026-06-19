@@ -22,7 +22,9 @@ writes to the app sink; same schema, separate stores (`/specs/infra.md`).
 | `retrieved_chunks` | jsonb | list of citation refs `{source_type, source_id, locator}` (`/specs/rag.md`); `[]` if none |
 | `llm_provider_model` | str | provider + model id used (e.g. `anthropic/claude-...`) |
 | `latency_ms` | int | end-to-end turn latency, ≥ 0 |
-| `token_cost_estimate` | numeric | estimated cost (USD); input+output tokens × rate |
+| `token_cost_estimate` | numeric | estimated cost (USD); `input_tokens × input_rate + output_tokens × output_rate` (COST-1, split rates) |
+| `prompt_tokens` | int | REAL input/prompt tokens for the turn (router + agent), ≥ 0 (COST-1) |
+| `completion_tokens` | int | REAL output/completion tokens for the turn (router + agent), ≥ 0 (COST-1) |
 | `status` | enum | `ok` \| `refused` \| `error` |
 | `redacted_user_msg` | text | PII-redacted inbound message; raw text NEVER stored |
 | `redacted_assistant_msg` | text | PII-redacted response; raw text NEVER stored |
@@ -62,12 +64,18 @@ inspect surface can only honour the cross-tenant-by-role boundary, never broaden
 column, so raw PII cannot be surfaced by construction. The inspect surface adds NO new visibility
 beyond what the row's RLS already grants the caller.
 
-### Cost / latency capture (required)
-`latency_ms` and `token_cost_estimate` MUST be persisted on the `message_events` row by the turn
-pipeline, threaded from the provider response (`LLMResponse` usage). They currently default to `0`
-because the agent answer drops usage; the cost surface (`GET /monitoring/cost`) reports **real
-captured cost or honest-zero/absent — NEVER a fabricated cost number**. Capturing usage is a
-Phase-6 build item; rollups are computed only from real persisted values.
+### Cost / latency / token capture (required) — real per-turn usage (Gate COST-1)
+`latency_ms`, `token_cost_estimate`, `prompt_tokens`, and `completion_tokens` MUST be persisted on
+the `message_events` row by the turn pipeline, threaded from the provider response (`LLMResponse`
+usage) and SUMMED across the turn's router-classification + agent-generation calls (a pre-router
+guardrail block has no LLM call → honest-zero). The token counts are the REAL provider counts
+(Anthropic `input_tokens`/`output_tokens`; OpenRouter `prompt_tokens`/`completion_tokens`). The
+dollar cost uses **SPLIT input/output per-1k-token rates** (`core/config.py`
+`anthropic_input_cost_per_1k_tokens` / `anthropic_output_cost_per_1k_tokens` — defaulting to the real
+claude-haiku-4-5 list price $1.00/$5.00 per 1M; OpenRouter rates 0 for the free model), because
+Anthropic prices output ~5× input — a single blended rate would misstate cost. The cost surface
+(`GET /monitoring/cost`) aggregates **real captured token totals + cost + latency by surface×model**,
+or honest-zero/absent — **NEVER a fabricated number**. The deterministic stub stays honest-zero cost.
 
 ### Drift read-surface (Gate M1 — now backed by a real producer)
 Phase 6 shipped `GET /monitoring/drift` as a **READ SURFACE ONLY** (honest-empty, never fabricated)

@@ -582,6 +582,12 @@ class MessageEvent(Base):
     token_cost_estimate: Mapped[float] = mapped_column(
         Numeric(12, 6), nullable=False, default=0
     )
+    # Gate COST-1: the REAL per-turn token counts from the provider response (Anthropic
+    # input/output_tokens, OpenRouter prompt/completion_tokens) — summed across the turn's router-
+    # classification + agent-generation calls (mirrors latency/cost). Honest-zero for paths with no
+    # generation call (a pre-router guardrail block) and for the deterministic stub.
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(16), nullable=False)  # ok|refused|error
     redacted_user_msg: Mapped[str] = mapped_column(Text, nullable=False, default="")
     redacted_assistant_msg: Mapped[str] = mapped_column(

@@ -79,8 +79,23 @@ class LLMClient(Protocol):
     ) -> LLMResponse: ...
 
 
-def _cost(prompt_tokens: int, completion_tokens: int, rate_per_1k: float) -> float:
-    return round((prompt_tokens + completion_tokens) / 1000.0 * rate_per_1k, 6)
+def _cost(
+    prompt_tokens: int,
+    completion_tokens: int,
+    input_rate_per_1k: float,
+    output_rate_per_1k: float,
+) -> float:
+    """USD cost = ``input_tokens × input_rate + output_tokens × output_rate`` (per 1k tokens).
+
+    Input and output are priced SEPARATELY (Gate COST-1): Anthropic charges output ~5× input, so a
+    single blended rate would misstate the real cost. Honest-zero when both rates are 0 (e.g. the
+    free OpenRouter fallback model). Real token counts in, real (small) dollar cost out.
+    """
+    return round(
+        prompt_tokens / 1000.0 * input_rate_per_1k
+        + completion_tokens / 1000.0 * output_rate_per_1k,
+        6,
+    )
 
 
 class OpenRouterClient:
@@ -98,7 +113,8 @@ class OpenRouterClient:
         model: str,
         timeout_seconds: float,
         max_tokens: int,
-        cost_per_1k_tokens: float,
+        input_cost_per_1k_tokens: float,
+        output_cost_per_1k_tokens: float,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         # Strip stray whitespace/newline a secret store can introduce (e.g. `value="$(cat key)"`
@@ -112,7 +128,8 @@ class OpenRouterClient:
         self._model = model
         self._timeout = timeout_seconds
         self._max_tokens = max_tokens
-        self._rate = cost_per_1k_tokens
+        self._input_rate = input_cost_per_1k_tokens
+        self._output_rate = output_cost_per_1k_tokens
 
     def complete(
         self,
@@ -165,7 +182,9 @@ class OpenRouterClient:
             model=mdl,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost_estimate=_cost(prompt_tokens, completion_tokens, self._rate),
+            cost_estimate=_cost(
+                prompt_tokens, completion_tokens, self._input_rate, self._output_rate
+            ),
             latency_ms=latency_ms,
         )
 
@@ -188,7 +207,8 @@ class AnthropicClient:
         model: str,
         timeout_seconds: float,
         max_tokens: int,
-        cost_per_1k_tokens: float,
+        input_cost_per_1k_tokens: float,
+        output_cost_per_1k_tokens: float,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self._api_key = (api_key or "").strip()
@@ -200,7 +220,8 @@ class AnthropicClient:
         self._model = model
         self._timeout = timeout_seconds
         self._max_tokens = max_tokens
-        self._rate = cost_per_1k_tokens
+        self._input_rate = input_cost_per_1k_tokens
+        self._output_rate = output_cost_per_1k_tokens
 
     @staticmethod
     def _split_system(messages: list[LLMMessage]) -> tuple[str, list[dict]]:
@@ -267,7 +288,9 @@ class AnthropicClient:
             model=f"anthropic/{mdl}",
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost_estimate=_cost(prompt_tokens, completion_tokens, self._rate),
+            cost_estimate=_cost(
+                prompt_tokens, completion_tokens, self._input_rate, self._output_rate
+            ),
             latency_ms=latency_ms,
         )
 
@@ -392,7 +415,8 @@ def get_llm_client() -> LLMClient:
                 model=settings.anthropic_model,
                 timeout_seconds=settings.llm_timeout_seconds,
                 max_tokens=settings.llm_max_tokens,
-                cost_per_1k_tokens=settings.anthropic_cost_per_1k_tokens,
+                input_cost_per_1k_tokens=settings.anthropic_input_cost_per_1k_tokens,
+                output_cost_per_1k_tokens=settings.anthropic_output_cost_per_1k_tokens,
             )
         )
     providers.append(
@@ -402,7 +426,8 @@ def get_llm_client() -> LLMClient:
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,
             max_tokens=settings.llm_max_tokens,
-            cost_per_1k_tokens=settings.llm_cost_per_1k_tokens,
+            input_cost_per_1k_tokens=settings.llm_input_cost_per_1k_tokens,
+            output_cost_per_1k_tokens=settings.llm_output_cost_per_1k_tokens,
         )
     )
     return providers[0] if len(providers) == 1 else FailoverClient(providers)

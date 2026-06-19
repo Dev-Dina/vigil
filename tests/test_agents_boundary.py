@@ -116,6 +116,7 @@ def test_openrouter_client_egress_allow_listed() -> None:
         model="m",
         timeout_seconds=1.0,
         max_tokens=8,
-        cost_per_1k_tokens=0.0,
+        input_cost_per_1k_tokens=0.0,
+        output_cost_per_1k_tokens=0.0,
     )
     assert c.base_url == "https://openrouter.ai/api/v1"

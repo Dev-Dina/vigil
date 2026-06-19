@@ -1137,11 +1137,14 @@ async def run_assistant_turn(
             llm_provider_model: str = "",
             latency_ms: int = 0,
             token_cost_estimate: float = 0.0,
+            prompt_tokens: int = 0,
+            completion_tokens: int = 0,
         ) -> None:
             # Usage defaults to honest-zero: paths with NO generation call (guardrail/router
-            # refusal) persist 0 cost/latency — real provider usage is threaded only where the
-            # agent actually generated an answer (Gate 6.2). ``llm_provider_model`` falls back to
-            # the configured model id when no provider answered (descriptive, not a cost claim).
+            # refusal) persist 0 cost/latency/tokens — real provider usage (cost, latency, AND the
+            # raw token counts: Gate COST-1) is threaded only where the LLM actually ran.
+            # ``llm_provider_model`` falls back to the configured model id when no provider answered
+            # (descriptive, not a cost claim).
             obs_repo.write_message_event(
                 tctx.session,
                 conversation_id=_uuid.UUID(conversation_id),
@@ -1158,6 +1161,8 @@ async def run_assistant_turn(
                 llm_provider_model=llm_provider_model or model_name,
                 latency_ms=latency_ms,
                 token_cost_estimate=token_cost_estimate,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
             )
             # ADDITIVE/BEST-EFFORT trace AFTER the durable record. The TurnTrace carries ONLY the
             # same redacted text + structural metadata (no raw field exists); a Langfuse failure is
@@ -1214,6 +1219,8 @@ async def run_assistant_turn(
                 llm_provider_model=decision.provider_model,
                 latency_ms=decision.latency_ms,
                 token_cost_estimate=decision.token_cost_estimate,
+                prompt_tokens=decision.prompt_tokens,
+                completion_tokens=decision.completion_tokens,
             )
             return _turn(refusal, "blocked", "refused", [])
 
@@ -1234,6 +1241,8 @@ async def run_assistant_turn(
                 llm_provider_model=decision.provider_model,
                 latency_ms=decision.latency_ms,
                 token_cost_estimate=decision.token_cost_estimate,
+                prompt_tokens=decision.prompt_tokens,
+                completion_tokens=decision.completion_tokens,
             )
             return _turn(refusal, "blocked", "refused", [])
 
@@ -1255,5 +1264,9 @@ async def run_assistant_turn(
             token_cost_estimate=round(
                 decision.token_cost_estimate + ans.token_cost_estimate, 6
             ),
+            # COST-1: the turn's REAL token totals = router-classification + agent-generation
+            # (a grounded refusal makes no agent call → just the router's tokens).
+            prompt_tokens=decision.prompt_tokens + ans.prompt_tokens,
+            completion_tokens=decision.completion_tokens + ans.completion_tokens,
         )
         return _turn(redacted_answer, "allowed", ans.status, ans.citations)

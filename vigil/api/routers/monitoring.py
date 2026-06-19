@@ -123,6 +123,10 @@ class CostRollupOut(BaseModel):
     total_cost: float
     total_latency_ms: int
     avg_latency_ms: float
+    # Gate COST-1: REAL summed token counts per (surface, model) from stored message_events.
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 class CostReportOut(BaseModel):
@@ -130,6 +134,9 @@ class CostReportOut(BaseModel):
 
     total_turns: int
     total_cost: float
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_tokens: int
     rollups: list[CostRollupOut]
 
 
@@ -156,6 +163,9 @@ async def get_cost(
     return CostReportOut(
         total_turns=report.total_turns,
         total_cost=report.total_cost,
+        total_prompt_tokens=report.total_prompt_tokens,
+        total_completion_tokens=report.total_completion_tokens,
+        total_tokens=report.total_tokens,
         rollups=[CostRollupOut(**asdict(r)) for r in report.rollups],
     )
 

@@ -80,13 +80,22 @@ class Settings(BaseSettings):
     anthropic_enabled: bool = True
     anthropic_base_url: str = "https://api.anthropic.com"
     anthropic_model: str = "claude-haiku-4-5"
-    anthropic_cost_per_1k_tokens: float = 0.0
+    # SPLIT input/output USD per 1k tokens (Gate COST-1). Anthropic prices input and output
+    # DIFFERENTLY (output ~5×), so a single blended rate would misstate cost — we charge
+    # input_tokens × input_rate + output_tokens × output_rate. Defaults are the REAL, current
+    # claude-haiku-4-5 list price: $1.00 / 1M input, $5.00 / 1M output (claude-api skill model
+    # table, cached 2026-06-04) → 0.001 / 0.005 per 1k. Override via VIGIL_ANTHROPIC_INPUT_COST_
+    # PER_1K_TOKENS / VIGIL_ANTHROPIC_OUTPUT_COST_PER_1K_TOKENS if Anthropic repricings land.
+    anthropic_input_cost_per_1k_tokens: float = 0.001
+    anthropic_output_cost_per_1k_tokens: float = 0.005
 
-    # OpenRouter (FALLBACK). Kept as the llm_* names (no rename); free model, cost ~0.
+    # OpenRouter (FALLBACK). Kept as the llm_* names (no rename). The configured model
+    # (meta-llama/llama-3.3-70b-instruct:free) is a FREE model → both rates honestly 0.0; set them
+    # if a paid OpenRouter model is configured. Split input/output for parity with Anthropic.
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
-    # USD per 1k (prompt+completion) tokens for the cost estimate; 0.0 for a free model.
-    llm_cost_per_1k_tokens: float = 0.0
+    llm_input_cost_per_1k_tokens: float = 0.0
+    llm_output_cost_per_1k_tokens: float = 0.0
 
     # --- langfuse tracing (Phase 6.3) ---
     # Per-turn trace ON TOP of the durable message_events record. CI-hermetic: langfuse_enabled

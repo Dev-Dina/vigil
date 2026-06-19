@@ -293,9 +293,15 @@ class CostRollup(BaseModel):                # one (surface, model) bucket
     total_cost: float                       # summed REAL token_cost_estimate; honest-zero, never faked
     total_latency_ms: int
     avg_latency_ms: float
+    prompt_tokens: int                      # COST-1: summed REAL prompt/input tokens
+    completion_tokens: int                  # COST-1: summed REAL completion/output tokens
+    total_tokens: int                       # prompt_tokens + completion_tokens
 class CostReport(BaseModel):                # rollups from REAL persisted usage only
     total_turns: int
     total_cost: float
+    total_prompt_tokens: int                # COST-1
+    total_completion_tokens: int            # COST-1
+    total_tokens: int                       # COST-1
     rollups: list[CostRollup]
 class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, ALREADY redacted
     id: str
@@ -310,6 +316,8 @@ class MessageEventOut(BaseModel):           # mirrors /specs/observability.md, A
     llm_provider_model: str
     latency_ms: int
     token_cost_estimate: float
+    prompt_tokens: int                      # COST-1: REAL per-turn input tokens (router + agent)
+    completion_tokens: int                  # COST-1: REAL per-turn output tokens (router + agent)
     retrieved_chunks: list[dict]            # citation refs only (debug-retrieval duty)
     redacted_user_msg: str                  # redacted at rest; NO raw column exists
     redacted_assistant_msg: str

@@ -127,12 +127,18 @@ class CostRollupView:
     total_cost: float
     total_latency_ms: int
     avg_latency_ms: float
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 @dataclass(frozen=True, slots=True)
 class CostReportView:
     total_turns: int
     total_cost: float
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_tokens: int
     rollups: list[CostRollupView]
 
 
@@ -161,12 +167,18 @@ def cost_report(
             total_cost=round(total_cost, 6),
             total_latency_ms=total_latency,
             avg_latency_ms=round(total_latency / turns, 2) if turns else 0.0,
+            prompt_tokens=prompt_tok,
+            completion_tokens=completion_tok,
+            total_tokens=prompt_tok + completion_tok,
         )
-        for s, model, turns, total_cost, total_latency in rows
+        for s, model, turns, total_cost, total_latency, prompt_tok, completion_tok in rows
     ]
     return CostReportView(
         total_turns=sum(r.turns for r in rollups),
         total_cost=round(sum(r.total_cost for r in rollups), 6),
+        total_prompt_tokens=sum(r.prompt_tokens for r in rollups),
+        total_completion_tokens=sum(r.completion_tokens for r in rollups),
+        total_tokens=sum(r.total_tokens for r in rollups),
         rollups=rollups,
     )
 

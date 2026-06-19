@@ -39,11 +39,15 @@ def write_message_event(
     llm_provider_model: str = "",
     latency_ms: int = 0,
     token_cost_estimate: float = 0.0,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
 ) -> MessageEvent:
     """Append one redacted ``message_events`` row for a turn (specs/observability.md).
 
     ``sponsor_id=None`` for Guide/platform turns (null-sponsor, platform-visible only). All
     message text MUST already be redacted (contract above). Runs under the caller's RLS session.
+    ``prompt_tokens`` / ``completion_tokens`` are the REAL per-turn counts (Gate COST-1), honest-
+    zero when no generation call was made.
     """
     row = MessageEvent(
         conversation_id=conversation_id,
@@ -57,6 +61,8 @@ def write_message_event(
         llm_provider_model=llm_provider_model,
         latency_ms=latency_ms,
         token_cost_estimate=token_cost_estimate,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
         status=status,
         redacted_user_msg=redacted_user_msg,
         redacted_assistant_msg=redacted_assistant_msg,
@@ -109,14 +115,14 @@ def cost_rollup(
     surface: str | None = None,
     since: datetime | None = None,
     until: datetime | None = None,
-) -> list[tuple[str, str, int, float, int]]:
+) -> list[tuple[str, str, int, float, int, int, int]]:
     """Aggregate REAL persisted usage from ``message_events``, grouped by surface + model.
 
-    Returns ``(surface, llm_provider_model, turns, total_cost, total_latency_ms)`` tuples,
-    summed straight from the stored ``token_cost_estimate`` / ``latency_ms`` columns — NO
-    fabrication: a turn that captured honest-zero usage contributes zero. Runs under the
-    caller's RLS-scoped session (visibility = the ``message_events_scope`` policy); never adds a
-    sponsor_id WHERE clause. Empty result when no events match (honest-empty).
+    Returns ``(surface, llm_provider_model, turns, total_cost, total_latency_ms, prompt_tokens,
+    completion_tokens)`` tuples, summed straight from the stored columns — NO fabrication: a turn
+    that captured honest-zero usage contributes zero. Runs under the caller's RLS-scoped session
+    (visibility = the ``message_events_scope`` policy); never adds a sponsor_id WHERE clause. Empty
+    result when no events match (honest-empty).
     """
     stmt = select(
         MessageEvent.surface,
@@ -126,6 +132,10 @@ def cost_rollup(
             "total_cost"
         ),
         func.coalesce(func.sum(MessageEvent.latency_ms), 0).label("total_latency_ms"),
+        func.coalesce(func.sum(MessageEvent.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(MessageEvent.completion_tokens), 0).label(
+            "completion_tokens"
+        ),
     )
     if surface is not None:
         stmt = stmt.where(MessageEvent.surface == surface)
@@ -137,6 +147,16 @@ def cost_rollup(
         MessageEvent.surface, MessageEvent.llm_provider_model
     ).order_by(MessageEvent.surface, MessageEvent.llm_provider_model)
     return [
-        (surface_, model or "", int(turns), float(cost), int(latency))
-        for surface_, model, turns, cost, latency in session.execute(stmt).all()
+        (
+            surface_,
+            model or "",
+            int(turns),
+            float(cost),
+            int(latency),
+            int(prompt_tok),
+            int(completion_tok),
+        )
+        for surface_, model, turns, cost, latency, prompt_tok, completion_tok in session.execute(
+            stmt
+        ).all()
     ]
