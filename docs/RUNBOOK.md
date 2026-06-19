@@ -64,7 +64,8 @@ coordinator sees only their own site (RLS + SEC-1 intact, served by the containe
 > **production model is the persistent, Shamir-sealed `vault` service** (profile `prod-vault`,
 > `infra/vault/vault.hcl`) with **manual `operator init`/`operator unseal`** — exactly the host
 > flow in **1.1–1.5** below. Phase 8 (k8s) replaces it with raft HA + KMS/transit auto-unseal.
-> `frontend` (D2) + `guide` (D3, profile `guide`) are **not** in the app stack yet.
+> `frontend` (D2) runs separately; the isolated **`guide`** service is now a first-class compose
+> service under **profile `guide`** on its own **`guide-net`** (Gate D3, §1.C below).
 
 ### 1.B Live-LLM bring-up against the PERSISTENT Vault — DEV ONLY, OPT-IN (Gate L1, real tokens)
 The §1.A stack is **stubbed by default** (`VIGIL_LLM_STUB=true` → deterministic `StubLLMClient`, no
@@ -119,9 +120,44 @@ Naming `vault api worker` (+ their postgres/redis deps) starts exactly those; th
 `latency_ms`/`token_cost_estimate` (a grounded/router refusal makes no generation call and stays
 honest-zero — correct). This **costs real tokens** and is opt-in only; the default
 `docker compose -f docker-compose.dev.yml --profile app up` (no override) stays **stubbed** against
-`vault-dev`, and CI/the spine never load the override. The Guide's live LLM (`VIGIL_GUIDE_LLM_STUB`)
-is **not** wired here — the Guide is its own isolated service on `guide-net` (no Vault route); a live
-Guide turn is a later (D3) gate (see §4c for the host/uv path).
+`vault-dev`, and CI/the spine never load the override. The Guide's live LLM is **separate** — it is
+its own isolated service on `guide-net` with **no Vault route** and its **own** key; see §1.C.
+
+### 1.C The isolated public Guide in Docker Compose (Gate D3)
+The public **Guide** (the document-only chatbot behind `/welcome`) runs as a first-class compose
+service under **profile `guide`**, on its **own `guide-net`** network with **no route** to the app's
+`postgres`/`redis`/`vault`/`api`/`worker` (those are on the compose default network). It builds the
+`guide/` package **alone** (imports nothing from `vigil.*`), serves **only** its file-backed
+approved-doc index, writes to its **own** SQLite sink, and uses its **own** LLM key — never the app's
+DB, Vault, or Anthropic key. The vendored MiniLM weights are **bind-mounted read-only** (host files,
+not an app service) so the embedder works without weakening isolation.
+
+**Stubbed by default (hermetic, no key) — whole-system, ONE command:**
+```bash
+docker compose -f docker-compose.dev.yml --profile app --profile guide up -d --build
+```
+This brings up infra + app + the Guide. The Guide builds its approved-doc index, then serves on
+**:8080** (the frontend's `NEXT_PUBLIC_GUIDE_URL` default), `VIGIL_GUIDE_LLM_STUB=true` → a
+deterministic stub answer, no network LLM call, no key needed.
+
+Verify reachability + isolation:
+```bash
+curl localhost:8080/healthz                                  # {"status":"ok","service":"guide"}
+curl -s localhost:8080/ask -H 'content-type: application/json' -d '{"question":"What is Vigil?"}'
+# ISOLATION (must FAIL): the Guide cannot resolve/reach the app datastores on its separate network
+docker compose -f docker-compose.dev.yml --profile guide exec guide \
+  python -c "import socket; socket.create_connection(('postgres',5432),3)"   # -> getaddrinfo/refused
+```
+
+**LIVE Guide turn (key-safe, opt-in) — the Guide's OWN key, never committed:**
+```bash
+export VIGIL_GUIDE_LLM_API_KEY=sk-or-...   # the Guide's OWN OpenRouter key (NOT the app's Anthropic key)
+docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app --profile guide up -d --build
+```
+The live override (`docker-compose.live.yml`) flips `VIGIL_GUIDE_LLM_STUB=false` and injects the key
+**from the shell** (`:?` fails loud if unset). The Guide reads it from its own env — it has **no Vault
+client** — so there is no shared-secret path to the app. Default stays stubbed; CI/the spine are
+unaffected (the Guide is not in the test path).
 
 ### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
 ```bash
@@ -231,7 +267,7 @@ hermetic value in `conftest`; the **app defaults** are below.
 | `VIGIL_LLM_STUB` | `false` | `true` → `StubLLMClient` (deterministic, no network, no key) | leave **false** + place the Anthropic key |
 | `VIGIL_LANGFUSE_ENABLED` | `false` | gates per-turn Langfuse tracing on top of the durable `message_events` | set **true** + place the Langfuse keys |
 | `VIGIL_EMAIL_STUB` | `true` | `true` → `StubEmailSender` (records intent, no SMTP, no credential) | set **false** + place the SMTP App Password |
-| `VIGIL_GUIDE_LLM_STUB` | `false` | `true` → deterministic Guide stub (no network, no key) | leave **false** + place the Guide key |
+| `VIGIL_GUIDE_LLM_STUB` | `false` (config); the compose `guide` service forces **`true`** | `true` → deterministic Guide stub (no network, no key) | `docker-compose.live.yml` sets it **false** + the Guide's OWN key from `VIGIL_GUIDE_LLM_API_KEY` (§1.C) |
 
 Other useful config: `VIGIL_DEMO_MODE` (default `false`; gates `POST /scoring/inject_events`),
 `VIGIL_APP_BASE_URL` (default `http://localhost:3000`; the deep-link base in the Phase-9 email),
@@ -264,13 +300,17 @@ Each path below is **never exercised live in CI**. Run each once to confirm the 
    `message_events`.
 
 ### (c) Live Guide turn (isolated service)
-1. `vault kv put secret/vigil/guide/llm_api_key value=sk-or-...` (or set `VIGIL_GUIDE_LLM_API_KEY`).
-2. Ensure `VIGIL_GUIDE_LLM_STUB` is unset/`false`; (re)build the index `uv run python -m
-   guide.build_index`; start `uvicorn guide.app:app --port 8080`.
-3. Ask an **approved-docs** question against the Guide endpoint.
-4. **Success:** a grounded answer cites approved-doc content; an out-of-scope / low-relevance
-   question is refused. The Guide reaches ONLY its own approved-doc index — never the app DB,
-   model endpoints, or app secrets (that is what (d) proves at the network layer).
+- **Compose (Gate D3, recommended):** `export VIGIL_GUIDE_LLM_API_KEY=sk-or-...` then bring up with
+  the live override + `--profile guide` (§1.C). The Guide reads the key from its own env (no Vault),
+  stays on `guide-net`, and answers `POST :8080/ask` from its approved-doc index only.
+- **Host/uv:** `vault kv put secret/vigil/guide/llm_api_key value=sk-or-...` (or set
+  `VIGIL_GUIDE_LLM_API_KEY`); ensure `VIGIL_GUIDE_LLM_STUB` is unset/`false`; (re)build the index
+  `uv run python -m guide.build_index`; start `uvicorn guide.app:app --port 8080`.
+
+Then ask an **approved-docs** question against the Guide endpoint.
+**Success:** a grounded answer cites approved-doc content; an out-of-scope / low-relevance question
+is refused. The Guide reaches ONLY its own approved-doc index — never the app DB, model endpoints, or
+app secrets (that is what (d) proves at the network layer).
 
 ### (d) Layer-3 kind + Calico isolation proof
 1. From the repo root run the fixed proof script (keep the cluster up for inspection):

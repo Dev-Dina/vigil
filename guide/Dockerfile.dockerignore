@@ -1,0 +1,15 @@
+# Per-Dockerfile ignore for the ISOLATED Guide build (Gate D3).
+#
+# BuildKit uses this file INSTEAD of the root .dockerignore when building guide/Dockerfile. The
+# root .dockerignore excludes guide/ + data/ (correct for the APP image), which would starve the
+# Guide build of its own package. Here we keep the context to the Guide package ONLY — no vigil/,
+# no app code, no data/ (the vendored MiniLM weights are BIND-MOUNTED read-only at runtime, not
+# baked in). This preserves the Guide's import-isolation: nothing from vigil.* can enter the image.
+*
+!guide
+guide/data
+guide/Dockerfile
+guide/Dockerfile.dockerignore
+**/__pycache__
+*.pyc
+*.pyo

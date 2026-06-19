@@ -61,21 +61,40 @@ services:
       - vault-data:/vault/file # encrypted persistent storage (Docker-managed; not in the repo)
 
   # Public Guide (isolated). On its OWN network only (guide-net) — NO route to postgres/redis/
-  # vault, which live on the compose default network. Builds the guide/ package alone (no vigil/).
-  # Its secret set is just its own LLM key (unused in 7.1); no DB DSN, no Vault token, no Redis.
+  # vault/api/worker, which live on the compose default network. Builds the guide/ package alone
+  # (no vigil/). Its secret set is just its OWN LLM key; no DB DSN, no Vault token, no Redis. STUBBED
+  # by default (no key, no live call); the key-safe live path is docker-compose.live.yml (Gate D3).
   guide:
     # Gated behind the `guide` profile (Gate D1) so it does not start with the dev app stack;
-    # the Guide is its own (D3) gate. Start with `--profile guide` when needed.
+    # the Guide is its own (D3) gate. Start with `--profile guide`.
     profiles: ["guide"]
     build:
       context: .
       dockerfile: guide/Dockerfile
+    image: vigil-guide:local
     ports:
       - "8080:8080"
     networks:
       - guide-net
     environment:
       VIGIL_GUIDE_LOG_LEVEL: INFO
+      # Hermetic by DEFAULT: the deterministic stub LLM — no key, no live call (CI-safe parity with
+      # the app's VIGIL_LLM_STUB). The live path flips this off + supplies the Guide's OWN key.
+      VIGIL_GUIDE_LLM_STUB: "true"
+    volumes:
+      # The Guide's OWN offline embedder weights (vendored all-MiniLM-L6-v2), bind-mounted READ-ONLY.
+      # Host files, NOT an app service — gives the Guide its embedder with NO route to the app's
+      # Postgres/Vault/services. Isolation (guide-net) is unchanged; the weights are public, not PII.
+      - ./data/models/embeddings/all-MiniLM-L6-v2:/app/data/models/embeddings/all-MiniLM-L6-v2:ro
+    # Build the Guide-owned approved-doc index from the mounted weights, THEN serve. The index is
+    # written INSIDE the container (a Guide-owned artifact), never shared with the app.
+    command: ["sh", "-c", "python -m guide.build_index && exec uvicorn guide.app:app --host 0.0.0.0 --port 8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/healthz').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
 # --- Dockerized app stack (Gate D1) — DEV-ONLY, profile "app" --------------------------------
 # `docker compose -f docker-compose.dev.yml --profile app up -d --build` brings up:

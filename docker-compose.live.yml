@@ -59,3 +59,16 @@ services:
         condition: service_healthy
       vault:
         condition: service_healthy
+
+  # The ISOLATED public Guide — LIVE path (Gate D3). Flips the stub off and supplies the Guide's OWN
+  # LLM key FROM THE SHELL (`:?` = fail loud if unset; NO key committed). This is the Guide's own
+  # OpenRouter key for its own free model — NOT the app's Anthropic key, and NOT read from the app's
+  # Vault (the Guide has no Vault client). Isolation is UNCHANGED: the Guide stays on guide-net with
+  # no route to the app's Postgres/Vault/api/worker; this override only sets two env vars. The base
+  # `guide` service (stub, weights mount, index build, healthcheck, guide-net) is inherited as-is.
+  # Bring up:  export VIGIL_GUIDE_LLM_API_KEY=<the Guide's own OpenRouter key>   # never committed
+  #   docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app --profile guide up -d --build
+  guide:
+    environment:
+      VIGIL_GUIDE_LLM_STUB: "false"
+      VIGIL_GUIDE_LLM_API_KEY: ${VIGIL_GUIDE_LLM_API_KEY:?Set VIGIL_GUIDE_LLM_API_KEY to the Guide's OWN OpenRouter key (NOT the app key) — see docs/RUNBOOK.md}
