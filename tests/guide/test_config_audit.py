@@ -24,6 +24,7 @@ _ALLOWED_FIELDS = {
     # (c) own LLM key + the Guide's OWN minimal LLM client config
     "llm_api_key",
     "llm_stub",
+    "llm_provider",  # non-secret: which client to build ("openai_compatible" | "anthropic")
     "llm_base_url",
     "llm_model",
     "llm_timeout_seconds",

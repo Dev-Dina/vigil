@@ -44,6 +44,10 @@ class GuideConfig(BaseSettings):
     # --- LLM client (the Guide's OWN minimal client; NOT vigil.agents.llm) ---
     # Hermetic CI: VIGIL_GUIDE_LLM_STUB=true selects the deterministic stub (no network, no key).
     llm_stub: bool = False
+    # Which real client to build: "openai_compatible" (OpenRouter/OpenAI /chat/completions, Bearer)
+    # or "anthropic" (native /v1/messages, x-api-key). NON-secret provider config; the key is the
+    # only secret. Default preserves current behaviour; the live Guide sets it to "anthropic".
+    llm_provider: str = "openai_compatible"
     llm_base_url: str = "https://openrouter.ai/api/v1"
     llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
     llm_timeout_seconds: float = 30.0

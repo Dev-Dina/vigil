@@ -60,15 +60,20 @@ services:
       vault:
         condition: service_healthy
 
-  # The ISOLATED public Guide — LIVE path (Gate D3). Flips the stub off and supplies the Guide's OWN
-  # LLM key FROM THE SHELL (`:?` = fail loud if unset; NO key committed). This is the Guide's own
-  # OpenRouter key for its own free model — NOT the app's Anthropic key, and NOT read from the app's
-  # Vault (the Guide has no Vault client). Isolation is UNCHANGED: the Guide stays on guide-net with
-  # no route to the app's Postgres/Vault/api/worker; this override only sets two env vars. The base
-  # `guide` service (stub, weights mount, index build, healthcheck, guide-net) is inherited as-is.
-  # Bring up:  export VIGIL_GUIDE_LLM_API_KEY=<the Guide's own OpenRouter key>   # never committed
+  # The ISOLATED public Guide — LIVE path (Gate D3 / GUIDE-ANTHROPIC). Flips the stub off and runs the
+  # Guide NATIVELY on Anthropic (Claude) with the Guide's OWN key FROM THE SHELL (`:?` = fail loud if
+  # unset; NO key committed). This is the Guide's own Anthropic key (sk-ant-...) — NOT the app's key,
+  # and NOT read from the app's Vault (the Guide has no Vault client). Provider/base_url/model are
+  # NON-secret config (overridable, with Anthropic defaults). Isolation is UNCHANGED: the Guide stays
+  # on guide-net with no route to the app's Postgres/Vault/api/worker; this override only sets env and
+  # adds an outbound call to api.anthropic.com. The base `guide` service (stub, weights mount, index
+  # build, healthcheck, guide-net) is inherited as-is.
+  # Bring up:  export VIGIL_GUIDE_LLM_API_KEY=<the Guide's own Anthropic key, sk-ant-...>   # never committed
   #   docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app --profile guide up -d --build
   guide:
     environment:
       VIGIL_GUIDE_LLM_STUB: "false"
-      VIGIL_GUIDE_LLM_API_KEY: ${VIGIL_GUIDE_LLM_API_KEY:?Set VIGIL_GUIDE_LLM_API_KEY to the Guide's OWN OpenRouter key (NOT the app key) — see docs/RUNBOOK.md}
+      VIGIL_GUIDE_LLM_PROVIDER: ${VIGIL_GUIDE_LLM_PROVIDER:-anthropic}
+      VIGIL_GUIDE_LLM_BASE_URL: ${VIGIL_GUIDE_LLM_BASE_URL:-https://api.anthropic.com}
+      VIGIL_GUIDE_LLM_MODEL: ${VIGIL_GUIDE_LLM_MODEL:-claude-haiku-4-5}
+      VIGIL_GUIDE_LLM_API_KEY: ${VIGIL_GUIDE_LLM_API_KEY:?Set VIGIL_GUIDE_LLM_API_KEY to the Guide's OWN Anthropic key (sk-ant-...) — see docs/RUNBOOK.md}

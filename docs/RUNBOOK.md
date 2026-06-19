@@ -149,14 +149,16 @@ docker compose -f docker-compose.dev.yml --profile guide exec guide \
   python -c "import socket; socket.create_connection(('postgres',5432),3)"   # -> getaddrinfo/refused
 ```
 
-**LIVE Guide turn (key-safe, opt-in) — the Guide's OWN key, never committed:**
+**LIVE Guide turn (key-safe, opt-in) — Anthropic-native, the Guide's OWN key, never committed:**
 ```bash
-export VIGIL_GUIDE_LLM_API_KEY=sk-or-...   # the Guide's OWN OpenRouter key (NOT the app's Anthropic key)
+export VIGIL_GUIDE_LLM_API_KEY=sk-ant-...   # the Guide's OWN Anthropic key (NOT the app's key)
 docker compose -f docker-compose.dev.yml -f docker-compose.live.yml --profile app --profile guide up -d --build
 ```
-The live override (`docker-compose.live.yml`) flips `VIGIL_GUIDE_LLM_STUB=false` and injects the key
-**from the shell** (`:?` fails loud if unset). The Guide reads it from its own env — it has **no Vault
-client** — so there is no shared-secret path to the app. Default stays stubbed; CI/the spine are
+The live override (`docker-compose.live.yml`) flips `VIGIL_GUIDE_LLM_STUB=false` and selects the
+**native Anthropic** client (`VIGIL_GUIDE_LLM_PROVIDER=anthropic`, `…_BASE_URL=https://api.anthropic.com`,
+`…_MODEL=claude-haiku-4-5` — all overridable), injecting the key **from the shell** (`:?` fails loud if
+unset). The Guide reads it from its own env — it has **no Vault client** — so there is no shared-secret
+path to the app; its only new egress is `api.anthropic.com`. Default stays stubbed; CI/the spine are
 unaffected (the Guide is not in the test path).
 
 ### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
@@ -267,7 +269,8 @@ hermetic value in `conftest`; the **app defaults** are below.
 | `VIGIL_LLM_STUB` | `false` | `true` → `StubLLMClient` (deterministic, no network, no key) | leave **false** + place the Anthropic key |
 | `VIGIL_LANGFUSE_ENABLED` | `false` | gates per-turn Langfuse tracing on top of the durable `message_events` | set **true** + place the Langfuse keys |
 | `VIGIL_EMAIL_STUB` | `true` | `true` → `StubEmailSender` (records intent, no SMTP, no credential) | set **false** + place the SMTP App Password |
-| `VIGIL_GUIDE_LLM_STUB` | `false` (config); the compose `guide` service forces **`true`** | `true` → deterministic Guide stub (no network, no key) | `docker-compose.live.yml` sets it **false** + the Guide's OWN key from `VIGIL_GUIDE_LLM_API_KEY` (§1.C) |
+| `VIGIL_GUIDE_LLM_STUB` | `false` (config); the compose `guide` service forces **`true`** | `true` → deterministic Guide stub (no network, no key) | `docker-compose.live.yml` sets it **false**, `VIGIL_GUIDE_LLM_PROVIDER=anthropic`, + the Guide's OWN key from `VIGIL_GUIDE_LLM_API_KEY` (§1.C) |
+| `VIGIL_GUIDE_LLM_PROVIDER` | `openai_compatible` | which Guide client to build: `openai_compatible` (`/chat/completions`, Bearer) or `anthropic` (native `/v1/messages`, `x-api-key`) | live Guide → **`anthropic`** (its own `sk-ant-...` key) |
 
 Other useful config: `VIGIL_DEMO_MODE` (default `false`; gates `POST /scoring/inject_events`),
 `VIGIL_APP_BASE_URL` (default `http://localhost:3000`; the deep-link base in the Phase-9 email),
@@ -299,13 +302,16 @@ Each path below is **never exercised live in CI**. Run each once to confirm the 
    are correct. The trace carries **redacted** content only (no raw PII), consistent with
    `message_events`.
 
-### (c) Live Guide turn (isolated service)
-- **Compose (Gate D3, recommended):** `export VIGIL_GUIDE_LLM_API_KEY=sk-or-...` then bring up with
-  the live override + `--profile guide` (§1.C). The Guide reads the key from its own env (no Vault),
-  stays on `guide-net`, and answers `POST :8080/ask` from its approved-doc index only.
-- **Host/uv:** `vault kv put secret/vigil/guide/llm_api_key value=sk-or-...` (or set
-  `VIGIL_GUIDE_LLM_API_KEY`); ensure `VIGIL_GUIDE_LLM_STUB` is unset/`false`; (re)build the index
-  `uv run python -m guide.build_index`; start `uvicorn guide.app:app --port 8080`.
+### (c) Live Guide turn (isolated service) — Anthropic-native
+- **Compose (Gate D3, recommended):** `export VIGIL_GUIDE_LLM_API_KEY=sk-ant-...` then bring up with
+  the live override + `--profile guide` (§1.C). The override selects the native Anthropic client
+  (`VIGIL_GUIDE_LLM_PROVIDER=anthropic`). The Guide reads the key from its own env (no Vault), stays
+  on `guide-net`, and answers `POST :8080/ask` from its approved-doc index only.
+- **Host/uv:** set `VIGIL_GUIDE_LLM_API_KEY=sk-ant-...` (or `vault kv put secret/vigil/guide/llm_api_key`)
+  + `VIGIL_GUIDE_LLM_PROVIDER=anthropic` + `VIGIL_GUIDE_LLM_MODEL=claude-haiku-4-5`; ensure
+  `VIGIL_GUIDE_LLM_STUB` is unset/`false`; (re)build the index `uv run python -m guide.build_index`;
+  start `uvicorn guide.app:app --port 8080`. (Leave the provider at its `openai_compatible` default for
+  an OpenAI/OpenRouter key instead.)
 
 Then ask an **approved-docs** question against the Guide endpoint.
 **Success:** a grounded answer cites approved-doc content; an out-of-scope / low-relevance question
