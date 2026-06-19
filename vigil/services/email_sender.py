@@ -126,20 +126,32 @@ class StubEmailSender:
 
 
 class SmtpEmailSender:
-    """Real Gmail SMTP sender (stdlib ``smtplib`` + STARTTLS). Built only when email_stub=False.
+    """Real SMTP sender (stdlib ``smtplib``). Built only when email_stub=False.
 
-    Reads the App Password from Vault (``vigil/notifications/email_password``); the host/port/From
-    are non-secret config. A failure raises :class:`EmailSendError` so the Arq job retries
-    (bounded by the worker ``max_tries``); the caller does NOT flip ``notified`` on failure.
+    Transport is configurable (Gate OBS-MAIL): ``use_starttls`` + ``use_auth`` default TRUE for a
+    real submission relay (Gmail/SendGrid/SES/Resend — STARTTLS + login with the Vault App Password);
+    a local catch-all (Mailpit) sets BOTH false → plaintext, no credential. The host/port/From are
+    non-secret config; the password is read only when ``use_auth``. A failure raises
+    :class:`EmailSendError` so the Arq job retries (bounded by ``max_tries``); the caller does NOT
+    flip ``notified`` on failure.
     """
 
     def __init__(
-        self, *, host: str, port: int, from_address: str, password: str
+        self,
+        *,
+        host: str,
+        port: int,
+        from_address: str,
+        password: str,
+        use_starttls: bool = True,
+        use_auth: bool = True,
     ) -> None:
         self._host = host
         self._port = port
         self._from = from_address
         self._password = password
+        self._use_starttls = use_starttls
+        self._use_auth = use_auth
 
     def send(self, *, to: list[str], subject: str, body: str) -> None:
         import smtplib
@@ -152,8 +164,10 @@ class SmtpEmailSender:
         msg.set_content(body)
         try:
             with smtplib.SMTP(self._host, self._port, timeout=30) as smtp:
-                smtp.starttls()
-                smtp.login(self._from, self._password)
+                if self._use_starttls:
+                    smtp.starttls()
+                if self._use_auth:
+                    smtp.login(self._from, self._password)
                 smtp.send_message(msg)
         except Exception as exc:  # noqa: BLE001 - normalize to a retryable send error
             raise EmailSendError(f"SMTP send failed: {exc}") from exc
@@ -173,9 +187,14 @@ def get_email_sender() -> EmailSender:
         raise EmailSendError(
             "notify_from_address must be set for a live send (VIGIL_NOTIFY_FROM_ADDRESS)"
         )
+    # The App Password (a Vault secret) is read ONLY when auth is on. A no-auth relay (Mailpit)
+    # reads no credential — so the demo/mail path needs nothing in Vault.
+    password = settings.notify_email_password if settings.smtp_auth else ""
     return SmtpEmailSender(
         host=settings.smtp_host,
         port=settings.smtp_port,
         from_address=settings.notify_from_address,
-        password=settings.notify_email_password,
+        password=password,
+        use_starttls=settings.smtp_starttls,
+        use_auth=settings.smtp_auth,
     )

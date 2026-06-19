@@ -1,0 +1,36 @@
+# Real-email override (Gate OBS-MAIL) — DEV/DEMO, self-contained, demo-safe.
+#
+# Flips api+worker from the email STUB to a REAL SMTP send pointed at the local Mailpit catch-all
+# (the `mailpit` service in docker-compose.dev.yml, profile `mail`). With this layered on, a
+# serious-risk crossing / drift-breach notification ACTUALLY sends over SMTP and is VIEWABLE at
+# http://localhost:8025 — WITHOUT real delivery, external accounts, or spamming anyone. Mailpit
+# accepts plaintext with no auth, so STARTTLS + AUTH are off here (the same SmtpEmailSender path,
+# transport toggles only). NO secret is read on this path (no Vault App Password needed).
+#
+# This override is OPT-IN. The DEFAULT stack (docker-compose.dev.yml alone) keeps VIGIL_EMAIL_STUB=true
+# (the StubEmailSender — no send, hermetic), and CI/the spine never load this file.
+#
+# Bring up (stubbed-LLM dev app + Mailpit + real SMTP to Mailpit):
+#   docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml --profile app --profile mail up -d --build
+# Then trigger a notification (drift-breach or crossing — see docs/RUNBOOK.md) and view it at :8025.
+#
+# PRODUCTION swap: point the SAME SMTP config at a real relay (SendGrid/SES/Resend) and set
+# VIGIL_SMTP_STARTTLS=true + VIGIL_SMTP_AUTH=true + the credential in Vault — the send PATH is identical.
+services:
+  api:
+    environment:
+      VIGIL_EMAIL_STUB: "false"
+      VIGIL_SMTP_HOST: mailpit
+      VIGIL_SMTP_PORT: "1025"
+      VIGIL_SMTP_STARTTLS: "false"  # Mailpit is plaintext (no cert)
+      VIGIL_SMTP_AUTH: "false"      # Mailpit accepts any/no credential → no secret read
+      VIGIL_NOTIFY_FROM_ADDRESS: vigil-notify@vigil.local
+
+  worker:
+    environment:
+      VIGIL_EMAIL_STUB: "false"
+      VIGIL_SMTP_HOST: mailpit
+      VIGIL_SMTP_PORT: "1025"
+      VIGIL_SMTP_STARTTLS: "false"
+      VIGIL_SMTP_AUTH: "false"
+      VIGIL_NOTIFY_FROM_ADDRESS: vigil-notify@vigil.local

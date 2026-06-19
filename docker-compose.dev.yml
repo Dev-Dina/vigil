@@ -229,6 +229,28 @@ services:
       - ./data:/app/data:ro
     command: ["python", "-m", "vigil.seed"]
 
+  # Mailpit (Gate OBS-MAIL) — a self-contained, demo-safe catch-all SMTP server with a web inbox.
+  # On the compose DEFAULT network so api/worker reach it at `mailpit:1025`; the web UI is published
+  # at :8025. It accepts ANY mail and delivers NOTHING externally (no accounts, no spam). Gated under
+  # the `mail` profile so the default stack does not start it. Pairs with docker-compose.mail.yml,
+  # which flips api/worker to a REAL SMTP send (VIGIL_EMAIL_STUB=false) pointed here. NOT on guide-net
+  # (the Guide sends no email).
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: ["mail"]
+    ports:
+      - "1025:1025"  # SMTP (also reachable in-network as mailpit:1025; published for host senders)
+      - "8025:8025"  # web inbox — http://localhost:8025
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"      # accept any/no credentials (demo catch-all)
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"  # allow plaintext (no STARTTLS) — matches the mail override
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/livez"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   # --- Next.js frontend (Gate D2) — PRODUCTION build, profile "frontend" ------------------------
   # Completes the one-command whole-system bring-up:
   #   docker compose -f docker-compose.dev.yml --profile app --profile guide --profile frontend up -d --build

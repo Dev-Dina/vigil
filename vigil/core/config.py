@@ -118,6 +118,12 @@ class Settings(BaseSettings):
     email_stub: bool = True
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587  # Gmail SMTP submission (STARTTLS)
+    # SMTP transport toggles (Gate OBS-MAIL), NON-secret. Gmail submission needs STARTTLS + AUTH
+    # (the defaults). A local catch-all server (Mailpit) accepts plaintext with NO TLS and NO auth,
+    # so the demo/mail override sets BOTH false → the SAME send path delivers to mailpit:1025 with
+    # no cert and no credential. The production swap (SendGrid/SES/Resend) keeps both true.
+    smtp_starttls: bool = True
+    smtp_auth: bool = True
     notify_from_address: str = (
         ""  # the From/login account (non-secret); required for a live send
     )

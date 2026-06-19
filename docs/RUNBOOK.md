@@ -196,6 +196,63 @@ needs the API (:8000) and Guide (:8080) up too (hence the combined profiles abov
 > `output: "standalone"` config addition is a **build-only** concern and does not affect `next dev`.
 > The image pins **Node 22** (matching CI's `npm ci` against `frontend/package-lock.json`).
 
+### 1.E Live observability — Langfuse tracing + Mailpit email (Gate OBS-MAIL)
+Two stubbed-by-default capabilities made REAL, **key-safe and opt-in**. The default stack + CI stay
+hermetic (NullTracer + email stub).
+
+**(i) Live Langfuse tracing — keys from the persistent Vault, enabled on the live stack.**
+The app reads the Langfuse keys from the **same persistent Vault** that holds the Anthropic key (the
+code paths are `secret/vigil/langfuse/public_key` + `secret/vigil/langfuse/secret_key`; the host is
+non-secret config, default `https://cloud.langfuse.com`). Seed the two keys ONCE by hand (root token,
+never committed):
+```bash
+ROOT=<persistent-vault-root-token>   # from `operator init`; password manager, never the repo
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/langfuse/public_key value=pk-lf-..."
+docker exec vigil-vault-1 sh -c "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=$ROOT vault kv put secret/vigil/langfuse/secret_key value=sk-lf-..."
+```
+The **live override** (`docker-compose.live.yml`) sets `VIGIL_LANGFUSE_ENABLED=true` (+ overridable
+`VIGIL_LANGFUSE_HOST`) on `api`+`worker`, so bringing up the live stack (§1.B) turns the **real
+tracer** on; it reads those Vault keys. Tracing is **best-effort**: if the keys are absent or init
+fails it falls back to `NullTracer` and the turn (and its mandatory `message_events` row) is never
+broken. **Verify:** with the live stack up and keys seeded, drive one assistant turn
+(`POST /api/v1/assistant/conversations` → a message → poll the job) → a **trace appears in the
+Langfuse project** for the configured host. (For a region host pass `VIGIL_LANGFUSE_HOST=...`.) The
+trace carries **redacted** content only (no raw PII), consistent with `message_events`.
+
+**(ii) Real email via Mailpit — self-contained, demo-safe (no external accounts, no spam).**
+`docker-compose.dev.yml` has a **`mailpit`** service (profile `mail`): a catch-all SMTP server
+(`mailpit:1025` in-network, also published) with a web inbox at **http://localhost:8025**. The
+**mail override** (`docker-compose.mail.yml`) flips `api`+`worker` to a **real SMTP send**
+(`VIGIL_EMAIL_STUB=false`, `VIGIL_SMTP_HOST=mailpit`, STARTTLS+AUTH **off** → no cert, no credential).
+No Vault secret is read on this path. Bring up the **stubbed-LLM** dev app + Mailpit + real SMTP:
+```bash
+# seed the ML-engineer's notify address first so the drift alert has a recipient (env-seeded, never a literal):
+VIGIL_DEMO_ML_NOTIFY_EMAIL=ml@example.test \
+  docker compose -f docker-compose.dev.yml --profile tools run --rm seed     # (fresh-volume DBs only)
+docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml --profile app --profile mail up -d --build
+```
+**Trigger a notification (the worker container sends → `mailpit:1025`):**
+```bash
+# (a) Drift-breach alert (platform): log in as the platform admin, then enqueue a CONSTRUCTED breach:
+TOKEN=$(curl -s localhost:8000/api/v1/auth/login -H 'content-type: application/json' \
+  -d '{"email":"admin@vigil.example","password":"vigil-dev-password"}' | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -s -X POST localhost:8000/api/v1/monitoring/drift/run -H "authorization: Bearer $TOKEN" \
+  -H 'content-type: application/json' -d '{"regime":"t2d","demo_shift":0.5}'
+# (b) OR a serious-risk crossing via the clinical-ops demo (host run → set SMTP to localhost:1025):
+#   VIGIL_EMAIL_STUB=false VIGIL_SMTP_HOST=localhost VIGIL_SMTP_PORT=1025 \
+#   VIGIL_SMTP_STARTTLS=false VIGIL_SMTP_AUTH=false VIGIL_NOTIFY_FROM_ADDRESS=vigil-notify@vigil.local \
+#   uv run python -m scripts.demo_clinical_ops_loop
+```
+**Verify:** the PII-free email appears in the Mailpit inbox at **http://localhost:8025**. The default
+stack (no `-f docker-compose.mail.yml`) stays `VIGIL_EMAIL_STUB=true` (no send); CI/the spine never
+load the override.
+
+> **Production swap (no code change).** Point the SAME SMTP config at a real relay
+> (SendGrid/SES/Resend): set `VIGIL_SMTP_HOST`/`VIGIL_SMTP_PORT` to the relay, `VIGIL_SMTP_STARTTLS=true`,
+> `VIGIL_SMTP_AUTH=true`, `VIGIL_NOTIFY_FROM_ADDRESS=<verified sender>`, and put the relay credential in
+> Vault (`secret/vigil/notifications/email_password`). The `SmtpEmailSender` send path is identical —
+> only the target + creds change.
+
 ### 1.1 Start the dev stack (host/uv flow — prod-shaped Vault)
 ```bash
 docker compose -f docker-compose.dev.yml up -d postgres redis
@@ -309,7 +366,10 @@ hermetic value in `conftest`; the **app defaults** are below.
 
 Other useful config: `VIGIL_DEMO_MODE` (default `false`; gates `POST /scoring/inject_events`),
 `VIGIL_APP_BASE_URL` (default `http://localhost:3000`; the deep-link base in the Phase-9 email),
-`VIGIL_LANGFUSE_HOST` (default `https://cloud.langfuse.com`).
+`VIGIL_LANGFUSE_HOST` (default `https://cloud.langfuse.com`). **SMTP transport (Gate OBS-MAIL):**
+`VIGIL_SMTP_STARTTLS` / `VIGIL_SMTP_AUTH` (both default `true` for a real relay; the Mailpit override
+sets both `false` for the plaintext/no-auth local catch-all), `VIGIL_SMTP_HOST` / `VIGIL_SMTP_PORT`
+(default Gmail `smtp.gmail.com:587`; the override → `mailpit:1025`).
 
 ---
 
@@ -423,6 +483,7 @@ Present the system in this order — each step states its own honesty boundary:
 | Dockerized app (api+worker+vault-dev) | API localhost:8000 | `docker compose -f docker-compose.dev.yml --profile app up -d --build` (Gate D1, dev-only auto-unseal) |
 | Containerized frontend (D2) | http://localhost:3000 | `docker compose -f docker-compose.dev.yml --profile frontend up -d --build` (prod build; standalone) |
 | **Whole system (infra+app+worker+Guide+UI)** | UI localhost:3000 | `docker compose -f docker-compose.dev.yml --profile app --profile guide --profile frontend up -d --build` (Gate D2, §1.D) |
+| Mailpit (real email, demo-safe) | inbox http://localhost:8025 | `docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml --profile app --profile mail up -d --build` (Gate OBS-MAIL, §1.E) |
 
 Make targets: `make db-up`, `make migrate`, `make seed`, `make api`, `make worker`,
 `make check-specs`, `make leakage`, `make guide-isolation-proof`.

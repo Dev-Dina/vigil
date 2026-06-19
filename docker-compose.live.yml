@@ -38,6 +38,13 @@ services:
       # Scoped read-only token for the persistent Vault, from the shell; `:?` = fail loud if unset.
       VAULT_TOKEN: ${VAULT_TOKEN:?Set VAULT_TOKEN to a scoped read token for the persistent Vault — see docs/RUNBOOK.md §1.B}
       VIGIL_LLM_STUB: "false"
+      # Live Langfuse tracing (Gate OBS-MAIL): the real tracer reads the Langfuse keys from the SAME
+      # persistent Vault (secret/vigil/langfuse/public_key + secret_key — seeded once by hand). The
+      # host is overridable (region hosts); default is cloud.langfuse.com. The default stack + CI keep
+      # this false → NullTracer, no key, hermetic. Tracing is best-effort: missing keys → NullTracer,
+      # never a broken turn.
+      VIGIL_LANGFUSE_ENABLED: "true"
+      VIGIL_LANGFUSE_HOST: ${VIGIL_LANGFUSE_HOST:-https://cloud.langfuse.com}
     # Replace the base deps (drops vault-seed/vault-dev) — the live path uses the persistent Vault.
     depends_on: !override
       postgres:
@@ -52,6 +59,11 @@ services:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: ${VAULT_TOKEN:?Set VAULT_TOKEN to a scoped read token for the persistent Vault — see docs/RUNBOOK.md §1.B}
       VIGIL_LLM_STUB: "false"
+      # Live Langfuse tracing on the worker too — the assistant turn runs in the worker, so the
+      # tracer that emits the per-turn trace lives here (reads the Langfuse keys from the persistent
+      # Vault). Same best-effort/hermetic-by-default posture as the api.
+      VIGIL_LANGFUSE_ENABLED: "true"
+      VIGIL_LANGFUSE_HOST: ${VIGIL_LANGFUSE_HOST:-https://cloud.langfuse.com}
     depends_on: !override
       postgres:
         condition: service_healthy
