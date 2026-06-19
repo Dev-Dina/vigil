@@ -100,7 +100,8 @@ def grounded_answer(
             LLMMessage(
                 "user",
                 f"Grounded context:\n{grounded}\n\nQuestion: {question}\n\n"
-                "Answer using only the context above and cite the sources.",
+                "Answer the question directly and concisely, grounded ONLY in the context above, "
+                "and cite the sources.",
             ),
         ],
         temperature=0.0,
