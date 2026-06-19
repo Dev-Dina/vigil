@@ -108,3 +108,40 @@
     @apply bg-background font-sans;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Landing page (/welcome) decorative motion — ADDITIVE keyframes only.
+ * Applied in markup behind the `motion-safe:` variant, so they are automatically
+ * disabled under prefers-reduced-motion; the rule below is a belt-and-suspenders
+ * guard. Nothing here is used by the authenticated app; tokens are untouched.
+ * ------------------------------------------------------------------------- */
+@keyframes vigil-scan {
+  0% { transform: translateX(-35%); opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { transform: translateX(135%); opacity: 0; }
+}
+@keyframes vigil-glow {
+  0%, 100% { opacity: 0.28; transform: translate3d(0, 0, 0) scale(1); }
+  50% { opacity: 0.5; transform: translate3d(2%, -3%, 0) scale(1.08); }
+}
+@keyframes vigil-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes vigil-ring {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@keyframes vigil-draw {
+  from { stroke-dashoffset: var(--vigil-dash, 1400); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes vigil-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[vigil"] { animation: none !important; }
+}
