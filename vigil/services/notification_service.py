@@ -117,19 +117,23 @@ def notify_crossing(*, crossing_id: str, sponsor_id: str) -> dict[str, object]:
 
 
 def resolve_drift_recipients() -> list[str]:
-    """Notification emails of the platform/ML engineer(s) — the M2 drift-alert recipients.
+    """Notification emails of the model-lifecycle engineer(s) — the M2 drift-alert recipients.
 
     The PLATFORM-SCOPED analog of :func:`resolve_recipients`. Drift is a MODEL-level statistic with
-    NO participant ``(sponsor, trial, site)`` tuple, so routing is by ROLE (``platform_admin`` = the
-    ML engineer) rather than by ``scope.permits`` — a site coordinator is NEVER a drift recipient.
-    The address still comes off the user record (env-seeded), never a code constant. Returns a
-    de-duplicated, sorted list (deterministic); empty when no platform engineer has an address set.
+    NO participant ``(sponsor, trial, site)`` tuple, so routing is by ROLE — the ``platform_admin``
+    (superset operator) AND the ``mlops_engineer`` (Gate RBAC-OPS — owns drift-run / register /
+    promote), the engineers who ACT on a breach — rather than by ``scope.permits``. A site
+    coordinator is NEVER a drift recipient; an auditor / llmops_engineer is not either. The address
+    comes off the user record (seed/env-driven). Returns a de-duplicated, sorted list (deterministic);
+    empty when no such engineer has an address set.
     """
     with auth_lookup_session() as session:
         return sorted(
             {
                 user.notification_email
-                for user in user_repo.platform_admins_with_notification_email(session)
+                for user in user_repo.drift_alert_recipients_with_notification_email(
+                    session
+                )
                 if user.notification_email
             }
         )

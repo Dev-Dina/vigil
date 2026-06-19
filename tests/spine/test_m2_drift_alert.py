@@ -5,9 +5,9 @@ Step 2 of the human-in-the-loop MLOps loop (M1 detect done; M3 governed promotio
 - The PRODUCER alerts ONCE per breach EVENT: a breaching ``compute_drift`` run enqueues exactly one
   ``notify_drift_breach``; a re-run over the SAME ongoing breach does NOT re-enqueue (the
   not-breached → breached EDGE dedupe); a non-breached run enqueues none.
-- The SEND path routes the PII-free alert to the PLATFORM/ML engineer (``platform_admin``), NOT a
-  site coordinator; send-once (the ``notified`` flag), no double-send on a re-run; a send failure
-  leaves ``notified`` false so Arq retries.
+- The SEND path routes the PII-free alert to the model-lifecycle engineer(s) (``platform_admin`` +
+  ``mlops_engineer``, Gate DRIFT-EMAIL-FIX), NOT a site coordinator; send-once (the ``notified``
+  flag), no double-send on a re-run; a send failure leaves ``notified`` false so Arq retries.
 - A constructed-demo breach is labelled a DEMONSTRATION in the alert.
 - The recipient address is SEED/ENV-driven (``VIGIL_DEMO_ML_NOTIFY_EMAIL``), never a code constant.
 
@@ -257,6 +257,9 @@ def test_send_once_to_platform_engineer_pii_free(
     ids = migrated_db
     _clear_drift()
     _set_user_notify(ids["platform_admin"], "ml.eng@example.test")
+    _set_user_notify(
+        ids["mlops_engineer"], None
+    )  # isolate the single controlled recipient
     point_id = _insert_breached_point(metric="psi", value=0.83)
 
     sender = _CapturingSender()
@@ -306,6 +309,9 @@ def test_recipient_is_platform_scoped_not_coordinator(
     ids = migrated_db
     _clear_drift()
     _set_user_notify(ids["platform_admin"], "ml.eng@example.test")
+    _set_user_notify(
+        ids["mlops_engineer"], None
+    )  # isolate the single controlled recipient
     _set_user_notify(ids["coordinator_a"], "coord.a.notify@example.test")
     point_id = _insert_breached_point()
 
@@ -321,6 +327,39 @@ def test_recipient_is_platform_scoped_not_coordinator(
 
     _set_user_notify(ids["platform_admin"], None)
     _set_user_notify(ids["coordinator_a"], None)
+    _clear_drift()
+
+
+# ---------------------------------------------------------------------------
+# 4b. The MLOps engineer (RBAC-OPS) IS a drift recipient (DRIFT-EMAIL-FIX)
+# ---------------------------------------------------------------------------
+
+
+def test_mlops_engineer_is_a_drift_recipient(
+    migrated_db: dict[str, str], monkeypatch
+) -> None:  # type: ignore[no-untyped-def]
+    """The mlops_engineer — the role that OWNS the model lifecycle (drift-run/register/promote) — is
+    a drift-alert recipient, by ROLE, even with NO platform_admin address set. This is the gap
+    DRIFT-EMAIL-FIX closes (the demo's 'ML engineer' persona is now mlops_engineer)."""
+    ids = migrated_db
+    _clear_drift()
+    _set_user_notify(
+        ids["platform_admin"], None
+    )  # ONLY the mlops engineer has an address
+    _set_user_notify(ids["mlops_engineer"], "mlops.eng@example.test")
+    point_id = _insert_breached_point()
+
+    sender = _CapturingSender()
+    monkeypatch.setattr(notification_service, "get_email_sender", lambda: sender)
+
+    r = notification_service.notify_drift_breach(drift_point_id=point_id)
+    assert r["status"] == "sent" and r["n_recipients"] == 1
+    assert sender.sent[0]["to"] == ["mlops.eng@example.test"], (
+        "the mlops_engineer must receive the drift alert (model-lifecycle owner)"
+    )
+
+    # restore the seeded demo default so later/repeat runs see the fresh-seed state
+    _set_user_notify(ids["mlops_engineer"], "mlops@vigil.example")
     _clear_drift()
 
 
@@ -361,6 +400,9 @@ def test_no_recipient_no_send(migrated_db: dict[str, str], monkeypatch) -> None:
     ids = migrated_db
     _clear_drift()
     _set_user_notify(ids["platform_admin"], None)  # no platform engineer address
+    _set_user_notify(
+        ids["mlops_engineer"], None
+    )  # nor the mlops engineer (clear the seeded default)
     point_id = _insert_breached_point()
 
     sender = _CapturingSender()

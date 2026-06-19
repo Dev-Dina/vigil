@@ -68,21 +68,23 @@ def users_with_notification_email(session: Session) -> list[User]:
     )
 
 
-def platform_admins_with_notification_email(session: Session) -> list[User]:
-    """ACTIVE ``platform_admin`` users with a notification_email — the M2 drift-alert pool.
+def drift_alert_recipients_with_notification_email(session: Session) -> list[User]:
+    """ACTIVE model-lifecycle engineers with a notification_email — the M2 drift-alert pool.
 
-    The platform/ML engineer who ACTS on a drift breach (governed promotion is theirs). Drift is a
-    MODEL-level concern with NO participant tuple, so the recipient is resolved by ROLE
-    (``platform_admin``) — the platform-scoped analog of the tenant-scoped crossing recipients,
-    NEVER a site coordinator. The address still comes off the user record (env-seeded, never a code
-    constant). Read under an is_platform session (cross-tenant ``user`` table).
+    The engineer(s) who ACT on a drift breach: the ``platform_admin`` (the superset operator) AND the
+    ``mlops_engineer`` (Gate RBAC-OPS — the role that OWNS the model lifecycle: drift-run / register /
+    promote). Both are the natural recipients of an ML drift alert. Drift is a MODEL-level concern
+    with NO participant tuple, so the recipient is resolved by ROLE — the platform-scoped analog of
+    the tenant-scoped crossing recipients, NEVER a site coordinator, NEVER an auditor (read-only) or
+    llmops_engineer (LLM ops, not the model lifecycle). The address still comes off the user record
+    (seed/env-driven). Read under an is_platform session (cross-tenant ``user`` table).
     """
     from vigil.domain import Role
 
     return list(
         session.execute(
             select(User).where(
-                User.role == str(Role.PLATFORM_ADMIN),
+                User.role.in_([str(Role.PLATFORM_ADMIN), str(Role.MLOPS_ENGINEER)]),
                 User.notification_email.is_not(None),
                 User.is_active.is_(True),
             )

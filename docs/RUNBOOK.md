@@ -226,9 +226,12 @@ trace carries **redacted** content only (no raw PII), consistent with `message_e
 (`VIGIL_EMAIL_STUB=false`, `VIGIL_SMTP_HOST=mailpit`, STARTTLS+AUTH **off** → no cert, no credential).
 No Vault secret is read on this path. Bring up the **stubbed-LLM** dev app + Mailpit + real SMTP:
 ```bash
-# seed the ML-engineer's notify address first so the drift alert has a recipient (env-seeded, never a literal):
-VIGIL_DEMO_ML_NOTIFY_EMAIL=ml@example.test \
-  docker compose -f docker-compose.dev.yml --profile tools run --rm seed     # (fresh-volume DBs only)
+# A FRESH seed already wires a working drift-alert recipient (Gate DRIFT-EMAIL-FIX): the
+# mlops_engineer (mlops@vigil.example) is seeded with that address by default, so the drift email
+# JUST WORKS with no env var. To route to a REAL demo inbox instead, set VIGIL_DEMO_ML_NOTIFY_EMAIL
+# at seed time (it sets both the mlops_engineer's and the platform_admin's notification_email):
+#   VIGIL_DEMO_ML_NOTIFY_EMAIL=ml@example.test \
+docker compose -f docker-compose.dev.yml --profile tools run --rm seed       # (fresh-volume DBs only)
 docker compose -f docker-compose.dev.yml -f docker-compose.mail.yml --profile app --profile mail up -d --build
 ```
 **Trigger a notification (the worker container sends → `mailpit:1025`):**

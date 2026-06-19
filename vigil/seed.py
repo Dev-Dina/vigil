@@ -58,6 +58,15 @@ _DEMO_NOTIFY_EMAIL = os.environ.get("VIGIL_DEMO_NOTIFY_EMAIL") or None
 # SEED TIME via the environment, NEVER a committed literal (same posture as VIGIL_DEMO_NOTIFY_EMAIL).
 # None → the platform_admin is seeded with no notification email (defaults UNSET, like everyone).
 _DEMO_ML_NOTIFY_EMAIL = os.environ.get("VIGIL_DEMO_ML_NOTIFY_EMAIL") or None
+# Gate DRIFT-EMAIL-FIX: so a FRESH seed yields a working drift-alert recipient WITHOUT requiring the
+# env var, the mlops_engineer (RBAC-OPS — the role that OWNS the model lifecycle: drift-run/register/
+# promote) is seeded with a notification_email that DEFAULTS to its OWN demo login address
+# (mlops@vigil.example, an RFC-2606 example domain — NOT a real inbox; Mailpit catches it regardless).
+# Set VIGIL_DEMO_ML_NOTIFY_EMAIL to route to a real demo inbox instead. This is a targeted demo
+# recipient, NOT a blanket default (every other seeded user still defaults UNSET).
+_DEMO_ML_DEFAULT_NOTIFY = (
+    os.environ.get("VIGIL_DEMO_ML_NOTIFY_EMAIL") or "mlops@vigil.example"
+)
 
 # Path to the synthetic T2D parquet files (build-time ingestion output, never live-fetched).
 _SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
@@ -287,7 +296,12 @@ def seed() -> dict[str, str]:
         # owns LLM operations (cost/guardrail, read-only). Both are platform-tier like admin/auditor
         # — they reach platform tables only and can NEVER see a tenant row (RLS fails closed).
         mlops = _add_user(
-            session, email="mlops@vigil.example", role=Role.MLOPS_ENGINEER
+            session,
+            email="mlops@vigil.example",
+            role=Role.MLOPS_ENGINEER,
+            # DRIFT-EMAIL-FIX: the natural drift-alert recipient. Defaults to the demo address above
+            # so a fresh seed has a working recipient; VIGIL_DEMO_ML_NOTIFY_EMAIL overrides it.
+            notification_email=_DEMO_ML_DEFAULT_NOTIFY,
         )
         llmops = _add_user(
             session, email="llmops@vigil.example", role=Role.LLMOPS_ENGINEER
