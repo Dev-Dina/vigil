@@ -55,3 +55,51 @@ export async function askGuide(question: string): Promise<GuideAnswer> {
   }
   return (await resp.json()) as GuideAnswer
 }
+
+// ---------------------------------------------------------------------------
+// Guide cost (Gate GUIDE-COST) — the ISOLATED Guide's OWN per-turn cost, read
+// browser-DIRECT from the Guide service. Same isolation posture as askGuide: NO
+// Authorization header, NEVER through lib/api.ts / the app API. Public-aggregate
+// (totals + per-model rollups; no rows/content). Mirrors guide/observability.cost_summary.
+// ---------------------------------------------------------------------------
+
+export interface GuideCostRollup {
+  llm_provider_model: string
+  turns: number
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  total_cost: number
+  total_latency_ms: number
+  avg_latency_ms: number
+}
+
+export interface GuideCost {
+  surface: string // "public_guide"
+  total_turns: number
+  total_prompt_tokens: number
+  total_completion_tokens: number
+  total_tokens: number
+  total_cost: number
+  avg_latency_ms: number
+  rollups: GuideCostRollup[]
+}
+
+// GET {GUIDE_BASE}/metrics/cost  ->  GuideCost
+// No auth header by design. A transport/HTTP failure throws GuideError so the caller can show an
+// honest "Guide metrics unreachable" state — never fabricated spend.
+export async function getGuideCost(): Promise<GuideCost> {
+  let resp: Response
+  try {
+    resp = await fetch(`${GUIDE_BASE}/metrics/cost`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+  } catch {
+    throw new GuideError("The public guide isn't reachable right now.")
+  }
+  if (!resp.ok) {
+    throw new GuideError(`The guide returned an error (${resp.status}).`)
+  }
+  return (await resp.json()) as GuideCost
+}
