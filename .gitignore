@@ -1,4 +1,7 @@
 .env
+# Demo secrets (Gate DEMO-RUNBOOK) — VAULT_TOKEN / Guide key / Langfuse host for demo-up.ps1.
+# NEVER committed; the committed .env.demo.example documents the variable NAMES only.
+.env.demo
 data/raw
 __pycache__/
 *.pyc
