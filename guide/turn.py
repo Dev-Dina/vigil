@@ -54,15 +54,14 @@ class _UsageRecorder:
             self.model = resp.model
         return resp
 
+
 _BLOCKED_MSG = (
     "I can't help with that. I'm a public guide that only explains the Vigil project from "
     "approved materials — I don't give medical, security, or out-of-scope answers."
 )
 # A fixed, terse refusal for individual/participant-data asks — the Guide is public and has no
 # access to any real participant; they are HARD-blocked before retrieval or the LLM.
-_PARTICIPANT_MSG = (
-    "Participant information is restricted. The Guide only answers general questions about Vigil."
-)
+_PARTICIPANT_MSG = "Participant information is restricted. The Guide only answers general questions about Vigil."
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,9 +135,7 @@ def run_guide_turn(
     if guard.result.decision == "blocked":
         route = f"guardrail:{guard.result.category}"
         message = (
-            _PARTICIPANT_MSG
-            if guard.result.category == "participant"
-            else _BLOCKED_MSG
+            _PARTICIPANT_MSG if guard.result.category == "participant" else _BLOCKED_MSG
         )
         _emit(
             decision="blocked",

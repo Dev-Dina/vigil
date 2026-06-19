@@ -61,7 +61,9 @@ def test_anthropic_client_posts_native_messages_shape(monkeypatch) -> None:  # t
     resp = _client().complete(
         [
             GuideLLMMessage("system", "SYSTEM PROMPT"),
-            GuideLLMMessage("user", "Approved context:\n...\n\nQuestion: What is Vigil?"),
+            GuideLLMMessage(
+                "user", "Approved context:\n...\n\nQuestion: What is Vigil?"
+            ),
         ]
     )
 
@@ -69,7 +71,9 @@ def test_anthropic_client_posts_native_messages_shape(monkeypatch) -> None:  # t
     assert captured["url"] == "https://api.anthropic.com/v1/messages"
     # Native headers — x-api-key (NOT Bearer) + pinned anthropic-version.
     assert captured["headers"]["x-api-key"] == "sk-ant-test"
-    assert captured["headers"]["anthropic-version"] == _ANTHROPIC_VERSION == "2023-06-01"
+    assert (
+        captured["headers"]["anthropic-version"] == _ANTHROPIC_VERSION == "2023-06-01"
+    )
     assert captured["headers"]["content-type"] == "application/json"
     assert "authorization" not in {k.lower() for k in captured["headers"]}
     # Body: system lifted to the top-level param; only the user turn in `messages`.
@@ -79,7 +83,10 @@ def test_anthropic_client_posts_native_messages_shape(monkeypatch) -> None:  # t
     assert body["temperature"] == 0.0
     assert body["system"] == "SYSTEM PROMPT"
     assert body["messages"] == [
-        {"role": "user", "content": "Approved context:\n...\n\nQuestion: What is Vigil?"}
+        {
+            "role": "user",
+            "content": "Approved context:\n...\n\nQuestion: What is Vigil?",
+        }
     ]
     assert all(m["role"] != "system" for m in body["messages"])
     # Response parsed from content[0].text into the SAME GuideLLMResponse interface.
@@ -196,7 +203,9 @@ def test_env_provider_anthropic_routes_to_v1_messages(monkeypatch) -> None:  # t
 
 def test_env_provider_default_is_openai_compatible(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setenv("VIGIL_GUIDE_LLM_STUB", "false")
-    monkeypatch.delenv("VIGIL_GUIDE_LLM_PROVIDER", raising=False)  # unset → field default
+    monkeypatch.delenv(
+        "VIGIL_GUIDE_LLM_PROVIDER", raising=False
+    )  # unset → field default
     monkeypatch.setenv("VIGIL_GUIDE_LLM_API_KEY", "key")
     _reset_guide_config_cache()
     try:

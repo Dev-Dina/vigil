@@ -223,7 +223,9 @@ def test_participant_data_hard_blocked_no_llm_call(
     )
     assert result.guardrail_decision == "blocked" and result.status == "refused"
     assert result.route_or_agent == "guardrail:participant"
-    assert result.content == _PARTICIPANT_MSG  # the fixed, terse restricted-info message
+    assert (
+        result.content == _PARTICIPANT_MSG
+    )  # the fixed, terse restricted-info message
     assert not result.citations
     assert llm.calls == [], "participant asks must reach NO LLM call"
     rows = _rows(sink_engine)
@@ -232,9 +234,9 @@ def test_participant_data_hard_blocked_no_llm_call(
 
 def test_general_participant_questions_stay_allowed() -> None:
     # The word "participant(s)" in a GENERAL method question must NOT be blocked (no false positive).
-    assert check_content("How does Vigil predict participant dropout risk?").decision == (
-        "allowed"
-    )
+    assert check_content(
+        "How does Vigil predict participant dropout risk?"
+    ).decision == ("allowed")
     assert check_content("How does Vigil rank participants for triage?").decision == (
         "allowed"
     )
@@ -248,7 +250,9 @@ def test_ask_endpoint_participant_question_blocked(sink_engine, guide_index) -> 
         return sink_engine, guide_index, get_embedder(), get_guide_llm_client()
 
     client = TestClient(create_app(resources=resources))
-    r = client.post("/ask", json={"question": "What is the risk score for participant A-0001?"})
+    r = client.post(
+        "/ask", json={"question": "What is the risk score for participant A-0001?"}
+    )
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["guardrail_decision"] == "blocked" and body["status"] == "refused"
@@ -271,7 +275,9 @@ def test_ask_rate_limited_per_ip(sink_engine, guide_index) -> None:  # type: ign
         return sink_engine, guide_index, get_embedder(), get_guide_llm_client()
 
     client = TestClient(
-        create_app(resources=resources, rate_limiter=RateLimiter(limit=2, window_seconds=60))
+        create_app(
+            resources=resources, rate_limiter=RateLimiter(limit=2, window_seconds=60)
+        )
     )
     q = {"question": "What models does Vigil use?"}
     assert client.post("/ask", json=q).status_code == 200

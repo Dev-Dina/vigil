@@ -98,7 +98,10 @@ def test_anthropic_parses_input_output_tokens(monkeypatch) -> None:  # type: ign
         httpx,
         "post",
         lambda *a, **k: _FakeResp(
-            {"content": [{"text": "hi"}], "usage": {"input_tokens": 120, "output_tokens": 34}}
+            {
+                "content": [{"text": "hi"}],
+                "usage": {"input_tokens": 120, "output_tokens": 34},
+            }
         ),
     )
     resp = AnthropicGuideClient(
@@ -157,14 +160,18 @@ def test_stub_is_honest_zero_tokens() -> None:
 def test_compute_cost_split_rates() -> None:
     assert compute_cost(1000, 500, 0.001, 0.005) == 0.0035  # 0.001 + 0.0025
     # output priced 5x input
-    assert compute_cost(0, 1000, 0.001, 0.005) == 5 * compute_cost(1000, 0, 0.001, 0.005)
+    assert compute_cost(0, 1000, 0.001, 0.005) == 5 * compute_cost(
+        1000, 0, 0.001, 0.005
+    )
 
 
 # --------------------------------------------------------------------------- turn persistence
 def test_turn_persists_summed_tokens_cost_model_latency(
     monkeypatch, sink_engine, guide_index
 ) -> None:  # type: ignore[no-untyped-def]
-    monkeypatch.setenv("VIGIL_GUIDE_LLM_PROVIDER", "anthropic")  # real claude-haiku-4-5 rates
+    monkeypatch.setenv(
+        "VIGIL_GUIDE_LLM_PROVIDER", "anthropic"
+    )  # real claude-haiku-4-5 rates
     _reset_guide_config_cache()
     try:
         llm = _CountingStub(label="ON_TOPIC_GENERAL", prompt=100, completion=10)
@@ -291,7 +298,9 @@ def test_metrics_cost_aggregates_sink_totals_only(sink_engine, guide_index) -> N
     assert body["total_cost"] == pytest.approx(0.0009)
     assert body["avg_latency_ms"] == pytest.approx(120.0)
     bucket = next(
-        b for b in body["rollups"] if b["llm_provider_model"] == "anthropic/claude-haiku-4-5"
+        b
+        for b in body["rollups"]
+        if b["llm_provider_model"] == "anthropic/claude-haiku-4-5"
     )
     assert bucket["turns"] == 2 and bucket["total_tokens"] == 550
     # AGGREGATE only — NO rows, NO question/answer content exposed.
