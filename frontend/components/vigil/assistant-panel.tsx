@@ -43,7 +43,7 @@ function ToolCallChip({ tool }: { tool: ToolCall }) {
 function UserMessage({ content }: { content: string }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] bg-primary text-primary-foreground px-3 py-2 rounded-lg rounded-br-sm text-sm">
+      <div className="min-w-0 max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-primary px-3.5 py-2.5 text-sm leading-relaxed text-primary-foreground">
         {content}
       </div>
     </div>
@@ -94,10 +94,10 @@ function AssistantMessage({
       {content && (
         <div
           className={cn(
-            "max-w-[95%] px-3 py-2 rounded-lg rounded-bl-sm text-sm shadow-sm border",
+            "min-w-0 max-w-[92%] whitespace-pre-wrap break-words rounded-2xl rounded-bl-md border px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
             isError
-              ? "bg-status-alert/5 border-status-alert/30 text-foreground"
-              : "bg-card border-border text-foreground"
+              ? "border-status-risk/30 bg-status-risk/5 text-foreground"
+              : "border-border bg-card text-foreground",
           )}
         >
           {renderContent(content)}
@@ -283,10 +283,14 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-background">
           {messages.length === 0 ? (
-            <div className="h-full flex items-center justify-center px-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                Ask about participants, reports, or operations. Answers are grounded and
-                cited; the assistant refuses anything it can&apos;t ground.
+            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/[0.05] text-foreground">
+                <MessageSquare className="h-5 w-5" strokeWidth={1.75} />
+              </span>
+              <h3 className="text-sm font-semibold text-foreground">Ask the Vigil assistant</h3>
+              <p className="mt-1.5 max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
+                Questions about participants, reports, or operations — within your scope. Answers are
+                grounded and cited; it refuses anything it can&apos;t ground.
               </p>
             </div>
           ) : (

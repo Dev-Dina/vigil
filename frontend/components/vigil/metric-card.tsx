@@ -29,7 +29,12 @@ export function MetricCard({
 }: MetricCardProps) {
   const heading = title ?? label
   return (
-    <Card className={cn("border-[0.5px] border-border shadow-sm", className)}>
+    <Card
+      className={cn(
+        "border-[0.5px] border-border shadow-sm transition-colors duration-200 hover:border-foreground/15",
+        className,
+      )}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
           {status && <StatusDot status={status} size="sm" />}

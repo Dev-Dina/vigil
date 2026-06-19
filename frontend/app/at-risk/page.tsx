@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { PageHeader } from "@/components/vigil"
 import { getCohort, ApiError } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
@@ -54,15 +55,11 @@ export default function AtRiskPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            At-Risk Participants
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Participants at your site(s) who have crossed the serious-risk threshold, ranked by
-            risk. Select one to review reasons, trajectory, and suggested actions.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="At-risk"
+          title="At-Risk Participants"
+          subtitle="Participants at your site(s) who have crossed the serious-risk threshold, ranked by risk. Select one to review reasons, trajectory, and suggested actions."
+        />
 
         {state === "loading" && (
           <p className="text-sm text-muted-foreground">Loading at-risk participants…</p>
@@ -84,14 +81,14 @@ export default function AtRiskPage() {
         )}
 
         {state === "ready" && rows.length > 0 && (
-          <div className="overflow-hidden rounded-md border-[0.5px] border-border">
+          <div className="overflow-hidden rounded-xl border-[0.5px] border-border bg-card shadow-sm">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-xs text-muted-foreground">
+              <thead className="border-b-[0.5px] border-border bg-secondary/60 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">Participant</th>
-                  <th className="px-4 py-2 text-left font-medium">Risk</th>
-                  <th className="px-4 py-2 text-left font-medium">Top Reason</th>
-                  <th className="px-4 py-2 text-left font-medium">Provenance</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Participant</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Risk</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Top Reason</th>
+                  <th className="px-4 py-2.5 text-left font-medium">Provenance</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,11 +96,11 @@ export default function AtRiskPage() {
                   <tr
                     key={r.participant_id}
                     onClick={() => router.push(`/participant/${r.participant_id}`)}
-                    className="cursor-pointer border-t-[0.5px] border-border transition-colors hover:bg-muted/30"
+                    className="group cursor-pointer border-t-[0.5px] border-border transition-colors hover:bg-secondary/50"
                   >
                     <td className="px-4 py-3 font-mono text-foreground">{r.participant_id}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded bg-red-100 px-2 py-0.5 font-mono text-xs font-semibold text-red-800">
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-status-risk/10 px-2 py-0.5 font-mono text-xs font-semibold text-status-risk">
                         {Math.round(r.risk_score * 100)}% · {r.risk_band.toUpperCase()}
                       </span>
                     </td>
@@ -113,7 +110,7 @@ export default function AtRiskPage() {
                     <td className="px-4 py-3">
                       {/* Synthetic badge is flag-driven (CohortRow.synthetic) — not a toggle. */}
                       {r.synthetic && (
-                        <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                        <span className="rounded-md bg-status-watch/10 px-2 py-0.5 text-xs font-semibold text-status-watch">
                           SYNTHETIC
                         </span>
                       )}

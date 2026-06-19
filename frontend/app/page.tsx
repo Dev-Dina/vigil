@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   MetricCard,
+  PageHeader,
   PulseDivider,
   RiskDial,
   RiskDistribution,
@@ -70,14 +71,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Trial Overview
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            CARDINAL-001 Phase III Cardiovascular Study
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Dashboard"
+          title="Trial Overview"
+          subtitle="Cohort risk at a glance — composition, mean risk, and the highest-risk participants, scoped to your access. A synthetic-cohort demonstration."
+        />
 
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-4">
           <Card className="border-[0.5px] border-border shadow-sm lg:row-span-2">
@@ -148,7 +146,7 @@ export default function DashboardPage() {
                 Highest Risk Participants
               </h2>
               <p className="text-sm text-muted-foreground">
-                Participants ranked by dropout probability
+                Participants ranked by dropout risk
               </p>
             </div>
             <button

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { TriageHeader } from "@/components/vigil/triage-header"
 import { TriageTable, type Participant } from "@/components/vigil/triage-table"
 import { MetricCard } from "@/components/vigil/metric-card"
+import { PageHeader } from "@/components/vigil/page-header"
 import { PulseDivider } from "@/components/vigil/pulse-divider"
 import { DemoLoop } from "@/components/vigil/demo-loop"
 import { getCohort, getCohortSummary, ApiError } from "@/lib/api"
@@ -114,16 +115,13 @@ export default function CohortTriagePage() {
       />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Cohort Triage
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Prioritized participant list sorted by dropout risk
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Triage"
+          title="Cohort Triage"
+          subtitle="The prioritized worklist — participants ranked by dropout risk so you can work the cohort top-down."
+        />
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <MetricCard
             label="At-Risk"
             value={summary?.by_band.high ?? "—"}

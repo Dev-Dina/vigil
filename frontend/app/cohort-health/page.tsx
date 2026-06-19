@@ -7,6 +7,7 @@ import {
   ContributingFactors,
   GuardrailMix,
   MetricCard,
+  PageHeader,
   PulseDivider,
   RiskDial,
   RiskDistribution,
@@ -92,13 +93,11 @@ export default function CohortHealthPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-7xl px-6 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Cohort Health</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Retention analytics across your scoped cohort — risk composition, a per-participant
-            spotlight, and (for platform roles) model, cost, guardrail, and drift signals.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="Analytics"
+          title="Cohort Health"
+          subtitle="Beyond the dashboard KPIs — a per-participant risk spotlight (trajectory + contributing factors) and, for platform roles, the model, cost, guardrail, and drift signals behind the scores."
+        />
 
         {/* ---------------------------------------------------------------- */}
         {/* Cohort overview + distribution (scope-bound: GET /cohort/summary) */}
@@ -318,9 +317,13 @@ function RiskSpotlight({
       </div>
 
       {isSynthetic && (
-        <div className="mb-4 rounded-md border border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <span className="font-semibold">[SYNTHETIC DATA]</span> This participant&apos;s risk is a
-          method demonstration only — not a clinical prediction.
+        <div className="mb-4 flex items-start gap-2 rounded-lg border-[0.5px] border-status-watch/40 bg-status-watch/[0.06] px-4 py-3 text-sm text-foreground">
+          <span className="font-mono text-xs font-semibold uppercase tracking-wide text-status-watch">
+            Synthetic data
+          </span>
+          <span className="text-muted-foreground">
+            This participant&apos;s risk is a method demonstration only — not a clinical prediction.
+          </span>
         </div>
       )}
 
@@ -531,7 +534,7 @@ function DriftPanel({ points }: { points: DriftPoint[] }) {
                         </span>
                       )}
                       {d.synthetic && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-900">
+                        <span className="rounded bg-status-watch/10 px-1.5 py-0.5 text-[10px] font-semibold text-status-watch">
                           SYNTHETIC
                         </span>
                       )}
