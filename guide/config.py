@@ -52,6 +52,15 @@ class GuideConfig(BaseSettings):
     llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
     llm_timeout_seconds: float = 30.0
     llm_max_tokens: int = 1024
+    # Gate GUIDE-COST: split input/output USD per-1k-token cost rates (non-secret). Anthropic
+    # defaults are the REAL claude-haiku-4-5 list price ($1/$5 per 1M → 0.001/0.005 per 1k), matching
+    # the app. The OpenAI-compatible/OpenRouter defaults are 0.0 (the configured free model) — set
+    # them if a paid model is used. The active pair is chosen by ``llm_provider``; the key stays the
+    # only secret. The Guide computes its OWN cost from these (never vigil's COST-1 code).
+    anthropic_input_cost_per_1k_tokens: float = 0.001
+    anthropic_output_cost_per_1k_tokens: float = 0.005
+    llm_input_cost_per_1k_tokens: float = 0.0
+    llm_output_cost_per_1k_tokens: float = 0.0
 
     # --- embeddings (the Guide's OWN offline loader; NOT vigil.agents.embeddings) ---
     # A read-only, in-repo MiniLM weights dir the Guide MOUNTS (no credential, no network). The

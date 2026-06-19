@@ -13,6 +13,7 @@ redacted fields — so raw text cannot be persisted by construction. Real turns 
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -63,6 +64,11 @@ class GuideMessageEvent(GuideBase):
     token_cost_estimate: Mapped[float] = mapped_column(
         Float, nullable=False, default=0.0
     )
+    # Gate GUIDE-COST: REAL per-turn token usage (summed across the topical-classify + answer calls).
+    # init_sink/create_all materializes these on a FRESH sink (it does NOT ALTER an existing SQLite
+    # table) — a container recreate gives the fresh sink; a Guide-owned Postgres is the Phase-8 swap.
+    prompt_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     redacted_user_msg: Mapped[str] = mapped_column(Text, nullable=False, default="")
     redacted_assistant_msg: Mapped[str] = mapped_column(
@@ -99,6 +105,8 @@ def write_message_event(
     llm_provider_model: str = "",
     latency_ms: int = 0,
     token_cost_estimate: float = 0.0,
+    prompt_tokens: int = 0,
+    completion_tokens: int = 0,
 ) -> GuideMessageEvent:
     """Append one redacted Guide turn row. ``surface``/``sponsor_id`` are fixed (guest/NULL).
 
@@ -116,6 +124,8 @@ def write_message_event(
         llm_provider_model=llm_provider_model,
         latency_ms=latency_ms,
         token_cost_estimate=token_cost_estimate,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
         status=status,
         redacted_user_msg=redacted_user_msg,
         redacted_assistant_msg=redacted_assistant_msg,
@@ -123,3 +133,78 @@ def write_message_event(
     session.add(row)
     session.flush()
     return row
+
+
+@dataclass(frozen=True, slots=True)
+class GuideCostRollup:
+    """Per-model aggregate over the Guide's OWN sink (no rows/content — totals only)."""
+
+    llm_provider_model: str
+    turns: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    total_cost: float
+    total_latency_ms: int
+    avg_latency_ms: float
+
+
+@dataclass(frozen=True, slots=True)
+class GuideCostSummary:
+    """Aggregate cost/usage over the Guide's OWN sink — the public-aggregate /metrics/cost payload.
+
+    Totals + per-model rollups ONLY: never a row, never question/answer content, never PII (the
+    Guide holds none). Mirrors the app's cost_report SHAPE so the dashboard can consume both.
+    """
+
+    surface: str
+    total_turns: int
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_tokens: int
+    total_cost: float
+    avg_latency_ms: float
+    rollups: list[GuideCostRollup]
+
+
+def cost_summary(session: Session) -> GuideCostSummary:
+    """Aggregate the Guide's OWN sink into totals + per-model rollups (read-only; no rows exposed)."""
+    from sqlalchemy import func, select
+
+    ev = GuideMessageEvent
+    rollups: list[GuideCostRollup] = []
+    rows = session.execute(
+        select(
+            ev.llm_provider_model,
+            func.count(ev.id),
+            func.coalesce(func.sum(ev.prompt_tokens), 0),
+            func.coalesce(func.sum(ev.completion_tokens), 0),
+            func.coalesce(func.sum(ev.token_cost_estimate), 0.0),
+            func.coalesce(func.sum(ev.latency_ms), 0),
+        ).group_by(ev.llm_provider_model)
+    ).all()
+    for model, turns, p_tok, c_tok, cost, latency in rows:
+        rollups.append(
+            GuideCostRollup(
+                llm_provider_model=model or "",
+                turns=int(turns),
+                prompt_tokens=int(p_tok),
+                completion_tokens=int(c_tok),
+                total_tokens=int(p_tok) + int(c_tok),
+                total_cost=round(float(cost), 6),
+                total_latency_ms=int(latency),
+                avg_latency_ms=round(int(latency) / int(turns), 2) if turns else 0.0,
+            )
+        )
+    total_turns = sum(r.turns for r in rollups)
+    total_latency = sum(r.total_latency_ms for r in rollups)
+    return GuideCostSummary(
+        surface="public_guide",
+        total_turns=total_turns,
+        total_prompt_tokens=sum(r.prompt_tokens for r in rollups),
+        total_completion_tokens=sum(r.completion_tokens for r in rollups),
+        total_tokens=sum(r.total_tokens for r in rollups),
+        total_cost=round(sum(r.total_cost for r in rollups), 6),
+        avg_latency_ms=round(total_latency / total_turns, 2) if total_turns else 0.0,
+        rollups=rollups,
+    )

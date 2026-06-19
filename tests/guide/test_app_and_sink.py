@@ -35,6 +35,8 @@ _OBSERVABILITY_FIELDS = {
     "llm_provider_model",
     "latency_ms",
     "token_cost_estimate",
+    "prompt_tokens",
+    "completion_tokens",
     "status",
     "redacted_user_msg",
     "redacted_assistant_msg",

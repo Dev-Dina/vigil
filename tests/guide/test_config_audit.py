@@ -29,6 +29,11 @@ _ALLOWED_FIELDS = {
     "llm_model",
     "llm_timeout_seconds",
     "llm_max_tokens",
+    # non-secret split input/output cost rates — the Guide computes its OWN cost (Gate GUIDE-COST)
+    "anthropic_input_cost_per_1k_tokens",
+    "anthropic_output_cost_per_1k_tokens",
+    "llm_input_cost_per_1k_tokens",
+    "llm_output_cost_per_1k_tokens",
     # own offline embedder + retrieval/sound-refusal tuning
     "embedding_model_path",
     "embedding_dim",

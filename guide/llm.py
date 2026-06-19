@@ -38,6 +38,34 @@ class GuideLLMResponse:
     content: str
     model: str
     latency_ms: int = 0
+    # Gate GUIDE-COST: REAL per-call token usage parsed from the provider response (0 when the
+    # provider/stub reports none). The Guide's OWN cost is derived from these (never vigil's code).
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+
+def compute_cost(
+    prompt_tokens: int,
+    completion_tokens: int,
+    input_rate_per_1k: float,
+    output_rate_per_1k: float,
+) -> float:
+    """The Guide's OWN split-rate cost helper (NOT vigil's): input×in_rate + output×out_rate per 1k."""
+    return round(
+        prompt_tokens / 1000 * input_rate_per_1k
+        + completion_tokens / 1000 * output_rate_per_1k,
+        6,
+    )
+
+
+def provider_cost_rates(cfg) -> tuple[float, float]:  # type: ignore[no-untyped-def]
+    """The (input, output) per-1k rates for the configured provider — non-secret config."""
+    if cfg.llm_provider == "anthropic":
+        return (
+            cfg.anthropic_input_cost_per_1k_tokens,
+            cfg.anthropic_output_cost_per_1k_tokens,
+        )
+    return cfg.llm_input_cost_per_1k_tokens, cfg.llm_output_cost_per_1k_tokens
 
 
 @runtime_checkable
@@ -100,13 +128,19 @@ class OpenRouterGuideClient:
                 timeout=self._timeout,
             )
             resp.raise_for_status()
-            content = resp.json()["choices"][0]["message"]["content"]
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            usage = data.get("usage") or {}
+            prompt_tokens = int(usage.get("prompt_tokens", 0) or 0)
+            completion_tokens = int(usage.get("completion_tokens", 0) or 0)
         except Exception as exc:  # noqa: BLE001 — fail loud, never a silent empty answer
             raise GuideLLMError(f"Guide LLM call failed: {exc}") from exc
         return GuideLLMResponse(
             content=content,
             model=self._model,
             latency_ms=int((time.monotonic() - started) * 1000),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
         )
 
 
@@ -177,13 +211,19 @@ class AnthropicGuideClient:
                 timeout=self._timeout,
             )
             resp.raise_for_status()
-            content = resp.json()["content"][0]["text"]
+            data = resp.json()
+            content = data["content"][0]["text"]
+            usage = data.get("usage") or {}
+            prompt_tokens = int(usage.get("input_tokens", 0) or 0)
+            completion_tokens = int(usage.get("output_tokens", 0) or 0)
         except Exception as exc:  # noqa: BLE001 — fail loud, never a silent empty answer
             raise GuideLLMError(f"Guide LLM call failed: {exc}") from exc
         return GuideLLMResponse(
             content=content,
             model=self._model,
             latency_ms=int((time.monotonic() - started) * 1000),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
         )
 
 

@@ -16,15 +16,18 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable
 
+from dataclasses import asdict
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
+from sqlalchemy.orm import Session
 
 from guide.config import get_config
 from guide.embeddings import get_embedder
 from guide.llm import get_guide_llm_client
-from guide.observability import create_sink_engine, init_sink
+from guide.observability import cost_summary, create_sink_engine, init_sink
 from guide.ratelimit import RateLimiter
 from guide.retrieval import IndexedChunk, load_index
 from guide.turn import run_guide_turn
@@ -46,6 +49,34 @@ class AskOut(BaseModel):
     citations: list[dict]
     guardrail_decision: str  # allowed | blocked
     status: str  # ok | refused
+
+
+class GuideCostRollupOut(BaseModel):
+    llm_provider_model: str
+    turns: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    total_cost: float
+    total_latency_ms: int
+    avg_latency_ms: float
+
+
+class GuideCostOut(BaseModel):
+    """Public-AGGREGATE cost over the Guide's OWN sink — totals + per-model rollups ONLY.
+
+    NEVER a row, NEVER question/answer content, NEVER PII (the Guide holds none). Mirrors the app's
+    cost_report shape so the monitoring dashboard can show app + Guide cost as two separate sources.
+    """
+
+    surface: str
+    total_turns: int
+    total_prompt_tokens: int
+    total_completion_tokens: int
+    total_tokens: int
+    total_cost: float
+    avg_latency_ms: float
+    rollups: list[GuideCostRollupOut]
 
 
 @lru_cache(maxsize=1)
@@ -99,6 +130,17 @@ def create_app(
             guardrail_decision=result.guardrail_decision,
             status=result.status,
         )
+
+    @app.get("/metrics/cost", response_model=GuideCostOut)
+    async def metrics_cost() -> GuideCostOut:
+        # Read-only PUBLIC-AGGREGATE of the Guide's OWN sink (Gate GUIDE-COST): totals + per-model
+        # rollups only — never rows, never question/answer content, never PII (the Guide has none).
+        # Reads ONLY the Guide's own store; touches NO app DB / Redis / Vault. Honest-zero on an
+        # empty sink. Lets the monitoring dashboard show app + Guide cost as two separate sources.
+        engine, _index, _embedder, _llm = provider()
+        with Session(engine) as session:
+            summary = cost_summary(session)
+        return GuideCostOut(**asdict(summary))
 
     return app
 
