@@ -13,6 +13,7 @@ const NAV = [
   { href: "/", label: "Dashboard" },
   { href: "/triage", label: "Triage" },
   { href: "/at-risk", label: "At-Risk" },
+  { href: "/cohort-health", label: "Cohort Health" },
   { href: "/monitoring", label: "Monitoring", platformOnly: true },
   { href: "/costs", label: "Costs", platformOnly: true },
   { href: "/observability", label: "Observability", platformOnly: true },

@@ -191,12 +191,21 @@ export interface ModelStatus {
   promoted_at: string | null
 }
 
+// Real computed PSI/KS drift point (Gate M1) — mirrors monitoring.DriftPointOut exactly.
+// Carries provenance: `synthetic` (synthetic cohort) and `constructed_demo` (the current
+// window was a constructed shift demonstration, NOT observed drift). Surface both honestly.
 export interface DriftPoint {
   model_name: string
-  metric: string
+  distribution: string
+  metric: string // 'psi' | 'ks'
   value: number
   threshold: number
   breached: boolean
+  reference_n: number
+  current_n: number
+  synthetic: boolean
+  constructed_demo: boolean
+  note: string
   ts: string
 }
 

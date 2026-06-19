@@ -10,6 +10,8 @@ export { TriageTable, type Participant as TriageParticipant } from "./triage-tab
 export { RiskLineChart } from "./risk-line-chart"
 export { RiskTrajectory, versionBoundaryIndices } from "./risk-trajectory"
 export { ContributingFactors } from "./contributing-factors"
+export { TrafficSplitBar } from "./traffic-split-bar"
+export { GuardrailMix } from "./guardrail-mix"
 export { ExplanationCard } from "./explanation-card"
 export { AssistantPanel } from "./assistant-panel"
 export { AppNav } from "./app-nav"
