@@ -15,6 +15,7 @@ from arq.connections import RedisSettings
 from vigil.core.config import get_settings
 from vigil.workers.tasks import (
     compute_drift,
+    notify_drift_breach,
     ping,
     run_assistant_turn,
     score_trial,
@@ -35,6 +36,7 @@ class WorkerSettings:
         run_assistant_turn,
         send_crossing_notification,
         compute_drift,  # Gate M1: also manually enqueued by POST /monitoring/drift/run
+        notify_drift_breach,  # Gate M2: drift-breach alert, enqueued by compute_drift on a breach
     ]
     # Gate M1: scheduled drift detection — hourly at minute 0, real windows (demo_shift defaults 0).
     # The same job is manually triggerable on demand (POST /monitoring/drift/run) for the demo.

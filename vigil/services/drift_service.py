@@ -48,6 +48,10 @@ class DriftRunSummary:
     points_written: int
     breached: bool
     constructed_demo: bool
+    # Gate M2: the breached anchor point id to ALERT on (a NEW breach EVENT only — the
+    # not-breached → breached EDGE). None when this run is not a fresh breach (no breach, or the
+    # breach was already ongoing → no re-alert). The producer (compute_drift) enqueues the alert.
+    alert_point_id: str | None = None
 
 
 def _pooled_champion_scores(
@@ -150,12 +154,25 @@ def run_drift_detection(
     any_breached = any(r.breached for r in results)
 
     written = 0
+    alert_point_id: str | None = None
     with platform_session() as session:
+        # Gate M2 EDGE: read each metric's PRIOR breach state BEFORE this run's appends, so a
+        # transition INTO breach (prior not breached / no prior) can be told apart from an ONGOING
+        # breach (prior already breached → no re-alert). Mirrors the crossing non-high→high edge.
+        prev_breached = {
+            r.metric: drift_repo.latest_breached_state(
+                session,
+                regime=regime,
+                model_version=model_version,
+                metric=r.metric,
+            )
+            for r in results
+        }
         for r in results:
             r_note = note
             if r.metric == "ks":
                 r_note = f"{note} p_value={r.detail.get('p_value'):.4g} (alpha={r.detail.get('alpha')})."
-            drift_repo.insert_drift_point(
+            row = drift_repo.insert_drift_point(
                 session,
                 regime=regime,
                 model_version=model_version,
@@ -171,6 +188,14 @@ def run_drift_detection(
                 note=r_note,
             )
             written += 1
+            # Alert anchor = the FIRST metric that newly breached this run (prior not breached).
+            # One alert per breach EVENT (run-level), even when both PSI and KS breach together.
+            if (
+                alert_point_id is None
+                and r.breached
+                and not prev_breached.get(r.metric)
+            ):
+                alert_point_id = str(row.id)
 
     log.info(
         "drift.computed",
@@ -183,6 +208,7 @@ def run_drift_detection(
                 "constructed_demo": constructed_demo,
                 "reference_n": int(reference.size),
                 "current_n": int(current.size),
+                "alert": alert_point_id is not None,
             }
         },
     )
@@ -195,4 +221,5 @@ def run_drift_detection(
         written,
         any_breached,
         constructed_demo,
+        alert_point_id,
     )

@@ -61,6 +61,9 @@ def create_app() -> FastAPI:
                 "detail": str(exc.detail),
                 "request_id": rid,
             },
+            # Preserve response headers set on the exception (e.g. Retry-After on a 429 throttle,
+            # WWW-Authenticate on a 401) — they'd otherwise be dropped by this uniform envelope.
+            headers=getattr(exc, "headers", None),
         )
 
     @app.exception_handler(RequestValidationError)

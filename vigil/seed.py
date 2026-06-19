@@ -54,6 +54,10 @@ SEED_PASSWORD = os.environ.get("VIGIL_SEED_PASSWORD", "vigil-dev-password")
 # NEVER a committed literal (domain.md § Notification routing). None → coord.a is seeded with no
 # notification email (the field defaults UNSET for everyone).
 _DEMO_NOTIFY_EMAIL = os.environ.get("VIGIL_DEMO_NOTIFY_EMAIL") or None
+# Demo drift-breach ALERT recipient (Gate M2) — the platform/ML engineer's address, supplied at
+# SEED TIME via the environment, NEVER a committed literal (same posture as VIGIL_DEMO_NOTIFY_EMAIL).
+# None → the platform_admin is seeded with no notification email (defaults UNSET, like everyone).
+_DEMO_ML_NOTIFY_EMAIL = os.environ.get("VIGIL_DEMO_ML_NOTIFY_EMAIL") or None
 
 # Path to the synthetic T2D parquet files (build-time ingestion output, never live-fetched).
 _SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
@@ -266,7 +270,14 @@ def seed() -> dict[str, str]:
     # 3) Users + single CRO grant (cross-tenant by design → platform bootstrap session).
     with platform_session() as session:
         admin = _add_user(
-            session, email="admin@vigil.example", role=Role.PLATFORM_ADMIN
+            session,
+            email="admin@vigil.example",
+            role=Role.PLATFORM_ADMIN,
+            # Gate M2 drift-breach alert recipient — SEED DATA from the environment, NEVER a
+            # committed code constant (mirrors coord.a's VIGIL_DEMO_NOTIFY_EMAIL). Set
+            # VIGIL_DEMO_ML_NOTIFY_EMAIL at seed time to enable the demo drift alert; unset → the
+            # platform_admin has no notification email, like every other seeded user.
+            notification_email=_DEMO_ML_NOTIFY_EMAIL,
         )
         auditor = _add_user(session, email="auditor@vigil.example", role=Role.AUDITOR)
         ids.update(platform_admin=str(admin.id), auditor=str(auditor.id))

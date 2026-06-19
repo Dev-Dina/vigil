@@ -50,6 +50,57 @@ def build_notification_body(*, deep_link: str, synthetic: bool) -> tuple[str, st
     return subject, body
 
 
+def build_drift_alert_body(
+    *,
+    regime: str,
+    model_version: str,
+    metric: str,
+    value: float,
+    threshold: float,
+    distribution: str,
+    reference_n: int,
+    current_n: int,
+    synthetic: bool,
+    constructed_demo: bool,
+    deep_link: str,
+) -> tuple[str, str]:
+    """The PII-FREE drift-breach ALERT (subject, body) for the ML/platform engineer (Gate M2).
+
+    Drift is a MODEL-level statistic: there is NO participant, coded id, or risk row in it, so the
+    body is PII-free by construction — it carries ONLY model-level scalars (which metric breached,
+    value vs threshold, the distribution, the window sizes) + provenance + a deep link to the
+    platform drift surface. A ``constructed_demo`` breach is labelled a DEMONSTRATION (consistent
+    with the M1 provenance) so a demo alert is never mistaken for observed production drift.
+    """
+    kind = "CONSTRUCTED demo" if constructed_demo else "breach"
+    subject = (
+        f"Vigil — {metric.upper()} drift {kind} on champion {model_version} ({regime})"
+    )
+    body = (
+        f"A {metric.upper()} drift {('DEMONSTRATION' if constructed_demo else 'breach')} "
+        f"was detected on the champion model {model_version} (regime {regime}).\n\n"
+        f"  metric:       {metric.upper()}\n"
+        f"  value:        {value:.4f}\n"
+        f"  threshold:    {threshold:.4f}\n"
+        f"  distribution: {distribution}\n"
+        f"  window:       reference_n={reference_n}, current_n={current_n}\n"
+        f"  provenance:   synthetic={synthetic}, constructed_demo={constructed_demo}\n\n"
+        f"Review the drift surface (platform/auditor only — log in):\n{deep_link}\n"
+    )
+    if constructed_demo:
+        body += (
+            "\nThis is a CONSTRUCTED demonstration (the current window is a deliberately-shifted "
+            "copy of the reference) — it demonstrates the detector firing, NOT observed production "
+            "drift.\n"
+        )
+    elif synthetic:
+        body += (
+            "\nThis drift was computed over the SYNTHETIC cohort — a method demonstration, not a "
+            "clinical signal.\n"
+        )
+    return subject, body
+
+
 @runtime_checkable
 class EmailSender(Protocol):
     """The only contract the notifier depends on for sending mail."""

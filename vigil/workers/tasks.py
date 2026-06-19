@@ -999,8 +999,62 @@ async def compute_drift(
     from vigil.services import drift_service
 
     summary = drift_service.run_drift_detection(regime=regime, demo_shift=demo_shift)
+
+    # Gate M2: a NEW breach EVENT (the not-breached → breached edge) → enqueue ONE PII-free alert to
+    # the ML/platform engineer (never inline; like the crossing doorbell). The send-once guard is the
+    # anchor point's ``notified`` flag, so a best-effort enqueue is safe; a re-run over the SAME
+    # ongoing breach returns no alert_point_id (the producer edge already deduped). A failed enqueue
+    # must NOT break drift computation — the points are persisted and the run can be re-driven.
+    if summary.alert_point_id:
+        from vigil.workers.settings import enqueue
+
+        try:
+            await enqueue("notify_drift_breach", drift_point_id=summary.alert_point_id)
+        except Exception:  # noqa: BLE001 - alert enqueue is best-effort, never break drift
+            log.warning(
+                "drift.alert_enqueue_failed",
+                extra={"extra": {"drift_point_id": summary.alert_point_id}},
+            )
+
     log.info("drift.job_done", extra={"extra": asdict(summary)})
     return asdict(summary)
+
+
+# ---------------------------------------------------------------------------
+# notify_drift_breach — Gate M2 PII-free drift-breach alert to the ML engineer
+# ---------------------------------------------------------------------------
+
+
+async def notify_drift_breach(
+    ctx: dict[str, Any], *, drift_point_id: str
+) -> dict[str, object]:
+    """Send the PII-free drift-breach alert for ONE anchor point to the ML engineer, exactly once.
+
+    Thin Arq wrapper over ``notification_service.notify_drift_breach`` (resolve platform recipients →
+    PII-free body → send → flip ``notified``). A send FAILURE is logged and RE-RAISED so Arq retries
+    (bounded by ``WorkerSettings.max_tries``); ``notified`` is not flipped on failure. Never inline
+    in the drift-compute path.
+    """
+    from vigil.services import notification_service
+
+    try:
+        result = notification_service.notify_drift_breach(drift_point_id=drift_point_id)
+    except Exception:  # noqa: BLE001 - log then re-raise so Arq retries (notified stays false)
+        log.warning(
+            "drift_notify.send_failed",
+            extra={
+                "extra": {
+                    "drift_point_id": drift_point_id,
+                    "job_try": ctx.get("job_try"),
+                }
+            },
+        )
+        raise
+    log.info(
+        "drift_notify.job_done",
+        extra={"extra": {"drift_point_id": drift_point_id, **result}},
+    )
+    return result
 
 
 # ---------------------------------------------------------------------------

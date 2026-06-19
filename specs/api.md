@@ -60,10 +60,24 @@ class ErrorOut(BaseModel):                  # uniform error body
 ### auth (`/auth`) — unauthenticated entry + session lifecycle
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
-| `POST /auth/login` | `LoginIn` | `TokenOut` | resolves scope, mints JWT, opens Redis session |
-| `POST /auth/refresh` | `RefreshIn` | `TokenOut` | rotates token if Redis session live + `scope_ver` current |
+| `POST /auth/login` | `LoginIn` | `TokenOut` | resolves scope, mints JWT, opens Redis session. **Brute-force throttled** (Gate SEC-RL): see below. |
+| `POST /auth/refresh` | `RefreshIn` | `TokenOut` | rotates token if Redis session live + `scope_ver` current. Not throttled (the refresh token is high-entropy; see below). |
 | `POST /auth/logout` | — (bearer) | `204` | revokes `jti` in Redis |
 | `GET /auth/me` | — (bearer) | `MeOut` | echoes resolved identity + scope (no secrets) |
+
+**Login brute-force throttle (Gate SEC-RL).** The unauthenticated `/auth/login` endpoint does **not**
+pass through `require_scope`, so it gets a dedicated throttle reusing the existing Redis fixed-window
+limiter (`vigil/core/rate_limit.py`). It counts **failed** attempts only, keyed **per account** (the
+submitted email — the unspoofable defense against credential-stuffing). After
+`login_rate_limit_max_failures` failures within `login_rate_limit_window_seconds` (config; defaults
+**5 / 900s**, `0` disables), further attempts get **`429 Too Many Requests` + `Retry-After`** *without*
+a credential check. A **successful** login clears the account counter, so a legitimate user is never
+locked out by their own prior typos. **Per-IP throttling is omitted by design**: the deployment is a
+shared-company environment behind a corporate NAT (many users share one egress IP), so a per-IP
+bucket would let one user's failures lock out colleagues — a false positive. `/auth/refresh` is
+**not** throttled: it carries no account identity, only an opaque high-entropy refresh token that is
+infeasible to brute-force. The auth/scope/JWT logic itself is unchanged — the throttle sits in front
+of the handler.
 
 ```python
 class LoginIn(BaseModel):

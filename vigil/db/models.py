@@ -459,6 +459,7 @@ class DriftMetric(Base):
     __table_args__ = (
         Index("ix_drift_metric_computed_at", "computed_at"),
         Index("ix_drift_metric_regime_version", "regime", "model_version"),
+        Index("ix_drift_metric_notified", "notified"),
     )
 
     id: Mapped[uuid.UUID] = pk()
@@ -477,6 +478,10 @@ class DriftMetric(Base):
         Boolean, nullable=False, default=False
     )
     note: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    # Gate M2: the ML-engineer drift-breach ALERT send-once hook (mirrors RiskCrossing.notified).
+    # The breach EVENT is the not-breached → breached EDGE (decided by the producer); ``notified``
+    # is the per-anchor-point send-once guard so a retried alert job never double-sends.
+    notified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     computed_at: Mapped[datetime] = created_at()
 
 

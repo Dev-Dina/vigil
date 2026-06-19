@@ -128,3 +128,29 @@ drift; it **never fabricates** a drift number.
   the current window to the reference shifted by a constant — a **CONSTRUCTED demonstration of the
   detector**, labelled `constructed_demo=true` + a note, **NOT observed production drift**. With
   `demo_shift=0` the numbers are real PSI/KS on the real (unshifted) windows.
+
+### Drift-breach alert (Gate M2)
+**Step 2** of the human-in-the-loop MLOps loop (M1 = detect; M3 = governed promotion — later): when
+`compute_drift` produces a **breach**, it **alerts the ML/platform engineer** so a human decides
+(M3). A real alert on a real breach; a constructed-demo breach stays labelled a demonstration.
+
+- **Reuses the Phase-9 notification machinery.** The PII-free `email_sender` (`StubEmailSender` by
+  default via `VIGIL_EMAIL_STUB`; real SMTP only on the live opt-in) + an **Arq job**
+  (`notify_drift_breach`, never inline) — the same pattern as the serious-risk crossing doorbell.
+- **Recipient = the platform/ML engineer (PLATFORM-SCOPED).** Drift is a **model-level** statistic
+  with **no participant `(sponsor, trial, site)` tuple**, so routing is by **role**
+  (`platform_admin`), NOT by `scope.permits`. `resolve_drift_recipients` reads the
+  `notification_email` off the `platform_admin` user record(s) — **env-seeded
+  (`VIGIL_DEMO_ML_NOTIFY_EMAIL`), never a code constant** — distinct from the tenant-scoped crossing
+  recipients. A site coordinator is NEVER a drift recipient.
+- **PII-free body (by construction).** Only model-level scalars: which metric breached (`psi`/`ks`),
+  `value` vs `threshold`, the `distribution`, the window sizes (`reference_n`/`current_n`), and the
+  provenance (`synthetic` / `constructed_demo`) + a deep link to the platform drift surface. No
+  participant, coded id, or risk row — there is none in drift to leak.
+- **Dedupe — once per breach EVENT.** The producer alerts only on the **not-breached → breached
+  EDGE** per `(regime, model_version, metric)` (the analog of the crossing non-high→high edge), so a
+  re-run while the **same breach is still ongoing does NOT re-alert**. The anchor point's
+  **`notified` flag** is the per-send guard (flipped true ONLY on a successful send), so a **retried**
+  job never double-sends; a send failure leaves it false so Arq retries.
+- **Constructed-demo honesty.** A breach from a `demo_shift` run is labelled a **CONSTRUCTED
+  demonstration** in the alert (subject + body), so a demo alert is never mistaken for observed drift.

@@ -42,6 +42,20 @@ class Settings(BaseSettings):
     rate_limit_per_user_per_minute: int = 120
     rate_limit_per_tenant_per_minute: int = 1200
 
+    # --- login brute-force throttle (Gate SEC-RL) ---
+    # POST /auth/login bypasses the per-scope limiter above (which only runs inside require_scope),
+    # so it gets its OWN throttle reusing the same Redis fixed-window mechanism. Counts FAILED
+    # attempts only, keyed PER ACCOUNT (the submitted email) — the unspoofable defense against
+    # credential-stuffing. A successful login clears the account counter, so a legitimate user is
+    # never locked out by their own prior typos. On exceed → 429 + Retry-After. Per-IP throttling is
+    # omitted by design (shared corporate NAT → one user's failures must not lock out colleagues).
+    # Set max_failures to 0 to DISABLE (e.g. a load test). Window is a fixed window from the first
+    # failure; both are env-overridable (`VIGIL_LOGIN_RATE_LIMIT_*`) so tests stay deterministic.
+    login_rate_limit_max_failures: int = 5
+    login_rate_limit_window_seconds: int = (
+        900  # 15 min lockout window after the Nth failure
+    )
+
     # --- db pool ---
     db_pool_size: int = 5
     db_max_overflow: int = 10

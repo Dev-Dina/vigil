@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, EmailStr, SecretStr
 
 from vigil.api.deps import ScopeDep, require_jti
+from vigil.core import rate_limit
 from vigil.core.scope import Scope, ScopeTuple
 from vigil.domain import Role
 from vigil.services import auth_service
@@ -56,17 +57,32 @@ def _token_out(result: auth_service.LoginResult) -> TokenOut:
 
 @router.post("/login", response_model=TokenOut)
 async def login(body: LoginIn) -> TokenOut:
+    email = str(body.email)
+    # Pre-auth gate: an account over its failed-attempt budget is rejected WITHOUT a credential
+    # check (so a locked account can't be probed) — credential-stuffing is throttled, not creds.
     try:
-        result = await auth_service.login(
-            str(body.email), body.password.get_secret_value()
-        )
+        await rate_limit.enforce_login(email)
+    except rate_limit.LoginRateLimitExceeded as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+            headers={"Retry-After": str(exc.retry_after)},
+        ) from exc
+    try:
+        result = await auth_service.login(email, body.password.get_secret_value())
     except AuthError as exc:
+        await rate_limit.record_login_failure(email)  # count this failed attempt
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         ) from exc
+    await rate_limit.clear_login_failures(email)  # success → reset the account counter
     return _token_out(result)
 
 
+# NOTE: /auth/refresh is intentionally NOT throttled. The throttle keys on the account (email), and
+# a refresh request carries no account identity — only the opaque, high-entropy refresh token, which
+# is infeasible to brute-force. Per-IP throttling was rejected (shared corporate NAT → false
+# positives), so there is no IP fallback here either.
 @router.post("/refresh", response_model=TokenOut)
 async def refresh(body: RefreshIn) -> TokenOut:
     try:

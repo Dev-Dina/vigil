@@ -111,3 +111,12 @@ global default constant in application code**; the recipient address must **neve
 committed literal anywhere** (code, spec, or config) — it is env-sourced. Production recipients
 come the same way: from each user's own `notification_email` on their record (never from a secret,
 never from code).
+
+**Platform-scoped drift alert (Gate M2) — a DISTINCT recipient axis.** The MLOps drift-breach alert
+(`/specs/observability.md § Drift-breach alert`) is **model-level**, not tenant data: a drift point
+has **no participant `(sponsor, trial, site)` tuple**, so it is routed by **role** to the
+**platform/ML engineer** (`platform_admin`), NOT by the `Scope.permits` site-coverage check used for
+crossings. The address still comes off that user's own `notification_email` record (env-seeded via
+`VIGIL_DEMO_ML_NOTIFY_EMAIL`, **never a committed literal**). A site coordinator is NEVER a drift
+recipient; the platform engineer is NEVER a crossing recipient — the two recipient resolutions are
+deliberately separate.

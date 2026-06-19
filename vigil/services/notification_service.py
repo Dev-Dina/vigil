@@ -20,10 +20,19 @@ from vigil.core.config import get_settings
 from vigil.core.logging import get_logger
 from vigil.core.scope import ScopeError, ScopeTuple
 from vigil.db.models import RiskCrossing
+from vigil.repositories import drift as drift_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import users as user_repo
-from vigil.repositories.session import auth_lookup_session, sponsor_bootstrap_session
-from vigil.services.email_sender import build_notification_body, get_email_sender
+from vigil.repositories.session import (
+    auth_lookup_session,
+    platform_session,
+    sponsor_bootstrap_session,
+)
+from vigil.services.email_sender import (
+    build_drift_alert_body,
+    build_notification_body,
+    get_email_sender,
+)
 from vigil.services.scope_resolver import resolve_scope
 
 log = get_logger("vigil.services.notification_service")
@@ -97,6 +106,85 @@ def notify_crossing(*, crossing_id: str, sponsor_id: str) -> dict[str, object]:
             "notify.sent",
             extra={
                 "extra": {"crossing_id": crossing_id, "n_recipients": len(recipients)}
+            },
+        )
+        return {"status": "sent", "n_recipients": len(recipients)}
+
+
+# ---------------------------------------------------------------------------
+# Gate M2 — drift-breach ALERT to the ML/platform engineer (platform-scoped)
+# ---------------------------------------------------------------------------
+
+
+def resolve_drift_recipients() -> list[str]:
+    """Notification emails of the platform/ML engineer(s) — the M2 drift-alert recipients.
+
+    The PLATFORM-SCOPED analog of :func:`resolve_recipients`. Drift is a MODEL-level statistic with
+    NO participant ``(sponsor, trial, site)`` tuple, so routing is by ROLE (``platform_admin`` = the
+    ML engineer) rather than by ``scope.permits`` — a site coordinator is NEVER a drift recipient.
+    The address still comes off the user record (env-seeded), never a code constant. Returns a
+    de-duplicated, sorted list (deterministic); empty when no platform engineer has an address set.
+    """
+    with auth_lookup_session() as session:
+        return sorted(
+            {
+                user.notification_email
+                for user in user_repo.platform_admins_with_notification_email(session)
+                if user.notification_email
+            }
+        )
+
+
+def notify_drift_breach(*, drift_point_id: str) -> dict[str, object]:
+    """Send the PII-free drift-breach ALERT for ONE breached anchor point, EXACTLY ONCE (Gate M2).
+
+    Send-once is the drift point's ``notified`` flag: an already-notified point does NOT re-send;
+    on a fresh breach with platform recipient(s) we send, then flip ``notified`` true — so a retried
+    job never double-sends. NO recipient → sends nothing and does NOT flip ``notified`` (harmless to
+    re-resolve later). A send FAILURE raises (``notified`` stays false → the Arq job retries, bounded
+    by the worker ``max_tries``). The body is PII-free by construction (drift has no participant);
+    recipients are PLATFORM-SCOPED (:func:`resolve_drift_recipients`), distinct from the tenant-scoped
+    crossing path. Cross-run dedupe (don't re-alert an ONGOING breach) is the producer's breach EDGE.
+    """
+    pid = uuid.UUID(drift_point_id)
+    with platform_session() as session:
+        point = drift_repo.get_drift_point(session, pid)
+        if point is None:
+            return {"status": "not_found"}
+        if point.notified:
+            return {"status": "already_notified"}
+        recipients = resolve_drift_recipients()
+        if not recipients:
+            log.info(
+                "drift_notify.no_recipients",
+                extra={"extra": {"drift_point_id": drift_point_id}},
+            )
+            return {"status": "no_recipients"}
+
+        deep_link = f"{get_settings().app_base_url.rstrip('/')}/monitoring"
+        subject, body = build_drift_alert_body(
+            regime=point.regime,
+            model_version=point.model_version,
+            metric=point.metric,
+            value=point.value,
+            threshold=point.threshold,
+            distribution=point.distribution,
+            reference_n=point.reference_n,
+            current_n=point.current_n,
+            synthetic=point.synthetic,
+            constructed_demo=point.constructed_demo,
+            deep_link=deep_link,
+        )
+        # Send first; flip notified ONLY on success (a send failure raises → retry, no flip).
+        get_email_sender().send(to=recipients, subject=subject, body=body)
+        drift_repo.mark_drift_point_notified(session, pid)
+        log.info(
+            "drift_notify.sent",
+            extra={
+                "extra": {
+                    "drift_point_id": drift_point_id,
+                    "n_recipients": len(recipients),
+                }
             },
         )
         return {"status": "sent", "n_recipients": len(recipients)}
