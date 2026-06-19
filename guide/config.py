@@ -66,6 +66,14 @@ class GuideConfig(BaseSettings):
     retrieval_top_k: int = 4
     relevance_threshold: float = 0.30
 
+    # --- topical guardrail (Gate GUIDE-TOPICAL) — semantic scope guard, defense-in-depth ---
+    # After the keyword guards, ONE cheap classify (the Guide's OWN client) labels the question
+    # ON_TOPIC_GENERAL (allow) / SPECIFIC_DATA / OFF_TOPIC / INJECTION (block) by MEANING. NON-secret
+    # config; NOT the security guarantee (which stays structural). fail_open: a classify error or an
+    # unparseable label PROCEEDS to retrieval (the relevance-threshold refusal is the backstop).
+    topical_guard_enabled: bool = True
+    topical_guard_fail_open: bool = True
+
 
 @lru_cache(maxsize=1)
 def get_config() -> GuideConfig:

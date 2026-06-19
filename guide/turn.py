@@ -22,11 +22,13 @@ from typing import Any
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from guide.config import get_config
 from guide.guardrails import guard_inbound
 from guide.observability import write_message_event
 from guide.rag import answer_question
 from guide.redaction import redact
 from guide.retrieval import IndexedChunk
+from guide.topical import UNKNOWN, block_for, classify_topic
 
 _BLOCKED_MSG = (
     "I can't help with that. I'm a public guide that only explains the Vigil project from "
@@ -109,6 +111,30 @@ def run_guide_turn(
             citations=[],
         )
         return TurnResult(message, [], "blocked", "refused", route)
+
+    # 1.5 Semantic topical guard (Gate GUIDE-TOPICAL) — ONE classify on the prompts that passed the
+    #     keyword guards, BEFORE any retrieval/answer call. Blocks specific-data / off-topic /
+    #     injection BY MEANING (catching phrasings the keyword guard misses). Defense-in-depth +
+    #     scope/UX, NOT the security guarantee. fail-open: a classify error/unparseable label
+    #     PROCEEDS (the relevance-threshold refusal + the structural approved-docs-only guarantee are
+    #     the backstops). Toggle-gated; when disabled the classify is skipped entirely.
+    cfg = get_config()
+    if cfg.topical_guard_enabled:
+        label = classify_topic(redacted_user, llm)
+        if label == UNKNOWN and not cfg.topical_guard_fail_open:
+            label = "OFF_TOPIC"  # fail-closed → conservative scope refusal
+        topical = block_for(label, injection_message=_BLOCKED_MSG)
+        if topical is not None:
+            category, message = topical
+            route = f"topical:{category}"
+            _emit(
+                decision="blocked",
+                status="refused",
+                redacted_assistant=redact(message),
+                route=route,
+                citations=[],
+            )
+            return TurnResult(message, [], "blocked", "refused", route)
 
     # 2. Allowed → retrieve + grounded/cited answer or sound (relevance) refusal.
     ans = answer_question(redacted_user, index=index, embedder=embedder, llm=llm)

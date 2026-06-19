@@ -34,6 +34,9 @@ _ALLOWED_FIELDS = {
     "embedding_dim",
     "retrieval_top_k",
     "relevance_threshold",
+    # semantic topical guardrail toggles (non-secret; Gate GUIDE-TOPICAL)
+    "topical_guard_enabled",
+    "topical_guard_fail_open",
 }
 
 # Substrings that would betray a deny-listed CREDENTIAL or internal/admin ROUTE on a field name.
