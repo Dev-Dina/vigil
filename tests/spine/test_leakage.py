@@ -72,6 +72,41 @@ def test_cro_manager_staffed_on_a_cannot_see_b(migrated_db):
             tenancy_repo.list_participants(session)
 
 
+# ----------------------------------------- SACRED re-proof: new platform-tier OPERATIONAL roles
+@pytest.mark.parametrize(
+    "email,role_str",
+    [
+        ("mlops@vigil.example", "mlops_engineer"),
+        ("llmops@vigil.example", "llmops_engineer"),
+    ],
+)
+def test_ops_role_is_platform_tier_with_no_tenant_reach(migrated_db, email, role_str):
+    """Gate RBAC-OPS sacred re-proof: each new operational role is platform-tier, carries NO
+    sponsor scope, and CANNOT read any tenant/participant row (RLS fails closed) — identical to
+    platform_admin/auditor. If adding the role gave ANY tenant reach, these assertions fail."""
+    ids = migrated_db
+    scope = _scope_for(email)
+
+    # (a) platform-tier, (b) NO sponsor scope (empty tuple set — the existing platform path).
+    assert str(scope.role) == role_str
+    assert scope.is_platform is True
+    assert scope.tuples == ()
+    assert scope.sponsor_ids == frozenset()
+
+    # (c) RLS fails closed on tenant data: under the role's own scoped session it sees NO
+    # participant of either sponsor — not A's, not B's, none at all.
+    with scoped_session(scope) as session:
+        assert (
+            tenancy_repo.get_participant(session, uuid.UUID(ids["participant_a"]))
+            is None
+        )
+        assert (
+            tenancy_repo.get_participant(session, uuid.UUID(ids["participant_b"]))
+            is None
+        )
+        assert tenancy_repo.list_participants(session, limit=100) == []
+
+
 def test_sponsor_b_sponsor_row_isolated(migrated_db):
     ids = migrated_db
     scope_b = _scope_for("oversight.b@vigil.example")

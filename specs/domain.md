@@ -11,7 +11,13 @@
 - User creation and assignment are scoped administration: a user may only create, grant, or
   assign a scope that is a subset of their own, never outside their tenant.
 
-## Roles (seven) and scope
+## Roles and scope
+
+Two orthogonal axes: the **seven data-scope roles** (which TENANT rows a caller may reach,
+enforced by RLS) and the **operational platform-tier roles** (which platform ACTIONS a caller may
+perform, Gate RBAC-OPS). The operational roles add no tenant reach — they are platform-tier.
+
+### Data-scope roles (seven)
 
 Canonical JWT `role` strings (snake_case; these are the exact strings emitted in tokens and used by all consumers — specs, backend, frontend, tests):
 
@@ -27,6 +33,32 @@ Canonical JWT `role` strings (snake_case; these are the exact strings emitted in
 
 **Canonical string rule:** `platform_admin` is the JWT role string for the ML / platform admin role. All specs, backend enums, and frontend types must use this exact string. The strings `ml_admin` and `ML_ADMIN` are non-canonical aliases and must not appear in JWTs or authorization checks.
 
+### Operational platform-tier roles (Gate RBAC-OPS)
+
+Two **least-privilege, action-based** roles layered ON TOP of the data-scope tier. They are
+**platform-tier**: no sponsor scope, no tenant reach — RLS fails closed for them on tenant data
+exactly as for `platform_admin` / `auditor` (re-proven by the cross-tenant + cross-site leakage
+suite). They differ only in which platform **actions/reads** they may perform.
+
+| JWT string | Display name | Level | Owns | NOT permitted |
+|---|---|---|---|---|
+| `mlops_engineer` | MLOps engineer | Platform (ops) | the model lifecycle: read **and** the write actions — drift detection (PSI/KS) + run, model registry, register, promote | LLMOps reads (LLM cost / guardrail mix); any tenant/participant data; user administration |
+| `llmops_engineer` | LLMOps engineer | Platform (ops) | LLM operations, **read-only**: LLM cost rollups, message_events / guardrail mix | the model-lifecycle write actions (**barred from drift-run / register / promote**); MLOps reads (drift / registry / model traffic); any tenant/participant data; user administration |
+
+**Capability table (the ENFORCED boundary).** Authorization is by capability, not raw role, in one
+helper (`vigil/domain.py § can_do`). The meaningful least-privilege claim is the **action boundary**:
+an LLMOps engineer is authorizationally barred from touching the model lifecycle.
+
+| Capability | Surfaces | platform_admin | auditor | mlops_engineer | llmops_engineer |
+|---|---|:--:|:--:|:--:|:--:|
+| `mlops_read` | drift, registry, model traffic | ✓ | ✓ | ✓ | ✗ |
+| `mlops_write` | drift-run, register, promote | ✓ | ✗ | ✓ | ✗ |
+| `llmops_read` | LLM cost, message_events / guardrail mix | ✓ | ✓ | ✗ | ✓ |
+
+`platform_admin` is the **superset** (all reads + all actions); `auditor` is **read-only** (all
+reads, no action); each ops role is confined to its **own** surface (read-its-own; only MLOps holds
+a write). No operational role holds any sponsor scope or `USER_ADMIN_ROLES` authority.
+
 ## Tenancy rules
 
 **User → scope mapping.** A user has exactly one **home tenant** plus a **scope**, both resolved
@@ -40,8 +72,10 @@ from trusted sources, never asserted by the client:
     sponsor, nothing outside it.
   - **Site user** (PI, coordinator) → fixed to `(own sponsor, own trial, own site)`.
   - **CRO user** (study/project manager, CRA) → the explicit grant list below; no home sponsor.
-  - **Platform** user (ML admin, auditor) → no sponsor scope; reaches only platform/global tables
-    (admin: never identifiable participant data; auditor: read-only).
+  - **Platform** user (ML admin, auditor, **and the operational `mlops_engineer` / `llmops_engineer`**)
+    → no sponsor scope; reaches only platform/global tables (admin: never identifiable participant
+    data; auditor: read-only; the ops roles: action-separated per the capability table above). All
+    platform-tier roles resolve to an EMPTY scope-tuple set — one path, no bespoke mechanism.
 
 **CRO cross-sponsor assignment = explicit per-assignment grants.** A CRO user never holds a
 blanket "all sponsors" flag. Cross-sponsor reach is rows in an **`assignment_grant`** table, the

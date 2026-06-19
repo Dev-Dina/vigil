@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from vigil.core.scope import Scope
 from vigil.db.models import ModelRegistry, RoutingState
-from vigil.domain import Role
+from vigil.domain import Capability, can_do
 from vigil.repositories import registry as registry_repo
 from vigil.repositories import routing as routing_repo
 from vigil.repositories.session import platform_session
@@ -209,10 +209,11 @@ def promote(
     (method, not clinical) — a record claiming clinical validation is rejected.
     ``model_card_ref`` MUST be non-null (enforced in the repository).
     """
-    if scope.role is not Role.PLATFORM_ADMIN:
+    if not can_do(scope.role, Capability.MLOPS_WRITE):
         raise RoutingPermissionError(
-            f"promotion denied: role {scope.role!r} is not platform_admin; promotion is "
-            "always manual and platform_admin-only (specs/routing.md § Decisions)"
+            f"promotion denied: role {scope.role!r} lacks mlops_write; promotion is a manual "
+            "model-lifecycle action for platform_admin + mlops_engineer only "
+            "(specs/routing.md § Decisions; specs/domain.md § Operational roles)"
         )
     if not scope.user_id:
         raise PromotionError("promotion requires a non-null actor_user_id")
@@ -327,10 +328,11 @@ def register_model(
         validation metrics; we never fabricate or compute them here.
       - a version already registered for the regime is a hard error (no silent overwrite).
     """
-    if scope.role is not Role.PLATFORM_ADMIN:
+    if not can_do(scope.role, Capability.MLOPS_WRITE):
         raise RoutingPermissionError(
-            f"model registration denied: role {scope.role!r} is not platform_admin; the registry "
-            "is a platform/ML-engineer surface (specs/routing.md § Model registry)"
+            f"model registration denied: role {scope.role!r} lacks mlops_write; the registry is a "
+            "model-lifecycle surface for platform_admin + mlops_engineer only "
+            "(specs/routing.md § Model registry; specs/domain.md § Operational roles)"
         )
     if not scope.user_id:
         raise RegistrationError("registration requires a non-null actor_user_id")
@@ -440,13 +442,15 @@ def list_registrations(
     """List registered versions + their supplied metrics/provenance (PLATFORM/AUDITOR read).
 
     The informed-decision surface: an engineer sees each version's OFFLINE validation metrics and
-    provenance BEFORE promoting. ``routing_state`` has no RLS, so the platform/auditor gate is the
-    sole guard (mirrors ``get_champion`` / the monitoring reads).
+    provenance BEFORE promoting. ``routing_state`` has no RLS, so the capability gate is the sole
+    guard. The registry is an MLOps surface — MLOPS_READ (platform_admin, auditor, mlops_engineer);
+    llmops_engineer is denied (it owns LLM ops, not the model lifecycle).
     """
-    if not scope.is_platform:
+    if not can_do(scope.role, Capability.MLOPS_READ):
         raise RoutingPermissionError(
-            f"model registry read denied: role {scope.role!r} is not platform-scoped; only "
-            "platform_admin and auditor may read the registry (specs/routing.md § Model registry)"
+            f"model registry read denied: role {scope.role!r} lacks mlops_read; the registry is an "
+            "MLOps read surface (platform_admin, auditor, mlops_engineer) "
+            "(specs/routing.md § Model registry; specs/domain.md § Operational roles)"
         )
     with platform_session() as session:
         rows = registry_repo.list_registrations(session, regime=regime)

@@ -16,8 +16,9 @@ export interface ErrorOut {
 }
 
 // ---- auth (/auth) ----
-// Seven canonical JWT role strings — /specs/domain.md § Roles.
-// Canonical platform/ML-admin string is "platform_admin" (matches domain.py).
+// Canonical JWT role strings — /specs/domain.md § Roles. The first seven are the data-scope
+// roles; the last two are operational platform-tier roles (Gate RBAC-OPS) — platform-tier, no
+// sponsor scope, action-separated. Canonical platform/ML-admin string is "platform_admin".
 export type Role =
   | "study_manager"
   | "cra"
@@ -26,6 +27,8 @@ export type Role =
   | "coordinator"
   | "platform_admin"
   | "auditor"
+  | "mlops_engineer"
+  | "llmops_engineer"
 
 export interface ScopeTuple {
   sponsor_id: string

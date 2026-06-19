@@ -14,19 +14,25 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from vigil.core.scope import Scope
-from vigil.domain import PLATFORM_ROLES
+from vigil.domain import Capability, can_do
 from vigil.repositories import drift as drift_repo
 from vigil.repositories import observability as obs_repo
 from vigil.repositories import routing as routing_repo
 from vigil.repositories.session import platform_session, scoped_session
 
 
-def _require_platform(scope: Scope, what: str) -> None:
-    """Role gate shared by every monitoring read: platform/auditor only (else 403)."""
-    if scope.role not in PLATFORM_ROLES:
+def _require(scope: Scope, capability: Capability, what: str) -> None:
+    """Capability gate for a monitoring surface (Gate RBAC-OPS; else 403).
+
+    MLOps reads (drift/registry/model-traffic) require ``MLOPS_READ`` (platform_admin, auditor,
+    mlops_engineer); LLMOps reads (cost/messages) require ``LLMOPS_READ`` (platform_admin,
+    auditor, llmops_engineer); the drift-run ACTION requires ``MLOPS_WRITE`` (platform_admin,
+    mlops_engineer). platform_admin/auditor keep full read; every sponsor/site/CRO role is denied.
+    """
+    if not can_do(scope.role, capability):
         raise MonitoringPermissionError(
-            f"monitoring {what} denied: role {scope.role!r} is not platform/auditor "
-            "(specs/observability.md § Phase 6 contracts; api.md § monitoring)"
+            f"monitoring {what} denied: role {scope.role!r} lacks {capability.value} "
+            "(specs/domain.md § Operational roles; api.md § monitoring)"
         )
 
 
@@ -73,7 +79,7 @@ def list_message_events(
     ``is_platform=on`` so RLS admits all sponsors (the legitimate cross-tenant-by-role read); any
     other scope would be narrowed by RLS to its own sponsor (defence in depth).
     """
-    _require_platform(scope, "inspect")
+    _require(scope, Capability.LLMOPS_READ, "inspect")
 
     conv = uuid.UUID(conversation_id) if conversation_id else None
 
@@ -156,7 +162,7 @@ def cost_report(
     Cost capture). Runs under ``scoped_session(scope)`` so the message_events RLS is the
     cross-tenant-by-role boundary (platform/auditor sees across; any other scope is narrowed).
     """
-    _require_platform(scope, "cost")
+    _require(scope, Capability.LLMOPS_READ, "cost")
     with scoped_session(scope) as session:
         rows = obs_repo.cost_rollup(session, surface=surface, since=since, until=until)
     rollups = [
@@ -206,7 +212,7 @@ def list_model_status(scope: Scope) -> list[ModelStatusView]:
     runs under ``platform_session``. ``model_name`` surfaces the regime (the model's identity in
     storage — there is no separate name column); ``version`` is the stored ``model_version``.
     """
-    _require_platform(scope, "models")
+    _require(scope, Capability.MLOPS_READ, "models")
     with platform_session() as session:
         rows = routing_repo.list_routing_state(session)
     return [
@@ -255,7 +261,7 @@ def list_drift_points(scope: Scope, *, limit: int = 50) -> list[DriftPointView]:
     demonstration of the detector, not observed drift). ``drift_metric`` is a platform-tier table
     (no tenant data); read under ``platform_session`` (the role gate above is the access guard).
     """
-    _require_platform(scope, "drift")
+    _require(scope, Capability.MLOPS_READ, "drift")
     with platform_session() as session:
         rows = drift_repo.list_recent_drift_points(session, limit=limit)
         return [
@@ -284,13 +290,10 @@ async def trigger_drift_run(
 
     The on-demand path mirroring the scheduled cron run. ``demo_shift != 0`` enqueues a CONSTRUCTED
     breach demonstration (labelled in the persisted points), never presented as observed drift.
-    Auditor (read-only) is denied — triggering a job is an action, not a read.
+    MLOPS_WRITE only (platform_admin + mlops_engineer); auditor (read-only) and llmops_engineer are
+    denied — triggering a job is a model-lifecycle action, not a read.
     """
-    from vigil.domain import Role
     from vigil.workers.settings import enqueue
 
-    if scope.role is not Role.PLATFORM_ADMIN:
-        raise MonitoringPermissionError(
-            f"drift run trigger denied: role {scope.role!r} is not platform_admin"
-        )
+    _require(scope, Capability.MLOPS_WRITE, "drift run trigger")
     return await enqueue("compute_drift", regime=regime, demo_shift=demo_shift)

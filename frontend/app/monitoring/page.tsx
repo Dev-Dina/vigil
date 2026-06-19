@@ -22,7 +22,7 @@ import {
 import { getCost, getDrift, getMessages, getModels, getRegistry } from "@/lib/api"
 import { getGuideCost, type GuideCost } from "@/lib/guide"
 import { useAuth } from "@/lib/auth-context"
-import { PLATFORM_ROLES } from "@/lib/role-gates"
+import { CAN_VIEW_LLMOPS, CAN_VIEW_MLOPS, PLATFORM_ROLES } from "@/lib/role-gates"
 import type {
   CostReport,
   DriftPoint,
@@ -70,13 +70,18 @@ function usd(v: number): string {
 export default function MonitoringPage() {
   const { me } = useAuth()
   const isPlatformRole = me?.role != null && (PLATFORM_ROLES as string[]).includes(me.role)
+  // Per-view capability gates (Gate RBAC-OPS): an MLOps engineer sees only MLOps; an LLMOps
+  // engineer only LLMOps; platform_admin + auditor see both. Server-side is the enforced gate.
+  const canViewMlops = me?.role != null && (CAN_VIEW_MLOPS as string[]).includes(me.role)
+  const canViewLlmops = me?.role != null && (CAN_VIEW_LLMOPS as string[]).includes(me.role)
 
   if (!isPlatformRole) {
     return (
       <div className="min-h-screen bg-background">
         <main className="mx-auto max-w-7xl px-6 py-16">
           <p className="text-muted-foreground">
-            This view is available only to platform and auditor roles.
+            This view is available only to platform roles (platform admin, auditor, MLOps/LLMOps
+            engineers).
           </p>
         </main>
       </div>
@@ -97,11 +102,40 @@ export default function MonitoringPage() {
 
         <FluidTabs
           tabs={[
-            { id: "mlops", label: "MLOps", content: <MLOpsView /> },
-            { id: "llmops", label: "LLMOps", content: <LLMOpsView /> },
+            {
+              id: "mlops",
+              label: "MLOps",
+              content: canViewMlops ? (
+                <MLOpsView />
+              ) : (
+                <ViewRestricted surface="MLOps" roles="platform admin, auditor, or an MLOps engineer" />
+              ),
+            },
+            {
+              id: "llmops",
+              label: "LLMOps",
+              content: canViewLlmops ? (
+                <LLMOpsView />
+              ) : (
+                <ViewRestricted surface="LLMOps" roles="platform admin, auditor, or an LLMOps engineer" />
+              ),
+            },
           ]}
         />
       </main>
+    </div>
+  )
+}
+
+// Honest "not available to your role" treatment (never an error) for a platform-tier role that
+// holds the OTHER operational view's capability but not this one (Gate RBAC-OPS).
+function ViewRestricted({ surface, roles }: { surface: string; roles: string }) {
+  return (
+    <div className="rounded-lg border-[0.5px] border-border bg-card p-6">
+      <p className="text-sm text-muted-foreground">
+        The {surface} view isn&apos;t available to your role. It&apos;s shown to {roles}. The
+        backend enforces this boundary regardless of what the UI displays.
+      </p>
     </div>
   )
 }

@@ -282,6 +282,18 @@ def seed() -> dict[str, str]:
         auditor = _add_user(session, email="auditor@vigil.example", role=Role.AUDITOR)
         ids.update(platform_admin=str(admin.id), auditor=str(auditor.id))
 
+        # Operational platform-tier roles (Gate RBAC-OPS): action-separated, NO sponsor scope.
+        # The MLOps engineer owns the model lifecycle (drift/registry/promote); the LLMOps engineer
+        # owns LLM operations (cost/guardrail, read-only). Both are platform-tier like admin/auditor
+        # — they reach platform tables only and can NEVER see a tenant row (RLS fails closed).
+        mlops = _add_user(
+            session, email="mlops@vigil.example", role=Role.MLOPS_ENGINEER
+        )
+        llmops = _add_user(
+            session, email="llmops@vigil.example", role=Role.LLMOPS_ENGINEER
+        )
+        ids.update(mlops_engineer=str(mlops.id), llmops_engineer=str(llmops.id))
+
         oversight_a = _add_user(
             session,
             email="oversight.a@vigil.example",
