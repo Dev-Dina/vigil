@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -40,33 +41,8 @@ export function AppNav() {
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b-[0.5px] border-border bg-card px-6">
       <div className="flex items-center gap-8">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-card"
-            >
-              <path
-                d="M8 1L2 4V8C2 11.3137 4.68629 14 8 14C11.3137 14 14 11.3137 14 8V4L8 1Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              <path
-                d="M8 5V8L10 10"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
+        <Link href="/" className="flex items-center gap-2.5">
+          <Image src="/vigil-mark.png" alt="Vigil" width={28} height={28} priority />
           <span className="text-lg font-semibold tracking-tight text-foreground">Vigil</span>
         </Link>
 
