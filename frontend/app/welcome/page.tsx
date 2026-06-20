@@ -19,8 +19,13 @@ import { GuideChat, SideLogin, StatusDot, type StatusType } from "@/components/v
 // (useAuth → /auth/login). Honest, assistive framing throughout — Vigil SURFACES and EXPLAINS risk.
 
 // ---- hero vitals motif ---------------------------------------------------
-// A faint ECG/heart-rate trace that evokes monitoring. Drawn at rest (visible under reduced-motion);
-// motion-safe adds the one-time "draw" + a sweeping scan highlight.
+// A faint ECG/heart-rate trace that evokes monitoring. The base line is drawn at rest (the full
+// static line reduced-motion users see); motion-safe draws it in once AND runs a bright pulse that
+// continuously sweeps along the trace so it reads as a live monitor. pathLength normalises the
+// dash units to 1400 so both the draw and the sweep are exact regardless of true path length.
+const VITALS_PATH =
+  "M0 60 H230 l18 -2 18 4 14 -40 16 78 18 -64 14 28 22 -2 H520 l16 -2 16 30 14 -70 16 60 16 -6 H760 l18 0 16 -34 14 64 16 -52 14 24 20 0 H1060 l18 -2 18 4 H1200"
+
 function VitalsTrace() {
   return (
     <svg
@@ -30,8 +35,10 @@ function VitalsTrace() {
       preserveAspectRatio="none"
       aria-hidden="true"
     >
+      {/* Base trace — full static line at rest; motion-safe draws it in once. */}
       <path
-        d="M0 60 H230 l18 -2 18 4 14 -40 16 78 18 -64 14 28 22 -2 H520 l16 -2 16 30 14 -70 16 60 16 -6 H760 l18 0 16 -34 14 64 16 -52 14 24 20 0 H1060 l18 -2 18 4 H1200"
+        d={VITALS_PATH}
+        pathLength={1400}
         stroke="var(--color-status-calm)"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -40,6 +47,18 @@ function VitalsTrace() {
           { strokeDasharray: 1400, strokeDashoffset: 0, "--vigil-dash": "1400" } as React.CSSProperties
         }
         className="motion-safe:animate-[vigil-draw_2.6s_ease-out_forwards]"
+      />
+      {/* Travelling pulse — a bright blip sweeping along the trace. Hidden at rest (opacity-0) so
+          reduced-motion shows only the static base line; motion-safe reveals + animates it. */}
+      <path
+        d={VITALS_PATH}
+        pathLength={1400}
+        stroke="var(--color-status-calm)"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ strokeDasharray: "90 1310" } as React.CSSProperties}
+        className="opacity-0 [filter:drop-shadow(0_0_6px_var(--color-status-calm))] motion-safe:opacity-90 motion-safe:animate-[vigil-ecg_3s_linear_infinite]"
       />
     </svg>
   )

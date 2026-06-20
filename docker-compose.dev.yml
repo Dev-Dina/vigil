@@ -78,6 +78,9 @@ services:
       - guide-net
     environment:
       VIGIL_GUIDE_LOG_LEVEL: INFO
+      # CORS allow-list for the browser-DIRECT frontend calls (lib/guide.ts → /ask, /metrics/cost).
+      # The frontend is host-published at :3000; prod overrides with its real origin. No credentials.
+      VIGIL_GUIDE_CORS_ORIGINS: ${VIGIL_GUIDE_CORS_ORIGINS:-http://localhost:3000}
       # Hermetic by DEFAULT: the deterministic stub LLM — no key, no live call (CI-safe parity with
       # the app's VIGIL_LLM_STUB). The live path flips this off + supplies the Guide's OWN key.
       VIGIL_GUIDE_LLM_STUB: "true"

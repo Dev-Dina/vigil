@@ -16,6 +16,8 @@ _ALLOWED_FIELDS = {
     "host",
     "port",
     "log_level",
+    # non-secret CORS allow-list — which web origins may read the Guide's public responses
+    "cors_origins",
     # (b) own file-backed approved-doc index
     "approved_docs_path",
     "approved_docs_index_path",

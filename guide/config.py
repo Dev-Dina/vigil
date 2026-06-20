@@ -26,6 +26,15 @@ class GuideConfig(BaseSettings):
     port: int = 8080
     log_level: str = "INFO"
 
+    # --- CORS (isolation-PRESERVING cross-origin allow-list) ---
+    # The frontend calls the Guide BROWSER-DIRECT (lib/guide.ts → POST /ask, GET /metrics/cost) with
+    # NO JWT — that direct, credential-free path IS the isolation design (no app proxy). The browser
+    # therefore needs the Guide to return Access-Control-Allow-Origin for the frontend's web origin.
+    # Comma-separated allow-list, configurable per environment (prod sets its real origin). NEVER a
+    # "*"-with-credentials: these calls carry no credentials, so a specific-origin allow-list is the
+    # correct, safe choice. NON-secret — just which web origins may read the Guide's public responses.
+    cors_origins: str = "http://localhost:3000,http://localhost:3001"
+
     # (b) the Guide's OWN read-only approved-doc index — a FILE-BACKED index built by
     #     guide/build_index.py from guide/approved_docs/. NOT pgvector, NOT the app's
     #     document_chunk. A local path, no credential.

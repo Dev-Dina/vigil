@@ -1,14 +1,20 @@
 """Seed for demonstrable isolation (domain.md entities; CLAUDE.md sacred-test fixture).
 
-Creates:
-- Sponsor A and Sponsor B (tenant roots), each with one trial, one site.
-- One coordinator per sponsor, scoped to that sponsor's site/trial.
+Creates (Gate SEED-DEMO — a demo-worthy multi-trial cohort):
+- Sponsor A and Sponsor B (tenant roots), each with TWO trials, a site each (4 trials total).
+- ~9 participants per trial (~36 total), each bridged to a synthetic trajectory ("low") or given a
+  PLANTED accruing missed-visit sequence ("medium"/"high") — the band SPREAD is produced by the REAL
+  champion at scoring (PREP step), never hand-set. The trial-1 / first participant of each sponsor is
+  the canonical fixture (A-0001 / B-0001) the spine tests pin.
+- One coordinator per sponsor, scoped to that sponsor's trial-1 site (sees their site's slice); the
+  per-sponsor SPONSOR_OVERSIGHT (oversight.a / oversight.b) sees that sponsor's FULL multi-trial cohort.
 - One PI on Sponsor A's site/trial (site role).
 - One CRO with one study manager staffed on Sponsor A ONLY (single assignment_grant)
   and one CRA/monitor narrowed to a specific site within Sponsor A's trial.
-- One platform admin and one auditor.
-- One participant per sponsor (leak is visible: A's coordinator / CRO user see only A;
-  nobody crosses the sponsor wall).
+- One platform admin and one auditor; the MLOps + LLMOps platform-tier ops roles.
+- t2d routing: champion (sequence_v1.1:demo) + shadow (structural_v1.0:t2d) + challenger
+  (sequence_v1.2:demo), mirrored into the model_registry catalog (the full governance story).
+- Cross-tenant leak stays visible: A's coordinator / CRO user see only A; nobody crosses the wall.
 
 All writes go through repositories on a platform-privileged session (bootstrap only).
 Run: uv run python -m vigil.seed
@@ -35,6 +41,7 @@ from vigil.core.security import hash_password
 from vigil.db.models import (
     AssignmentGrant,
     Engagement,
+    ModelRegistry,
     Participant,
     RoutingState,
     Site,
@@ -200,6 +207,120 @@ def _seed_engagement(
     return len(new_rows)
 
 
+# --- Demo cohort shape (Gate SEED-DEMO) --------------------------------------------------------
+# Each sponsor gets 2 trials; each trial _PARTICIPANTS_PER_TRIAL participants. The band SPREAD is
+# produced by the REAL champion (NEVER hand-set): a "low" participant is bridged to a synthetic
+# trajectory (the cohort is mostly low-dropout), while "medium"/"high" carry a PLANTED accruing
+# missed-visit sequence (the Gate 9.7 demo-loop signal) the real calibrated LSTM scores up. Tuned so
+# each sponsor lands ~3 high + a few medium + mostly low, and each coordinator's HOME trial (trial 1)
+# carries exactly ONE high — a small, legible at-risk set. Every row stays SYNTHETIC-labeled +
+# coded-ref only (no names/PII). Scoring is a PREP step (trigger score_trial per trial) — the seed
+# stays hermetic (no torch) so the spine can seed it every session.
+_PARTICIPANTS_PER_TRIAL = 9
+_TRIAL1_PROFILES = (
+    "low",
+    "low",
+    "medium",
+    "low",
+    "high",
+    "low",
+    "medium",
+    "low",
+    "low",
+)
+_TRIAL2_PROFILES = (
+    "low",
+    "high",
+    "low",
+    "medium",
+    "low",
+    "high",
+    "low",
+    "medium",
+    "low",
+)
+# Planted accruing missed-visit sequences (2 attended → then consecutive misses). Under the real
+# calibrated champion: ~5 consecutive → medium (>0.3; a couple cross 0.6 under some trial contexts),
+# ~12 consecutive → high (>0.6). NOT a hand-set band — the pattern drives the model; the model
+# assigns the band (thresholds >0.6 high, >0.3 med).
+_PLANT_PATTERN: dict[str, list[bool]] = {
+    "medium": [False, False] + [True] * 5,
+    "high": [False, False] + [True] * 12,
+}
+_PLANT_SPACING_DAYS = 28  # ~monthly visits
+
+
+def _seed_planted_engagement(
+    *,
+    sponsor_id: uuid.UUID,
+    participant_id: uuid.UUID,
+    trial_id: uuid.UUID,
+    site_id: uuid.UUID,
+    profile: str,
+    idx: int,
+) -> None:
+    """Plant a synthetic accruing missed-visit trajectory + demo-shape covariates for a demo
+    participant so the REAL champion scores it up. Mirrors scripts.demo_clinical_ops_loop: a
+    literature-shaped PLANTED signal — every engagement row synthetic=True, NO hand-set band.
+
+    enrolled_at is anchored to the trajectory START (FIX-5), varied per ``idx`` so days-enrolled
+    differs, and placed far enough in the past that the LAST visit stays strictly before now() (the
+    feature-time leakage guard rejects any visit at/after the decision time).
+    """
+    pattern = _PLANT_PATTERN[profile]
+    # base_days_ago > span (= spacing * (len-1)); high span = 28*13 = 364, so 400+ keeps every
+    # visit in the past. The per-idx stagger spreads enrolled_at across the cohort.
+    base_days_ago = 400 + idx * 13
+    base = datetime.now(tz=timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ) - timedelta(days=base_days_ago)
+
+    cum = cons = 0
+    eng_rows: list[dict] = []
+    for vi, missed in enumerate(pattern):
+        if missed:
+            cum += 1
+            cons += 1
+        else:
+            cons = 0
+        eng_rows.append(
+            {
+                "visit_index": vi,
+                "visit_timestamp": base + timedelta(days=_PLANT_SPACING_DAYS * vi),
+                "attended": not missed,
+                "missed": missed,
+                "cumulative_missed": cum,
+                "consecutive_missed": cons,
+            }
+        )
+
+    with sponsor_bootstrap_session(str(sponsor_id)) as session:
+        p = session.get(Participant, participant_id)
+        assert p is not None, f"planted participant {participant_id} not found in seed"
+        # FIX-5: enrolled_at == trajectory start (not the seed-run moment). Demo-shape covariates,
+        # varied per idx so the cohort is not a single repeated row; all clearly synthetic.
+        p.enrolled_at = base
+        p.age_years = 55.0 + (idx * 3) % 30
+        p.hba1c_pct = round(6.8 + ((idx * 7) % 10) * 0.2, 1)
+        p.bmi = 25.0 + (idx * 5) % 12
+        p.sex = "Female" if idx % 2 else "Male"
+        p.arm_type = "Placebo Comparator" if idx % 2 else "Active Comparator"
+        session.flush()
+        for r in eng_rows:
+            session.add(
+                Engagement(
+                    id=uuid.uuid4(),
+                    sponsor_id=sponsor_id,
+                    participant_id=participant_id,
+                    trial_id=trial_id,
+                    site_id=site_id,
+                    synthetic=True,
+                    **r,
+                )
+            )
+        session.flush()
+
+
 def _add_user(session, *, email, role, **kw) -> User:  # type: ignore[no-untyped-def]
     user = User(
         email=email,
@@ -212,42 +333,63 @@ def _add_user(session, *, email, role, **kw) -> User:  # type: ignore[no-untyped
     return user
 
 
-def _seed_sponsor_tenant_rows(
-    sponsor_id: uuid.UUID, prefix: str
-) -> dict[str, uuid.UUID]:
-    """Insert one trial/site/participant under a sponsor-bound session.
+def _build_sponsor_cohort(sponsor_id: uuid.UUID, prefix: str) -> dict:
+    """Insert TWO trials (each with a site) + a spread of participants under a sponsor-bound session.
 
-    RLS binds to that sponsor. UUIDs returned so the platform pass can FK to them.
+    RLS binds to that sponsor. Participants are bare rows (coded-ref only, NO hand-set band — the
+    denormalized risk columns default low/0.0 and are filled by the REAL champion at scoring). Each
+    descriptor carries its trajectory ``profile`` (low → synthetic-bridge; medium/high → planted) so
+    the engagement pass can drive an honest, model-produced band spread. The trial-1 / first
+    participant is the canonical fixture (``{prefix}-0001``) the spine tests pin.
     """
-    trial_id = uuid.uuid4()
-    site_id = uuid.uuid4()
-    participant_id = uuid.uuid4()
-    risk = (0.82, "high") if prefix == "A" else (0.40, "medium")
+    out: dict = {"participants": []}
+    seq = 0
     with sponsor_bootstrap_session(str(sponsor_id)) as session:
-        session.add(Trial(id=trial_id, sponsor_id=sponsor_id, name=f"Trial {prefix}1"))
-        session.flush()
-        session.add(
-            Site(
-                id=site_id,
-                sponsor_id=sponsor_id,
-                trial_id=trial_id,
-                name=f"Site {prefix}1",
+        for ti, (label, profiles) in enumerate(
+            (("1", _TRIAL1_PROFILES), ("2", _TRIAL2_PROFILES)), start=1
+        ):
+            trial_id = uuid.uuid4()
+            site_id = uuid.uuid4()
+            session.add(
+                Trial(id=trial_id, sponsor_id=sponsor_id, name=f"Trial {prefix}{label}")
             )
-        )
-        session.flush()
-        session.add(
-            Participant(
-                id=participant_id,
-                sponsor_id=sponsor_id,
-                trial_id=trial_id,
-                site_id=site_id,
-                coded_ref=f"{prefix}-0001",
-                risk_score=risk[0],
-                risk_band=risk[1],
+            session.flush()
+            session.add(
+                Site(
+                    id=site_id,
+                    sponsor_id=sponsor_id,
+                    trial_id=trial_id,
+                    name=f"Site {prefix}{label}",
+                )
             )
-        )
-        session.flush()
-    return {"trial": trial_id, "site": site_id, "participant": participant_id}
+            session.flush()
+            out[f"trial{ti}"] = trial_id
+            out[f"site{ti}"] = site_id
+            for profile in profiles:
+                seq += 1
+                participant_id = uuid.uuid4()
+                session.add(
+                    Participant(
+                        id=participant_id,
+                        sponsor_id=sponsor_id,
+                        trial_id=trial_id,
+                        site_id=site_id,
+                        coded_ref=f"{prefix}-{seq:04d}",
+                        status="active",
+                    )
+                )
+                session.flush()
+                out["participants"].append(
+                    {
+                        "id": participant_id,
+                        "trial": trial_id,
+                        "site": site_id,
+                        "profile": profile,
+                        "coded_ref": f"{prefix}-{seq:04d}",
+                        "idx": seq,
+                    }
+                )
+    return out
 
 
 def seed() -> dict[str, str]:
@@ -264,9 +406,21 @@ def seed() -> dict[str, str]:
         cro_id=str(cro_id), sponsor_a=str(sponsor_a_id), sponsor_b=str(sponsor_b_id)
     )
 
-    # 2) Each sponsor's operational rows, inserted bound to that sponsor (RLS enforced).
-    tenant_a = _seed_sponsor_tenant_rows(sponsor_a_id, "A")
-    tenant_b = _seed_sponsor_tenant_rows(sponsor_b_id, "B")
+    # 2) Each sponsor's operational cohort (2 trials × a spread of participants), bound to that
+    #    sponsor (RLS enforced). The trial-1 / first participant stays the canonical fixture the
+    #    spine tests pin (participant_a/trial_a/site_a unchanged); trial 2 is the second site.
+    cohort_a = _build_sponsor_cohort(sponsor_a_id, "A")
+    cohort_b = _build_sponsor_cohort(sponsor_b_id, "B")
+    tenant_a = {
+        "trial": cohort_a["trial1"],
+        "site": cohort_a["site1"],
+        "participant": cohort_a["participants"][0]["id"],
+    }
+    tenant_b = {
+        "trial": cohort_b["trial1"],
+        "site": cohort_b["site1"],
+        "participant": cohort_b["participants"][0]["id"],
+    }
     ids.update(
         trial_a=str(tenant_a["trial"]),
         site_a=str(tenant_a["site"]),
@@ -274,6 +428,11 @@ def seed() -> dict[str, str]:
         trial_b=str(tenant_b["trial"]),
         site_b=str(tenant_b["site"]),
         participant_b=str(tenant_b["participant"]),
+        # Second trial/site per sponsor (the multi-trial demo; coord stays on trial 1).
+        trial_a2=str(cohort_a["trial2"]),
+        site_a2=str(cohort_a["site2"]),
+        trial_b2=str(cohort_b["trial2"]),
+        site_b2=str(cohort_b["site2"]),
     )
 
     # 3) Users + single CRO grant (cross-tenant by design → platform bootstrap session).
@@ -400,71 +559,142 @@ def seed() -> dict[str, str]:
     _seed_score(sponsor_a_id, tenant_a, ids, "score_a")
     _seed_score(sponsor_b_id, tenant_b, ids, "score_b")
 
-    # 5) Seed bridge: copy synthetic T2D engagement trajectories to demo participants.
-    #    Mapping rule: synthetic_pid = uint32(MD5(uuid.bytes + b"seed-bridge-v1")[:4]) % n.
-    #    Timestamps anchored so the last visit precedes now() (no future-dated visits);
-    #    miss_probability withheld (latent hazard, inv 4).
-    #    Each demo UUID maps to exactly one synthetic trajectory; same UUID → same result always.
+    # 5) Engagement pass — give EVERY seeded participant a trajectory the REAL model can score:
+    #    "low" → bridge to a synthetic T2D trajectory (MD5 map, mostly low-dropout); "medium"/"high"
+    #    → a PLANTED accruing missed-visit sequence the real champion scores up. Timestamps anchored
+    #    so the last visit precedes now() (no future-dated visits); every row synthetic=True. No
+    #    hand-set band — bands appear when score_trial runs at PREP (the seed stays torch-free).
     eng_df = pd.read_parquet(_SYNTH_DIR / "engagement.parquet")
     par_df = pd.read_parquet(_SYNTH_DIR / "participants.parquet")
     n_synth = len(par_df)
-    for demo_pid_str, _sponsor_id, _tenant in [
-        (ids["participant_a"], sponsor_a_id, tenant_a),
-        (ids["participant_b"], sponsor_b_id, tenant_b),
-    ]:
-        demo_uuid = uuid.UUID(demo_pid_str)
-        synthetic_pid = _map_synthetic_pid(demo_uuid, n_synth)
-        n_inserted = _seed_engagement(
-            sponsor_id=_sponsor_id,
-            participant_id=demo_uuid,
-            trial_id=_tenant["trial"],
-            site_id=_tenant["site"],
-            synthetic_pid=synthetic_pid,
-            eng_df=eng_df,
-            par_df=par_df,
-        )
-        log.info(
-            "seed.engagement",
-            extra={
-                "extra": {
-                    "participant": demo_pid_str,
-                    "synthetic_pid": synthetic_pid,
-                    "inserted": n_inserted,
-                }
-            },
-        )
+    n_low = n_planted = 0
+    for cohort, _sponsor_id in ((cohort_a, sponsor_a_id), (cohort_b, sponsor_b_id)):
+        for d in cohort["participants"]:
+            if d["profile"] == "low":
+                synthetic_pid = _map_synthetic_pid(d["id"], n_synth)
+                _seed_engagement(
+                    sponsor_id=_sponsor_id,
+                    participant_id=d["id"],
+                    trial_id=d["trial"],
+                    site_id=d["site"],
+                    synthetic_pid=synthetic_pid,
+                    eng_df=eng_df,
+                    par_df=par_df,
+                )
+                n_low += 1
+            else:
+                _seed_planted_engagement(
+                    sponsor_id=_sponsor_id,
+                    participant_id=d["id"],
+                    trial_id=d["trial"],
+                    site_id=d["site"],
+                    profile=d["profile"],
+                    idx=d["idx"],
+                )
+                n_planted += 1
+    n_participants = len(cohort_a["participants"]) + len(cohort_b["participants"])
+    log.info(
+        "seed.engagement",
+        extra={"extra": {"low_bridged": n_low, "planted": n_planted}},
+    )
     ids.update(
+        # Retained for compatibility: the canonical participants are "low" (bridged) — their map.
         seed_bridge_a_synthetic_pid=str(
             _map_synthetic_pid(uuid.UUID(ids["participant_a"]), n_synth)
         ),
         seed_bridge_b_synthetic_pid=str(
             _map_synthetic_pid(uuid.UUID(ids["participant_b"]), n_synth)
         ),
+        participants_total=str(n_participants),
+        trials_total="4",
     )
 
-    # 6) Routing state: champion + shadow rows for the demo regime (t2d).
-    #    Champion: sequence LSTM (B2b); shadow: structural GBT (B2c).
-    #    UNIQUE(regime, role) — one champion + one shadow per regime at a time.
+    # 6) Routing state + registry: the full champion/challenger/shadow governance story for t2d.
+    #    routing_state is the live PROJECTION (UNIQUE(regime, role) — one of each role); model_registry
+    #    is the durable CATALOG with the SUPPLIED offline metrics + provenance (recorded, never
+    #    computed; provenance='architecture_validation' — synthetic method validity, NOT a clinical
+    #    claim). The challenger (sequence_v1.2:demo) is registered for the governance demo only; it is
+    #    NOT scored (score_trial loads champion + shadow only) and never reaches the champion surface.
+    champion_mv, shadow_mv, challenger_mv = (
+        "sequence_v1.1:demo",
+        "structural_v1.0:t2d",
+        "sequence_v1.2:demo",
+    )
+    champion_card = "data/models/t2d/model_card.md"
+    shadow_card = "data/models/t2d/model_card_structural.md"
     with platform_session() as session:
-        session.add(
-            RoutingState(
-                regime="t2d",
-                role="champion",
-                model_version="sequence_v1.1:demo",
-                model_card_ref="data/models/t2d/model_card.md",
-            )
+        session.add_all(
+            [
+                RoutingState(
+                    regime="t2d",
+                    role="champion",
+                    model_version=champion_mv,
+                    model_card_ref=champion_card,
+                ),
+                RoutingState(
+                    regime="t2d",
+                    role="shadow",
+                    model_version=shadow_mv,
+                    model_card_ref=shadow_card,
+                ),
+                RoutingState(
+                    regime="t2d",
+                    role="challenger",
+                    model_version=challenger_mv,
+                    model_card_ref=champion_card,
+                ),
+            ]
         )
-        session.add(
-            RoutingState(
-                regime="t2d",
-                role="shadow",
-                model_version="structural_v1.0:t2d",
-                model_card_ref="data/models/t2d/model_card_structural.md",
-            )
+        # Catalog rows (Gate M3): SUPPLIED offline metrics from the model cards (champion/shadow) +
+        # a clearly-synthetic architecture-validation entry for the demo challenger. All labelled
+        # 'architecture_validation' — synthetic method validity, never a clinical claim.
+        session.add_all(
+            [
+                ModelRegistry(
+                    regime="t2d",
+                    model_version=champion_mv,
+                    status="champion",
+                    artifact_ref="data/models/t2d/sequence_v1.1_demo.pt",
+                    model_card_ref=champion_card,
+                    metrics={
+                        "pr_auc": 0.339,
+                        "brier": 0.07526,
+                        "roc_auc": 0.790061,
+                        "ece": 0.0075,
+                    },
+                    provenance="architecture_validation",
+                    notes="isotonic-calibrated sequence LSTM; synthetic VAL fold (group-disjoint).",
+                ),
+                ModelRegistry(
+                    regime="t2d",
+                    model_version=shadow_mv,
+                    status="shadow",
+                    artifact_ref="data/models/t2d/structural_v1.0_t2d.pkl",
+                    model_card_ref=shadow_card,
+                    metrics={"pr_auc": 0.3425, "brier": 0.1258},
+                    provenance="architecture_validation",
+                    notes="structural GBT shadow; real structural floor (~0.34 PR-AUC) context.",
+                ),
+                ModelRegistry(
+                    regime="t2d",
+                    model_version=challenger_mv,
+                    status="challenger",
+                    artifact_ref="data/models/t2d/sequence_v1.2_demo.pt",
+                    model_card_ref=champion_card,
+                    metrics={"pr_auc": 0.345, "brier": 0.0747, "roc_auc": 0.792},
+                    provenance="architecture_validation",
+                    notes=(
+                        "DEMO challenger registered to exercise the champion/challenger/shadow "
+                        "governance projection; supplied synthetic VAL-fold metrics, awaiting a "
+                        "governed promotion. Not a trained production artifact, not a clinical claim."
+                    ),
+                ),
+            ]
         )
         session.flush()
-    ids["routing_t2d_champion"] = "sequence_v1.1:demo"
-    ids["routing_t2d_shadow"] = "structural_v1.0:t2d"
+    ids["routing_t2d_champion"] = champion_mv
+    ids["routing_t2d_shadow"] = shadow_mv
+    ids["routing_t2d_challenger"] = challenger_mv
 
     log.info("seed.complete", extra={"extra": {"entities": len(ids)}})
     return ids

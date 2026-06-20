@@ -19,6 +19,7 @@ from typing import Callable
 from dataclasses import asdict
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import Engine
@@ -107,6 +108,20 @@ def create_app(
     if cache is None and cfg.response_cache_enabled:
         cache = ResponseCache(max_size=cfg.response_cache_max_size)
     app = FastAPI(title="Vigil Guide", version="0.3.0")
+
+    # CORS for the browser-DIRECT frontend calls (lib/guide.ts). The frontend talks to the Guide
+    # straight from the browser with NO JWT — the isolation design — so the Guide must return the
+    # Access-Control-Allow-Origin header for the configured frontend origin(s). Specific-origin
+    # allow-list (NEVER "*"-with-credentials); these calls carry no credentials. Adds response
+    # headers ONLY — no app/vigil coupling, no new data path; the Guide still reads only approved docs.
+    cors_origins = [o.strip() for o in cfg.cors_origins.split(",") if o.strip()]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type"],
+    )
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
