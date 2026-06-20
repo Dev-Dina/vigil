@@ -69,6 +69,25 @@ class DocHit:
     distance: float
 
 
+@dataclass(frozen=True, slots=True)
+class CohortRiskRow:
+    """One scope-visible at-risk participant for the operational TRIAGE tool (Gate OPS-ASSIST).
+
+    Coded refs only; risk facts come through the champion allowlist (never shadow/challenger).
+    ``needs_intervention`` = a high-risk participant with NO intervention logged yet. This is
+    operational status (who's flagged / who has an open follow-up), NOT clinical advice.
+    """
+
+    participant_id: str
+    coded_ref: str | None  # identity roles only (same gate as participant detail)
+    risk_band: str
+    risk_score: float
+    synthetic: bool
+    top_factor: str | None
+    intervention_logged: bool
+    needs_intervention: bool
+
+
 @dataclass(slots=True)
 class ToolContext:
     """The ONLY handle the tools accept. Carries the resolved full scope + its scope-bound
@@ -160,6 +179,61 @@ def participant_risk_facts(ctx: ToolContext, participant_id: str) -> RiskFacts |
         synthetic=champ.synthetic,
         top_factors=list(champ.top_factors),
     )
+
+
+def cohort_at_risk(
+    ctx: ToolContext, *, bands: tuple[str, ...] = ("high",), limit: int = 25
+) -> list[CohortRiskRow]:
+    """The caller's OWN scoped at-risk cohort — operational TRIAGE, never clinical advice.
+
+    REUSES the existing scoped at-risk read path (the cohort/at-risk surface): the RLS-scoped
+    ``list_participants`` (axis 1: cross-tenant) + the dual-axis ``scope.permits`` site narrowing
+    (axis 2: cross-site, exactly like ``participant_risk_facts``) + the champion-only score read.
+    Returns ONLY participants the caller's scope already permits — a site coordinator sees only
+    their site; cross-tenant is impossible by construction (no new SQL, no scope widening, no LLM).
+    A platform caller (no tenant tuples) reaches no rows. ``needs_intervention`` = a high-risk
+    participant with NO intervention logged yet. Coded refs surface only for identity roles.
+    """
+    from vigil.domain import IDENTITY_ROLES  # local: avoid import cycle at module load
+
+    # axis 1 (RLS): sponsor-scoped participants; axis 2: narrow to the caller's permitted site set.
+    rows = [
+        p
+        for p in tenancy_repo.list_participants(ctx.session, risk_band=None, limit=None)
+        if p.risk_band in bands
+        and ctx.scope.permits(
+            ScopeTuple(
+                sponsor_id=str(p.sponsor_id),
+                trial_id=str(p.trial_id),
+                site_id=str(p.site_id),
+            )
+        )
+    ]
+    rows.sort(key=lambda p: p.risk_score, reverse=True)
+    rows = rows[:limit]
+
+    # Champion-only facts (synthetic + top factor) — a shadow/challenger row can never surface.
+    champ = scoring_repo.champion_scores_by_participant(
+        ctx.session, [p.id for p in rows], champion_versions=ctx.champion_versions
+    )
+    is_identity = ctx.scope.role in IDENTITY_ROLES
+    out: list[CohortRiskRow] = []
+    for p in rows:
+        c = champ.get(p.id)
+        logged = len(tenancy_repo.list_interventions(ctx.session, p.id)) > 0
+        out.append(
+            CohortRiskRow(
+                participant_id=str(p.id),
+                coded_ref=p.coded_ref if is_identity else None,
+                risk_band=p.risk_band,
+                risk_score=p.risk_score,
+                synthetic=c.synthetic if c is not None else True,
+                top_factor=(list(c.top_factors)[0] if c and c.top_factors else None),
+                intervention_logged=logged,
+                needs_intervention=(p.risk_band == "high" and not logged),
+            )
+        )
+    return out
 
 
 def search_documents(ctx: ToolContext, query: str, *, k: int = 5) -> list[DocHit]:

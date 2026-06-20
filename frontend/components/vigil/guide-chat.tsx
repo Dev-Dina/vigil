@@ -21,25 +21,6 @@ interface ChatMessage {
   citations?: GuideCitation[]
 }
 
-function CitationChips({ citations }: { citations: GuideCitation[] }) {
-  if (citations.length === 0) return null
-  return (
-    <div className="mt-2 flex flex-wrap gap-1.5">
-      {citations.map((c, i) => (
-        <span
-          key={`${c.source_id}-${c.locator}-${i}`}
-          className="inline-flex items-center gap-1 rounded border border-border bg-background px-2 py-0.5 font-mono text-[11px] text-muted-foreground"
-          title={c.source_type}
-        >
-          {c.source_id}
-          <span className="text-border">·</span>
-          {c.locator}
-        </span>
-      ))}
-    </div>
-  )
-}
-
 const SUGGESTIONS = [
   "What does Vigil do?",
   "How does it surface dropout risk?",
@@ -187,7 +168,8 @@ export function GuideChat({ className }: { className?: string }) {
                   )}
                 >
                   {m.content}
-                  {m.citations && <CitationChips citations={m.citations} />}
+                  {/* Citation DATA still flows on the message (m.citations) — the answer stays
+                      grounded; the Guide chat just does not render the raw citation chips. */}
                 </div>
               </div>
             ),

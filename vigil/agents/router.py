@@ -22,7 +22,9 @@ from vigil.agents.llm import LLMClient, LLMMessage
 AGENT_DEFINITIONS: dict[str, str] = {
     "retention": (
         "Participant retention / dropout-risk explanations — 'why is participant X flagged', "
-        "what drives a risk score, a participant's risk trajectory, retention method questions."
+        "what drives a risk score, a participant's risk trajectory, retention method questions; "
+        "also WHICH participants in the caller's own cohort are at risk or need follow-up/"
+        "intervention (a scoped operational triage list — status only, NOT clinical advice)."
     ),
     "report": (
         "Scoped reporting / aggregates — counts and distributions across the caller's cohort "

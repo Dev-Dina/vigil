@@ -13,14 +13,37 @@ hallucination.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Literal
 
 from vigil.agents.guardrails import fence_untrusted
 from vigil.agents.llm import LLMClient, LLMMessage
-from vigil.agents.tools import ToolContext, participant_risk_facts, search_documents
+from vigil.agents.tools import (
+    ToolContext,
+    cohort_at_risk,
+    participant_risk_facts,
+    search_documents,
+)
 
 _REFUSAL = "I don't have grounded information for that within your scope."
+
+# Deterministic (NOT LLM) intent match for the scoped triage tool (Gate OPS-ASSIST): "who needs
+# intervention", "who's at risk in my cohort", "which participants need follow-up". Keyword-gated so
+# the cohort tool is invoked ONLY for cohort/triage questions, never on every turn.
+_COHORT_TRIAGE = re.compile(
+    r"(who\b[^?]*\b(?:need|needs|at[- ]risk|high[- ]risk|flagged|follow[- ]?up|"
+    r"intervention|contact|outreach|attention|triage)"
+    r"|which\s+participants?\b[^?]*\b(?:at[- ]risk|high[- ]risk|need|follow|intervention|flag)"
+    r"|\b(?:my|our)\s+cohort\b"
+    r"|\bneeds?\s+(?:an?\s+)?(?:intervention|follow[- ]?up|outreach))",
+    re.IGNORECASE,
+)
+
+
+def _is_cohort_triage_question(question: str) -> bool:
+    """True for scoped 'who's at risk / who needs follow-up in my cohort' triage questions."""
+    return bool(_COHORT_TRIAGE.search(question))
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +98,35 @@ def grounded_answer(
                     f"risk_band={facts.risk_band} top_factors={facts.top_factors} "
                     f"model_version={facts.model_version} synthetic={facts.synthetic}",
                     label="participant_risk",
+                )
+            )
+
+    # 1b. Scoped cohort TRIAGE (Gate OPS-ASSIST): "who needs intervention / who's at risk in MY
+    #     cohort". Deterministic intent match (not the LLM) → inject the caller's OWN scoped at-risk
+    #     list as grounded DATA. cohort_at_risk reads ONLY under ctx.scope (RLS + dual-axis), coded
+    #     refs only, champion-only facts — operational triage, never clinical advice.
+    if participant_id is None and _is_cohort_triage_question(question):
+        at_risk = cohort_at_risk(ctx)
+        if at_risk:
+            citations.append(
+                {
+                    "source_type": "structured",
+                    "source_id": "cohort:at_risk",
+                    "locator": f"n={len(at_risk)} band=high",
+                }
+            )
+            cohort_lines = "\n".join(
+                f"participant={r.coded_ref or r.participant_id} band={r.risk_band} "
+                f"score={r.risk_score} top_factor={r.top_factor} "
+                f"intervention_logged={r.intervention_logged} "
+                f"needs_intervention={r.needs_intervention} synthetic={r.synthetic}"
+                for r in at_risk
+            )
+            context_blocks.append(
+                fence_untrusted(
+                    "Caller's scoped at-risk cohort (high-risk; coded refs only; operational "
+                    "triage, NOT clinical advice):\n" + cohort_lines,
+                    label="cohort_at_risk",
                 )
             )
 
