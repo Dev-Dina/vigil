@@ -19,6 +19,26 @@ interface Message {
   isError?: boolean
   toolCalls?: ToolCall[]
   timestamp?: string
+  // The routed agent (retention/report/operations) that handled this turn; null/undefined for a
+  // refusal (no agent dispatched). Read straight off the AssistantTurn response — no client logic.
+  agent?: string | null
+}
+
+// Honest label for the routed agent; falls back to the raw name for any future agent.
+const AGENT_LABELS: Record<string, string> = {
+  retention: "Retention agent",
+  report: "Report agent",
+  operations: "Operations agent",
+}
+
+function AgentBadge({ agent }: { agent: string }) {
+  const label = AGENT_LABELS[agent] ?? `${agent} agent`
+  return (
+    <span className="inline-flex w-fit items-center gap-1.5 rounded-full border-[0.5px] border-status-calm/30 bg-status-calm/10 px-2 py-0.5 text-[11px] font-medium text-status-calm">
+      <span className="h-1.5 w-1.5 rounded-full bg-status-calm" />
+      {label}
+    </span>
+  )
 }
 
 function ToolCallChip({ tool }: { tool: ToolCall }) {
@@ -55,11 +75,13 @@ function AssistantMessage({
   blocked,
   isError,
   toolCalls,
+  agent,
 }: {
   content: string
   blocked?: boolean
   isError?: boolean
   toolCalls?: ToolCall[]
+  agent?: string | null
 }) {
   // Parse content to render monospace numbers
   const renderContent = (text: string) => {
@@ -79,6 +101,8 @@ function AssistantMessage({
 
   return (
     <div className="flex flex-col gap-1.5">
+      {/* Which agent handled the turn — shown for an answered turn (no agent on a refusal). */}
+      {!blocked && agent && <AgentBadge agent={agent} />}
       {blocked && (
         <span className="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-status-watch/10 text-status-watch">
           Refused by guardrail
@@ -191,6 +215,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
                 ...m,
                 content: finalTurn.content,
                 blocked: finalTurn.guardrail_decision === "blocked",
+                agent: finalTurn.agent ?? null,
                 toolCalls: undefined,
                 timestamp: new Date(finalTurn.created_at).toLocaleTimeString([], {
                   hour: "numeric",
@@ -256,7 +281,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
       {/* Panel */}
       <div
         className={cn(
-          "fixed top-0 right-0 z-50 h-full w-[400px] max-w-full bg-card border-l border-border shadow-xl",
+          "fixed top-0 right-0 z-50 h-full w-[440px] max-w-full bg-card border-l border-border shadow-xl",
           "flex flex-col",
           "transition-transform duration-300 ease-out",
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -304,6 +329,7 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
                     blocked={message.blocked}
                     isError={message.isError}
                     toolCalls={message.toolCalls}
+                    agent={message.agent}
                   />
                 )}
               </div>
@@ -322,13 +348,13 @@ export function AssistantPanel({ className }: AssistantPanelProps) {
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about participants, reports, or operations..."
                 className={cn(
-                  "w-full min-h-[44px] max-h-[120px] px-3 py-2.5 pr-10",
+                  "w-full min-h-[64px] max-h-[120px] px-3 py-2.5 pr-10",
                   "bg-background border border-border rounded-lg",
                   "text-sm text-foreground placeholder:text-muted-foreground",
                   "focus:outline-none focus:ring-1 focus:ring-ring",
                   "resize-none"
                 )}
-                rows={1}
+                rows={2}
               />
             </div>
             <button

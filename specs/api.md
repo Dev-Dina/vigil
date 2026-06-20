@@ -237,6 +237,10 @@ class AssistantTurn(BaseModel):
     role: Literal["user", "assistant"]
     content: str                            # redacted at rest
     guardrail_decision: Literal["allowed", "blocked"]
+    agent: str | None = None                # routed agent (retention/report/operations) for an
+                                            # ANSWERED turn; None for a user turn or a guardrail/
+                                            # router refusal. Surfaces message_events.route_or_agent;
+                                            # the router/classification is unchanged.
     created_at: datetime
 ```
 

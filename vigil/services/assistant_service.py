@@ -46,6 +46,10 @@ class AssistantTurn(BaseModel):
     role: Literal["user", "assistant"]
     content: str  # redacted at rest
     guardrail_decision: Literal["allowed", "blocked"]
+    # The routed agent (retention/report/operations) that handled an ANSWERED assistant turn;
+    # None for a user turn or a guardrail/router refusal (no agent dispatched). Surfaces the value
+    # the worker already records in message_events.route_or_agent — the router is unchanged.
+    agent: str | None = None
     created_at: datetime
 
 
@@ -118,8 +122,21 @@ def _turn_from_result(result: dict) -> AssistantTurn:
         role="assistant",
         content=result["content"],
         guardrail_decision=result["guardrail_decision"],
+        agent=result.get(
+            "agent"
+        ),  # None for a refusal; the routed agent for an answered turn
         created_at=datetime.fromisoformat(result["created_at"]),
     )
+
+
+def _agent_from_route(route_or_agent: str) -> str | None:
+    """The bare routed agent from a stored ``route_or_agent`` (``"agent:retention"`` → ``"retention"``).
+
+    Returns None for a non-agent route (``guardrail:*`` / ``router:*``) — no agent was dispatched.
+    Purely parses the already-persisted value; no routing logic here.
+    """
+    prefix = "agent:"
+    return route_or_agent[len(prefix) :] if route_or_agent.startswith(prefix) else None
 
 
 def list_messages(scope: Scope, conversation_id: str) -> list[AssistantTurn]:
@@ -161,6 +178,7 @@ def list_messages(scope: Scope, conversation_id: str) -> list[AssistantTurn]:
                 role="assistant",
                 content=r.redacted_assistant_msg,
                 guardrail_decision=r.guardrail_decision,  # type: ignore[arg-type]
+                agent=_agent_from_route(r.route_or_agent),
                 created_at=ts,
             )
         )

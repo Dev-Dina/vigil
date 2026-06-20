@@ -1109,7 +1109,12 @@ async def run_assistant_turn(
     created_at = datetime.now(tz=timezone.utc)
 
     def _turn(
-        text: str, decision: str, status: str, citations: list[Any]
+        text: str,
+        decision: str,
+        status: str,
+        citations: list[Any],
+        *,
+        agent: str | None = None,
     ) -> dict[str, Any]:
         return {
             "conversation_id": conversation_id,
@@ -1117,6 +1122,10 @@ async def run_assistant_turn(
             "content": text,
             "guardrail_decision": decision,
             "status": status,
+            # The routed agent (retention/report/operations) — already decided + persisted to
+            # message_events.route_or_agent; surfaced here too. None for a guardrail/router refusal
+            # (no agent dispatched). This threads an existing value; the router is unchanged.
+            "agent": agent,
             "citations": citations,
             "created_at": created_at.isoformat(),
         }
@@ -1269,4 +1278,6 @@ async def run_assistant_turn(
             prompt_tokens=decision.prompt_tokens + ans.prompt_tokens,
             completion_tokens=decision.completion_tokens + ans.completion_tokens,
         )
-        return _turn(redacted_answer, "allowed", ans.status, ans.citations)
+        return _turn(
+            redacted_answer, "allowed", ans.status, ans.citations, agent=decision.agent
+        )

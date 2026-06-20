@@ -122,6 +122,8 @@ def test_done_when_in_scope_answered_with_citations(
     )
     assert res["guardrail_decision"] == "allowed"
     assert res["status"] == "ok"
+    # The routed agent is surfaced in the turn RESULT (not just message_events.route_or_agent).
+    assert res["agent"] == "retention"
     assert res["citations"], "answered turn must carry citations (grounded)"
     # A structured (champion) citation for the in-scope participant is present.
     assert any(
@@ -148,6 +150,7 @@ def test_clinical_question_blocked_by_guardrail(migrated_db: dict[str, str]) -> 
         llm=llm,
     )
     assert res["guardrail_decision"] == "blocked" and res["status"] == "refused"
+    assert res["agent"] is None, "a guardrail refusal dispatched no agent"
     assert not any("RETENTION" in c for c in llm.calls), (
         "agent must not run on a blocked turn"
     )
@@ -165,8 +168,50 @@ def test_router_refuses_unclassifiable(migrated_db: dict[str, str]) -> None:
         llm=llm,
     )
     assert res["guardrail_decision"] == "blocked" and res["status"] == "refused"
+    assert res["agent"] is None, "a router refusal dispatched no agent"
     rows = _events(ids, res["_conversation_id"])
     assert len(rows) == 1 and rows[0].route_or_agent == "router:refuse"
+
+
+# ---------------------------------------------------------------------------
+# 1b. The routed agent is surfaced END-TO-END in the AssistantTurn response schema
+# ---------------------------------------------------------------------------
+
+
+def test_assistant_turn_response_exposes_routed_agent(
+    migrated_db: dict[str, str],
+) -> None:
+    """The AssistantTurn the client receives carries the routed agent (answered) / None (refusal).
+
+    Proves the surfacing is end-to-end: worker result dict → ``_turn_from_result`` → AssistantTurn.
+    The report/operations agents flow the same path; a refusal carries no agent.
+    """
+    from vigil.services.assistant_service import _turn_from_result
+
+    ids = migrated_db
+    with platform_session() as session:
+        ingest_card_corpus(session, get_embedder())
+
+    for route_to in ("report", "operations"):
+        res = _run(
+            ids,
+            user_id=ids["coordinator_a"],
+            content="How many high-risk participants are there?",
+            llm=ScriptedLLM(route_to=route_to, answer="grounded"),
+        )
+        turn = _turn_from_result(res)
+        assert turn.agent == route_to, (
+            f"{route_to} turn must surface agent={route_to!r}"
+        )
+
+    # A router refusal → the response carries no agent.
+    refusal = _run(
+        ids,
+        user_id=ids["coordinator_a"],
+        content="Tell me a joke about the weather.",
+        llm=ScriptedLLM(route_to="refuse"),
+    )
+    assert _turn_from_result(refusal).agent is None
 
 
 # ---------------------------------------------------------------------------

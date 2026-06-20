@@ -181,14 +181,15 @@ export function TriageTable({
                 <tr
                   key={participant.id}
                   className={cn(
-                    "group border-b border-border transition-colors last:border-b-0 hover:bg-muted/40",
-                    isHighestRisk && "relative"
+                    "group border-b border-border transition-colors last:border-b-0 hover:bg-muted/40"
                   )}
                 >
-                  {isHighestRisk && (
-                    <td className="absolute inset-y-0 left-0 w-1 bg-status-risk" />
-                  )}
-                  <td className={cn("px-4 py-3", isHighestRisk && "pl-5")}>
+                  <td
+                    className={cn(
+                      "px-4 py-3",
+                      isHighestRisk && "border-l-2 border-status-risk"
+                    )}
+                  >
                     <StatusDot status={status} />
                   </td>
                   <td className="px-4 py-3">
@@ -200,7 +201,7 @@ export function TriageTable({
                         {participant.id}
                       </Link>
                       {syntheticIds?.has(participant.id) && (
-                        <span className="inline-flex w-fit items-center rounded border border-amber-400 bg-amber-50 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                        <span className="inline-flex w-fit items-center rounded border border-status-watch/30 bg-status-watch/10 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-status-watch">
                           SYNTHETIC
                         </span>
                       )}

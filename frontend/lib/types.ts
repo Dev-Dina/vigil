@@ -173,6 +173,9 @@ export interface AssistantTurn {
   conversation_id: string
   role: "user" | "assistant"
   content: string // redacted at rest
+  // Routed agent (retention/report/operations) that handled an answered turn; null for a user turn
+  // or a guardrail/router refusal (no agent dispatched). Mirrors message_events.route_or_agent.
+  agent?: string | null
   guardrail_decision: "allowed" | "blocked"
   created_at: string
 }
