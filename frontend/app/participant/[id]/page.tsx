@@ -22,16 +22,65 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { daysSince } from "@/lib/utils"
 import { PLATFORM_ROLES, CAN_LOG_INTERVENTIONS } from "@/lib/role-gates"
+import { groupFactors } from "@/lib/factors"
 import type {
   ParticipantDetail,
   RiskExplanation,
   RiskHistoryPoint,
   InterventionOut,
   InterventionKind,
+  BaselineContext,
 } from "@/lib/types"
 
-function humanizeFactor(tag: string): string {
-  return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+// One baseline covariate cell. SYNTHETIC literature-prior — an imputed value MUST carry the
+// "imputed" badge; nothing here is ever a bare clinical measurement.
+function BaselineItem({
+  label,
+  value,
+  imputed,
+}: {
+  label: string
+  value: string
+  imputed?: boolean
+}) {
+  return (
+    <div>
+      <p className="mb-0.5 text-[11px] text-muted-foreground">{label}</p>
+      <p className="font-mono text-sm text-foreground">{value}</p>
+      {imputed && (
+        <span className="mt-0.5 inline-block rounded-full border-[0.5px] border-status-watch/30 bg-status-watch/10 px-1.5 py-0.5 text-[10px] font-medium text-status-watch">
+          imputed (literature prior)
+        </span>
+      )}
+    </div>
+  )
+}
+
+function BaselineContextCard({ baseline }: { baseline: BaselineContext }) {
+  const num = (v: number | null, suffix = "") => (v == null ? "—" : `${v}${suffix}`)
+  return (
+    <div className="mb-4 rounded border border-border bg-card px-4 py-3">
+      <div className="mb-3 flex items-center gap-2">
+        <p className="text-xs font-medium text-muted-foreground">Baseline context</p>
+        <span className="rounded-full border-[0.5px] border-status-watch/30 bg-status-watch/10 px-1.5 py-0.5 text-[10px] font-medium text-status-watch">
+          synthetic
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+        <BaselineItem label="HbA1c" value={num(baseline.hba1c_pct, "%")} imputed={baseline.hba1c_imputed} />
+        <BaselineItem label="BMI" value={num(baseline.bmi)} imputed={baseline.bmi_imputed} />
+        <BaselineItem label="Age" value={num(baseline.age_years, " yrs")} imputed={baseline.age_imputed} />
+        <BaselineItem label="Sex" value={baseline.sex ?? "—"} />
+        <BaselineItem label="Arm" value={baseline.arm_type ?? "—"} />
+      </div>
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+        Synthetic literature-prior values calibrated to published population statistics — NOT real
+        patient measurements. Values marked{" "}
+        <span className="text-status-watch">imputed</span> are literature-prior estimates. These
+        baseline covariates also feed the scoring model&apos;s context.
+      </p>
+    </div>
+  )
 }
 
 export default function ParticipantDetailPage() {
@@ -86,16 +135,9 @@ export default function ParticipantDetailPage() {
     )
   }
 
-  // Map signed FactorContribution -> ContributingFactors display props.
-  const factors = useMemo(
-    () =>
-      (risk?.factors ?? []).map((f) => ({
-        name: humanizeFactor(f.feature),
-        impact: Math.round(Math.abs(f.contribution) * 100),
-        description: f.contribution >= 0 ? "Increases risk" : "Decreases risk",
-      })),
-    [risk],
-  )
+  // Group the correlated missed-visit channels + emphasize the primary driver (display-layer only;
+  // the model's occlusion numbers are unchanged — see lib/factors).
+  const factors = useMemo(() => groupFactors(risk?.factors ?? []), [risk])
 
   const riskPct = detail ? Math.round(detail.risk_score * 100) : 0
 
@@ -114,7 +156,7 @@ export default function ParticipantDetailPage() {
   // RiskExplanation has factors but no prose; the assistant produces prose.
   // TODO(phase5): replace with assistant-generated explanation (/assistant).
   const explanation = risk
-    ? `Risk score ${riskPct}% over a ${risk.horizon_days}-day horizon (model ${risk.model_version}). Top drivers are listed at left; review with site staff before acting.`
+    ? `Risk score ${riskPct}% over a ${risk.horizon_days}-day horizon (model ${risk.model_version}). Top drivers are listed at left; review with site staff before acting. The score also reflects synthetic baseline context (HbA1c, BMI, age, arm), not visit patterns alone — only the visit-trajectory features receive attribution.`
     : "Loading risk explanation…"
 
   // Non-dismissible synthetic disclosure (dashboard.md): flag-driven, never a toggle. Shown when
@@ -221,6 +263,10 @@ export default function ParticipantDetailPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Baseline context — SYNTHETIC literature-prior covariates (site roles only). Every
+            imputed value carries its own "imputed" badge; the section is labelled synthetic. */}
+        {detail?.baseline && <BaselineContextCard baseline={detail.baseline} />}
 
         {/* Champion risk trajectory (H2b): cross-version, version boundaries VISIBLE.
             RiskTrajectory breaks the line + labels each model change; synthetic points are

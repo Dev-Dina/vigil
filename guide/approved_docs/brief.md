@@ -1,9 +1,10 @@
 # Vigil — Project Brief
 
-Vigil is a **clinical-trial retention-intelligence** platform. It predicts which trial
-participants are at risk of dropping out, ranks the cohort so staff can triage the highest-risk
-participants first, and **explains every flag** — which factors drove a risk score — so a human
-can act on it rather than trust a black box.
+Vigil is a **clinical-trial retention-intelligence** platform. It **surfaces and explains**
+participant dropout **risk** early — ranking the cohort so staff can triage the highest-risk
+participants first and **explaining every flag** (which factors drove a risk score) — so a human
+can act on it rather than trust a black box. It **assists retention**; it does not claim to predict
+who will drop out.
 
 ## The problem
 Participant dropout is one of the most expensive and least predictable risks in a clinical trial.
@@ -12,7 +13,7 @@ usually notice disengagement late. Vigil's goal is to surface that risk **earlie
 reason attached**, so a coordinator can reach out before a participant is lost.
 
 ## What Vigil does
-- **Predicts** per-participant dropout risk and assigns a risk band (high / medium / low).
+- **Surfaces and estimates** per-participant dropout **risk** and assigns a risk band (high / medium / low).
 - **Ranks** the cohort for triage — the riskiest participants rise to the top of the worklist.
 - **Explains** each flag with the contributing factors behind the score.
 - **Audits** every prediction and assistant answer so a reviewer can trace what happened.

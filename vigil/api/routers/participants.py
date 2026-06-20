@@ -34,6 +34,24 @@ class ParticipantIdentity(BaseModel):
     coded_ref: str | None = None
 
 
+class BaselineContext(BaseModel):
+    """SYNTHETIC literature-prior baseline covariates — NOT real measurements. Returned ONLY for
+    site roles (same gate as ``identity``/coded_ref); null otherwise. Each ``*_imputed`` flag marks a
+    literature-prior imputation; the read surface MUST render an imputed value WITH a synthetic/
+    imputed label (never as a bare clinical value). These covariates also feed the scoring model's
+    static context (they move the score), but only the visit-trajectory features receive attribution.
+    """
+
+    age_years: float | None = None
+    age_imputed: bool = False
+    hba1c_pct: float | None = None
+    hba1c_imputed: bool = False
+    bmi: float | None = None
+    bmi_imputed: bool = False
+    sex: str | None = None
+    arm_type: str | None = None
+
+
 class ParticipantDetail(BaseModel):
     participant_id: str
     trial_id: str
@@ -43,6 +61,8 @@ class ParticipantDetail(BaseModel):
     enrolled_at: datetime
     synthetic: bool  # from participant_score.synthetic; always surfaced (dashboard.md)
     identity: ParticipantIdentity | None = None
+    # SYNTHETIC baseline covariates; null unless a site role (same gate as identity). See BaselineContext.
+    baseline: BaselineContext | None = None
 
 
 class FactorContribution(BaseModel):
@@ -152,9 +172,23 @@ async def get_participant(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="participant not found in scope",
         )
+    is_identity = view.coded_ref is not None
     identity: ParticipantIdentity | None = (
-        ParticipantIdentity(coded_ref=view.coded_ref)
-        if view.coded_ref is not None
+        ParticipantIdentity(coded_ref=view.coded_ref) if is_identity else None
+    )
+    # Same gate as identity: baseline covariates surface only for site roles (None otherwise).
+    baseline: BaselineContext | None = (
+        BaselineContext(
+            age_years=view.age_years,
+            age_imputed=view.age_imputed,
+            hba1c_pct=view.hba1c_pct,
+            hba1c_imputed=view.hba1c_imputed,
+            bmi=view.bmi,
+            bmi_imputed=view.bmi_imputed,
+            sex=view.sex,
+            arm_type=view.arm_type,
+        )
+        if is_identity
         else None
     )
     return ParticipantDetail(
@@ -166,6 +200,7 @@ async def get_participant(
         enrolled_at=view.enrolled_at,
         synthetic=view.synthetic,
         identity=identity,
+        baseline=baseline,
     )
 
 

@@ -351,7 +351,13 @@ def _build_sponsor_cohort(sponsor_id: uuid.UUID, prefix: str) -> dict:
             trial_id = uuid.uuid4()
             site_id = uuid.uuid4()
             session.add(
-                Trial(id=trial_id, sponsor_id=sponsor_id, name=f"Trial {prefix}{label}")
+                Trial(
+                    id=trial_id,
+                    sponsor_id=sponsor_id,
+                    # Honest regime hint: the champion is a t2d-regime dropout model. Coded/synthetic,
+                    # no invented sponsor brand; sites stay coded (Site A1, ...).
+                    name=f"T2D Retention - Trial {prefix}{label}",
+                )
             )
             session.flush()
             session.add(

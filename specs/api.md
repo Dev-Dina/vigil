@@ -178,6 +178,12 @@ class ParticipantDetail(BaseModel):
     enrolled_at: datetime
     synthetic: bool                               # from participant_score.synthetic; always surfaced
     identity: ParticipantIdentity | None = None   # populated ONLY for site roles; null otherwise
+    baseline: BaselineContext | None = None       # SYNTHETIC literature-prior covariates; site roles only (same gate as identity)
+class BaselineContext(BaseModel):                 # NOT real measurements — every *_imputed value MUST render with a synthetic/imputed label
+    age_years: float | None = None; age_imputed: bool = False
+    hba1c_pct: float | None = None; hba1c_imputed: bool = False
+    bmi: float | None = None; bmi_imputed: bool = False
+    sex: str | None = None; arm_type: str | None = None
 class RiskExplanation(BaseModel):
     participant_id: str
     risk_score: float

@@ -85,6 +85,20 @@ export interface ParticipantIdentity {
   [key: string]: unknown
 }
 
+// SYNTHETIC literature-prior baseline covariates — NOT real measurements. Returned ONLY for site
+// roles (same gate as `identity`). Each *_imputed flag marks a literature-prior imputation; the UI
+// MUST render an imputed value WITH a synthetic/imputed label (never a bare clinical value).
+export interface BaselineContext {
+  age_years: number | null
+  age_imputed: boolean
+  hba1c_pct: number | null
+  hba1c_imputed: boolean
+  bmi: number | null
+  bmi_imputed: boolean
+  sex: string | null
+  arm_type: string | null
+}
+
 export interface ParticipantDetail {
   participant_id: string
   trial_id: string
@@ -94,6 +108,7 @@ export interface ParticipantDetail {
   enrolled_at: string // ISO datetime
   synthetic: boolean // from participant_score.synthetic; always surfaced
   identity: ParticipantIdentity | null
+  baseline: BaselineContext | null // SYNTHETIC covariates; null unless a site role (same gate as identity)
 }
 
 // api.md references FactorContribution ("signed feature contributions, sorted by

@@ -32,6 +32,18 @@ class ParticipantDetailView:
     enrolled_at: datetime
     synthetic: bool
     coded_ref: str | None  # populated ONLY for site roles; None otherwise
+    # Baseline covariates — SYNTHETIC literature-prior values, NOT real measurements. Gated
+    # IDENTICALLY to coded_ref (site/identity roles only; None for everyone else). The ``*_imputed``
+    # flags mark a literature-prior imputation (db ``*_baseline_imputed``); the read surface MUST
+    # render an imputed value WITH a synthetic/imputed label, never as a bare clinical result.
+    age_years: float | None = None
+    age_imputed: bool = False
+    hba1c_pct: float | None = None
+    hba1c_imputed: bool = False
+    bmi: float | None = None
+    bmi_imputed: bool = False
+    sex: str | None = None
+    arm_type: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +80,8 @@ def get_detail(scope: Scope, participant_id: str) -> ParticipantDetailView | Non
         )
     # synthetic from the champion score (B4); safe-synthetic default if unscored (never claims real).
     synthetic = champ.synthetic if champ is not None else True
-    coded_ref = p.coded_ref if scope.role in IDENTITY_ROLES else None
+    is_identity = scope.role in IDENTITY_ROLES
+    coded_ref = p.coded_ref if is_identity else None
     return ParticipantDetailView(
         participant_id=str(p.id),
         trial_id=str(p.trial_id),
@@ -78,6 +91,15 @@ def get_detail(scope: Scope, participant_id: str) -> ParticipantDetailView | Non
         enrolled_at=p.enrolled_at,
         synthetic=synthetic,
         coded_ref=coded_ref,
+        # Same gate as coded_ref: baseline covariates only for identity roles, None otherwise.
+        age_years=p.age_years if is_identity else None,
+        age_imputed=bool(p.age_years_baseline_imputed) if is_identity else False,
+        hba1c_pct=p.hba1c_pct if is_identity else None,
+        hba1c_imputed=bool(p.hba1c_pct_baseline_imputed) if is_identity else False,
+        bmi=p.bmi if is_identity else None,
+        bmi_imputed=bool(p.bmi_baseline_imputed) if is_identity else False,
+        sex=p.sex if is_identity else None,
+        arm_type=p.arm_type if is_identity else None,
     )
 
 

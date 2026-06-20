@@ -27,6 +27,7 @@ import {
 } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
+import { groupFactors } from "@/lib/factors"
 import type {
   CohortRow,
   CohortSummary,
@@ -37,10 +38,6 @@ import type {
   RiskExplanation,
   RiskHistoryPoint,
 } from "@/lib/types"
-
-function humanizeFactor(tag: string): string {
-  return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
 
 type CohortState = "loading" | "ready" | "scoped_out" | "error"
 
@@ -269,15 +266,9 @@ function RiskSpotlight({
   const selectedRow = rows.find((r) => r.participant_id === selectedId)
   const isSynthetic = (selectedRow?.synthetic ?? false) || (risk?.synthetic ?? false)
 
-  const factors = useMemo(
-    () =>
-      (risk?.factors ?? []).map((f) => ({
-        name: humanizeFactor(f.feature),
-        impact: Math.round(Math.abs(f.contribution) * 100),
-        description: f.contribution >= 0 ? "Increases risk" : "Decreases risk",
-      })),
-    [risk],
-  )
+  // Group the correlated missed-visit channels + emphasize the primary driver (display-layer only;
+  // the model's occlusion numbers are unchanged — see lib/factors).
+  const factors = useMemo(() => groupFactors(risk?.factors ?? []), [risk])
 
   return (
     <section className="mb-2">
