@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Phone, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
-import { cn, participantLabel } from "@/lib/utils"
+import { cn, participantLabel, statusFromBand, statusFromScore } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { StatusDot } from "./status-dot"
 import { MiniRiskDial } from "./mini-risk-dial"
@@ -12,10 +12,11 @@ import { Sparkline } from "./sparkline"
 export interface Participant {
   id: string // internal UUID — routing/keys only, never the primary display label
   codedRef?: string | null // human-readable pseudonymous ref (e.g. "A-0001"); the primary label
+  riskBand?: string | null // AUTHORITATIVE backend band — drives the dot/dial color (never re-thresholded)
   riskScore: number
   riskTrend: number[]
   topRiskReason: string
-  daysEnrolled: number
+  daysEnrolled: number | null // null = unknown/invalid enrolled_at → rendered as "—"
 }
 
 type SortKey = "riskScore" | "daysEnrolled" | "id"
@@ -29,10 +30,10 @@ interface TriageTableProps {
   syntheticIds?: Set<string>
 }
 
-function getStatus(score: number): "calm" | "watch" | "risk" {
-  if (score >= 70) return "risk"
-  if (score >= 40) return "watch"
-  return "calm"
+// Status (dot + dial color) from the AUTHORITATIVE backend band; falls back to aligned score cuts
+// only when a row has no band — so the dot/dial can never contradict the band shown elsewhere.
+function rowStatus(p: Participant): "calm" | "watch" | "risk" {
+  return statusFromBand(p.riskBand) ?? statusFromScore(p.riskScore)
 }
 
 export function TriageTable({
@@ -59,7 +60,8 @@ export function TriageTable({
       return (a.riskScore - b.riskScore) * modifier
     }
     if (sortKey === "daysEnrolled") {
-      return (a.daysEnrolled - b.daysEnrolled) * modifier
+      // null (unknown enrolled_at) sorts as 0 so the comparator stays total.
+      return ((a.daysEnrolled ?? 0) - (b.daysEnrolled ?? 0)) * modifier
     }
     // Sort by the displayed label (coded_ref when present), not the internal UUID.
     return (
@@ -180,7 +182,7 @@ export function TriageTable({
           <tbody>
             {sortedParticipants.map((participant) => {
               const isHighestRisk = participant.id === highestRiskId
-              const status = getStatus(participant.riskScore)
+              const status = rowStatus(participant)
 
               return (
                 <tr
@@ -214,7 +216,7 @@ export function TriageTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
-                      <MiniRiskDial value={participant.riskScore} size={28} />
+                      <MiniRiskDial value={participant.riskScore} size={28} status={status} />
                       <span className="w-10 text-right font-mono text-sm font-semibold text-foreground">
                         {participant.riskScore}
                       </span>
@@ -232,7 +234,7 @@ export function TriageTable({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className="font-mono text-sm text-foreground">
-                      {participant.daysEnrolled}
+                      {participant.daysEnrolled ?? "—"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">

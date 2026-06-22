@@ -12,9 +12,11 @@ interface RiskDistributionProps {
 
 export function RiskDistribution({ calm, watch, risk, className }: RiskDistributionProps) {
   const total = calm + watch + risk
-  const calmPercent = (calm / total) * 100
-  const watchPercent = (watch / total) * 100
-  const riskPercent = (risk / total) * 100
+  // Guard the empty cohort: total === 0 would make every percentage NaN → invalid `width: NaN%`.
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0)
+  const calmPercent = pct(calm)
+  const watchPercent = pct(watch)
+  const riskPercent = pct(risk)
 
   return (
     <Card className={cn("border-[0.5px] border-border shadow-sm", className)}>

@@ -45,7 +45,17 @@ class InboundGuard:
 # advice / injection / secret-extraction asks; the structural guarantees (scoped tools, no route
 # to comply) are the strong defense (specs/rag.md § Prompt-injection: structural, not just prompt).
 _CLINICAL = re.compile(
-    r"\b(diagnos\w*|prescrib\w*|treatment for|what (?:medication|drug|dose)|"
+    r"\b(diagnos\w*|prescrib\w*|"
+    # "treatment for / should / plan / option / recommendation" — but NOT "treatment arm/group"
+    # (clinical-trial terminology, a legitimate operational term).
+    r"treatment\s+(?:for|should|plan|option|recommend\w*)|"
+    # "how should we treat <patient/participant/coded-ref>" — scoped to a care object so "treat the
+    # data" stays allowed.
+    r"\btreat\s+(?:this\s+(?:patient|participant)|the\s+(?:patient|participant)|"
+    r"them|him|her|patient|participant|[A-Za-z]{1,8}-?\d+)|"
+    r"recommend\w*\s+(?:an?\s+|the\s+)?(?:treatment|therapy|medication|drug|dose)|"
+    r"care plan|"
+    r"what (?:medication|drug|dose)|"
     r"should (?:i|they|we) (?:take|stop|change)|is it (?:cancer|safe to)|"
     r"medical advice|cure|therapy recommendation)\b",
     re.IGNORECASE,

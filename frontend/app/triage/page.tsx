@@ -14,14 +14,6 @@ import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
 import type { CohortRow, CohortSummary } from "@/lib/types"
 
-// Trial selector options are UI-local; trial scope ultimately comes from the
-// JWT scope (api.md). TODO(phase4): populate from resolved scope / a trials endpoint.
-const TRIALS = [
-  { id: "trl_22", name: "BEACON-2024", phase: "III" },
-  { id: "trl_23", name: "HORIZON-A", phase: "II" },
-  { id: "trl_24", name: "CLARITY-1", phase: "III" },
-]
-
 function humanizeFactor(tag: string): string {
   return tag.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }
@@ -33,6 +25,7 @@ function toRow(r: CohortRow): Participant {
   return {
     id: r.participant_id,
     codedRef: r.coded_ref, // primary user-facing label (UUID stays the route/key)
+    riskBand: r.risk_band, // authoritative band drives the dot/dial color (never re-thresholded)
     riskScore: Math.round(r.risk_score * 100),
     riskTrend: [], // TODO(phase5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",
@@ -43,7 +36,6 @@ function toRow(r: CohortRow): Participant {
 export default function CohortTriagePage() {
   const router = useRouter()
   const { me } = useAuth()
-  const [selectedTrial, setSelectedTrial] = useState(TRIALS[0].id)
   const [searchQuery, setSearchQuery] = useState("")
   const [rows, setRows] = useState<CohortRow[]>([])
   const [summary, setSummary] = useState<CohortSummary | null>(null)
@@ -55,10 +47,10 @@ export default function CohortTriagePage() {
   useEffect(() => {
     if (isPlatformRole) return
     setScopeDenied(false)
-    Promise.all([
-      getCohort({ trial_id: selectedTrial }),
-      getCohortSummary({ trial_id: selectedTrial }),
-    ])
+    // The caller's FULL scoped cohort — the SAME read the Dashboard uses, with NO client-supplied
+    // trial_id filter (the previous hardcoded fake trial_id returned an empty cohort). Scope/RLS is
+    // enforced server-side from the token.
+    Promise.all([getCohort(), getCohortSummary()])
       .then(([page, sum]) => {
         setRows(page.items)
         setSummary(sum)
@@ -69,7 +61,7 @@ export default function CohortTriagePage() {
         }
         // Other errors: leave rows empty; user sees blank table.
       })
-  }, [selectedTrial, isPlatformRole])
+  }, [isPlatformRole])
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return rows
@@ -93,6 +85,10 @@ export default function CohortTriagePage() {
     setSummary(newSummary)
   }
 
+  // The demo loop injects events for a REAL in-scope trial — take it from the loaded cohort
+  // (highest-risk first), not a hardcoded id.
+  const demoTrialId = rows[0]?.trial_id ?? ""
+
   // Platform role message replaces the cohort view.
   if (isPlatformRole || scopeDenied) {
     return (
@@ -109,9 +105,6 @@ export default function CohortTriagePage() {
   return (
     <div className="min-h-screen bg-background">
       <TriageHeader
-        trials={TRIALS}
-        selectedTrial={selectedTrial}
-        onTrialChange={setSelectedTrial}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -139,9 +132,11 @@ export default function CohortTriagePage() {
             label="Avg Risk Score"
             value={summary ? Math.round(summary.mean_risk * 100) : "—"}
             status={
-              summary && summary.mean_risk >= 0.7
+              // Aligned to the backend bands (>0.6 / >0.3) so the mean-risk card never contradicts
+              // a participant's authoritative band.
+              summary && summary.mean_risk > 0.6
                 ? "risk"
-                : summary && summary.mean_risk >= 0.4
+                : summary && summary.mean_risk > 0.3
                   ? "watch"
                   : "calm"
             }
@@ -158,7 +153,7 @@ export default function CohortTriagePage() {
 
         <PulseDivider className="my-8" />
 
-        <DemoLoop trialId={selectedTrial} onRefresh={handleDemoRefresh} />
+        <DemoLoop trialId={demoTrialId} onRefresh={handleDemoRefresh} />
       </main>
     </div>
   )

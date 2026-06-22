@@ -1,14 +1,17 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn, statusFromScore, type RiskStatus } from "@/lib/utils"
 
 interface MiniRiskDialProps {
   value: number
   size?: number
   className?: string
+  /** The authoritative status (from the backend risk_band). When provided, it drives the arc color
+   *  so the dial can never contradict the participant's band; falls back to aligned score cuts. */
+  status?: RiskStatus
 }
 
-export function MiniRiskDial({ value, size = 24, className }: MiniRiskDialProps) {
+export function MiniRiskDial({ value, size = 24, className, status }: MiniRiskDialProps) {
   const clampedValue = Math.max(0, Math.min(100, value))
   
   const centerX = size / 2
@@ -35,14 +38,14 @@ export function MiniRiskDial({ value, size = 24, className }: MiniRiskDialProps)
   const backgroundArc = `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${end.x} ${end.y}`
   const valueArc = `M ${start.x} ${start.y} A ${radius} ${radius} 0 0 1 ${valuePoint.x} ${valuePoint.y}`
 
-  let strokeColor: string
-  if (clampedValue >= 70) {
-    strokeColor = "var(--status-risk)"
-  } else if (clampedValue >= 40) {
-    strokeColor = "var(--status-watch)"
-  } else {
-    strokeColor = "var(--status-calm)"
-  }
+  // Color from the authoritative band-derived status when given; else aligned score cuts (>60/>30).
+  const resolvedStatus = status ?? statusFromScore(clampedValue)
+  const strokeColor =
+    resolvedStatus === "risk"
+      ? "var(--status-risk)"
+      : resolvedStatus === "watch"
+        ? "var(--status-watch)"
+        : "var(--status-calm)"
 
   return (
     <svg

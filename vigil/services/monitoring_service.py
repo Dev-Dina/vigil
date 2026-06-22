@@ -81,7 +81,15 @@ def list_message_events(
     """
     _require(scope, Capability.LLMOPS_READ, "inspect")
 
-    conv = uuid.UUID(conversation_id) if conversation_id else None
+    # A malformed conversation_id filter is a bad FILTER value, not a server fault: treat it as
+    # "matches nothing" → empty page (never a 500), mirroring participant_service's id handling.
+    if conversation_id:
+        try:
+            conv: uuid.UUID | None = uuid.UUID(conversation_id)
+        except (ValueError, AttributeError):
+            return []
+    else:
+        conv = None
 
     with scoped_session(
         scope

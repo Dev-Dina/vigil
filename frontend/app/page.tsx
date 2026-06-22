@@ -26,6 +26,7 @@ function toRow(r: CohortRow): TriageParticipant {
   return {
     id: r.participant_id,
     codedRef: r.coded_ref, // primary user-facing label (UUID stays the route/key)
+    riskBand: r.risk_band, // authoritative band drives the dot/dial color (never re-thresholded)
     riskScore: Math.round(r.risk_score * 100),
     riskTrend: [], // TODO(phase4/5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",

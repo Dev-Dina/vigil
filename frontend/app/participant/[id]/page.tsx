@@ -245,7 +245,7 @@ export default function ParticipantDetailPage() {
             <CardContent className="pt-4">
               <p className="mb-1 text-xs text-muted-foreground">Days Enrolled</p>
               <p className="font-mono text-xl font-semibold text-foreground">
-                {detail ? daysSince(detail.enrolled_at) : "—"}
+                {detail ? (daysSince(detail.enrolled_at) ?? "—") : "—"}
               </p>
             </CardContent>
           </Card>

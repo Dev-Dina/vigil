@@ -51,7 +51,9 @@ export function ContributingFactors({ factors, className }: ContributingFactorsP
                   </span>
                 )}
               </span>
-              <span className="font-mono text-sm text-muted-foreground">{factor.impact}%</span>
+              {/* Clamp the printed % to match the bar (Math.min(100,…) below): a grouped sum of
+                  correlated channels can exceed 100, but the number must agree with the bar. */}
+              <span className="font-mono text-sm text-muted-foreground">{Math.min(100, factor.impact)}%</span>
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div

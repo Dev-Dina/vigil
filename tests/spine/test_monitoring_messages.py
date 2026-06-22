@@ -108,6 +108,30 @@ def test_role_gate_platform_auditor_only(migrated_db: dict[str, str]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 1b. MALFORMED conversation_id filter → empty page, NEVER a 500 (Gate FIX-DEMO #10)
+# ---------------------------------------------------------------------------
+
+
+def test_malformed_conversation_id_is_not_500(migrated_db: dict[str, str]) -> None:
+    client = (
+        _client()
+    )  # raise_server_exceptions=False → a 500 surfaces as a 500 response
+    token = _token(client, "admin@vigil.example")
+    # A bad filter value is a bad FILTER, not a server fault: empty page (200), never 500/404.
+    r = client.get(
+        "/api/v1/monitoring/messages?conversation_id=not-a-uuid", headers=_h(token)
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["items"] == []
+    # A well-formed (but unknown) conversation_id still works → empty page, 200.
+    r2 = client.get(
+        f"/api/v1/monitoring/messages?conversation_id={uuid.uuid4()}",
+        headers=_h(token),
+    )
+    assert r2.status_code == 200, r2.text
+
+
+# ---------------------------------------------------------------------------
 # 2. CROSS-TENANT-BY-ROLE: platform/auditor sees events across sponsors
 # ---------------------------------------------------------------------------
 

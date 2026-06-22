@@ -72,6 +72,34 @@ def test_guardrail_blocks_secret_extraction() -> None:
     assert r.decision == "blocked" and r.category == "secret"
 
 
+def test_guardrail_blocks_treatment_phrasings() -> None:
+    # The clinical guard must catch treatment/care asks beyond the literal "treatment for".
+    for probe in (
+        "why is A-0001 high risk and what treatment should they get?",
+        "how should we treat A-0001",
+        "how should we treat this patient",
+        "recommend a treatment for the participant",
+        "what care plan should we use for A-0001",
+        "what therapy recommendation do you have",
+    ):
+        r = guardrails.check_content(probe)
+        assert r.decision == "blocked" and r.category == "clinical", probe
+
+
+def test_guardrail_allows_legit_risk_and_method_questions() -> None:
+    # Broadening the clinical guard must NOT block legitimate risk / methodology / operational asks,
+    # including clinical-trial terminology like "treatment arm".
+    for probe in (
+        "why is A-0001 flagged high risk?",
+        "how does the model use attendance to flag dropout risk?",
+        "which participants in my cohort need follow-up?",
+        "what is driving PT-DEMO-LOOP's risk?",
+        "what is the treatment arm for A-0001?",
+    ):
+        r = guardrails.check_content(probe)
+        assert r.decision == "allowed" and r.category is None, probe
+
+
 def test_guardrail_blocks_identity_reveal() -> None:
     # Participants are coded (coded_ref only) — there is NO name to give. Making the coded_ref a
     # resolvable reference (Gate CODED-REF) does NOT open identity answers.

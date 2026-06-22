@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn, statusFromScore, type RiskStatus } from "@/lib/utils"
 import { StatusType } from "./status-dot"
 
 interface RiskDialProps {
@@ -8,6 +8,9 @@ interface RiskDialProps {
   size?: "sm" | "md" | "lg"
   showLabel?: boolean
   className?: string
+  /** The authoritative status (from the backend risk_band) when the caller has a banded participant.
+   *  Omitted for a score-only aggregate (e.g. the cohort MEAN), which falls back to aligned cuts. */
+  status?: RiskStatus
 }
 
 const sizeConfig = {
@@ -16,22 +19,18 @@ const sizeConfig = {
   lg: { width: 160, height: 96, strokeWidth: 10, fontSize: "text-3xl" },
 }
 
-function getStatus(value: number): StatusType {
-  if (value < 40) return "calm"
-  if (value < 70) return "watch"
-  return "risk"
-}
-
 const statusColors: Record<StatusType, string> = {
   calm: "#17A07A",
   watch: "#BA7517",
   risk: "#D85A30",
 }
 
-export function RiskDial({ value, size = "md", showLabel = true, className }: RiskDialProps) {
+export function RiskDial({ value, size = "md", showLabel = true, className, status }: RiskDialProps) {
   const config = sizeConfig[size]
-  const status = getStatus(value)
-  const color = statusColors[status]
+  // Authoritative band-derived status when given; else cuts ALIGNED to the backend bands (>60/>30)
+  // so a score-only dial never contradicts a banded chip elsewhere on the same participant.
+  const resolvedStatus = status ?? statusFromScore(value)
+  const color = statusColors[resolvedStatus]
   
   // Semicircle calculations
   const radius = (config.width - config.strokeWidth) / 2
