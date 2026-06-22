@@ -1,0 +1,79 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260622145537
+Username: DESKTOP-3NE7P9D\LEGION
+RunAs User: DESKTOP-3NE7P9D\LEGION
+Configuration Name: 
+Machine: DESKTOP-3NE7P9D (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -ExecutionPolicy Bypass -File deploy\k8s\run-isolation-proof.ps1
+Process ID: 43756
+PSVersion: 5.1.26100.8655
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.8655
+BuildVersion: 10.0.26100.8655
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+== Guide layer-3 isolation proof ==
+
+[1/8] Creating kind cluster 'vigil-guide-proof' (default CNI DISABLED for Calico)...
+
+
+[2/8] Installing Calico v3.27.3 (NetworkPolicy-enforcing CNI)...
+
+    waiting for the Calico daemonset to REGISTER, then become ready (up to 5 min)...
+    wait attempt 1 timed out; retrying...
+
+[3/8] Building + loading the guide image (vigil-guide:local)...
+
+
+
+[4/8] Applying namespace + guide + deny-list targets + positive control (NOT the policies)...
+
+
+    waiting for all deployments to be available (retried; tolerates a slow bring-up)...
+    wait attempt 1 timed out; retrying...
+    wait attempt 2 timed out; retrying...
+
+[5/8] NEGATIVE PRE-CHECK (before policy): every deny-list target must be REACHABLE...
+    pre  postgres        :5432  -> REACHABLE
+    pre  redis           :6379  -> REACHABLE
+    pre  vault           :8200  -> REACHABLE
+    pre  app-api         :8000  -> REACHABLE
+    pre  model-endpoint  :9000  -> REACHABLE
+    pre  allowed-egress  :8088  -> REACHABLE
+
+[6/8] Applying the guide NetworkPolicies (default-deny-egress + guide-egress-allow)...
+
+    pausing 8s for policy propagation...
+
+[7/8] DENIAL TEST (after policy): every deny-list target must be DENIED...
+    post postgres        :5432  -> DENIED
+    post redis           :6379  -> DENIED
+    post vault           :8200  -> DENIED
+    post app-api         :8000  -> DENIED
+    post model-endpoint  :9000  -> DENIED
+
+[8/8] POSITIVE CONTROL (after policy): the one allowed egress must SUCCEED...
+    post allowed-egress  :8088  -> OK
+
+================ SUMMARY ================
+
+Target              PreCheck  PostPolicy  
+------              --------  ----------  
+postgres:5432       reachable denied      
+redis:6379          reachable denied      
+vault:8200          reachable denied      
+app-api:8000        reachable denied      
+model-endpoint:9000 reachable denied      
+allowed-egress:8088 reachable OK (allowed)
+RESULT: PASS - every deny-list target DENIED after the policy; positive control OK.
+Layer-3 NetworkPolicy isolation demonstrated on a local Calico-enforced kind cluster.
+Transcript: C:\Users\LEGION\Desktop\ThisIsIt\Codebase\Vigil\deploy\k8s\last-proof-transcript.txt
+=========================================
+**********************
+Windows PowerShell transcript end
+End time: 20260622151751
+**********************

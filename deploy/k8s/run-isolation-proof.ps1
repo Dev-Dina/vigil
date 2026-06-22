@@ -69,6 +69,12 @@ function Require-Tool($name) {
 # sys.argv), and pass kubectl args via a SPLATTED array so each token - including the spaces in
 # the -c payload - is passed intact (PS native-arg quoting otherwise mangled it in the live run).
 function Test-PodConnect($targetHost, $port) {
+  # A denied/refused connection makes the in-pod python raise + kubectl exit non-zero WITH a stderr
+  # traceback. Under the script-level $ErrorActionPreference='Stop', PowerShell 5.1 escalates that
+  # native stderr to a TERMINATING error (the [5/8] crash in the prior run), even with *> $null.
+  # We INTENTIONALLY tolerate a non-zero exit here (it IS the signal), so localize EAP to this
+  # function; the verdict still comes from $LASTEXITCODE, so a real denial reads as 'denied', not a crash.
+  $ErrorActionPreference = 'SilentlyContinue'
   $stmt = "import socket; socket.create_connection(('$targetHost',$port),timeout=3).close()"
   $kargs = @("exec", "-n", $Ns, "deploy/guide", "--", "python", "-c", $stmt)
   kubectl @kargs *> $null
@@ -78,6 +84,10 @@ function Test-PodConnect($targetHost, $port) {
 # Poll until a resource EXISTS (then the caller may safely `wait`/`rollout status` on it). Avoids
 # the live-run "no matching resources found" when waiting before Calico's objects register.
 function Wait-Exists([string[]]$getArgs, [int]$timeoutSec = 180) {
+  # Polls a resource that does not exist YET -> kubectl writes 'NotFound' to stderr + exits non-zero,
+  # which would escalate to a terminating error under the script-level EAP='Stop'. Tolerated by design
+  # (we loop on $LASTEXITCODE), so localize EAP here; the caller still throws loudly if we time out.
+  $ErrorActionPreference = 'SilentlyContinue'
   $deadline = (Get-Date).AddSeconds($timeoutSec)
   while ((Get-Date) -lt $deadline) {
     & kubectl @getArgs *> $null
@@ -89,6 +99,9 @@ function Wait-Exists([string[]]$getArgs, [int]$timeoutSec = 180) {
 
 # Run a kubectl wait/rollout with retries - tolerate a slow bring-up (e.g. laptop sleep mid-run).
 function Invoke-WaitWithRetry([string[]]$waitArgs, [int]$retries = 3) {
+  # A kubectl wait/rollout that times out exits non-zero (often with stderr) -> would escalate under
+  # EAP='Stop'. We retry by design and the caller throws loudly on final failure, so localize EAP here.
+  $ErrorActionPreference = 'SilentlyContinue'
   for ($i = 1; $i -le $retries; $i++) {
     & kubectl @waitArgs
     if ($LASTEXITCODE -eq 0) { return $true }

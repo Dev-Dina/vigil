@@ -27,8 +27,8 @@ infra/vault/init.json
 guide/data/
 tests/guide/_built_index.json
 
-# Guide layer-3 proof run artifact (transcript from run-isolation-proof)
-deploy/k8s/last-proof-transcript.txt
+# Guide layer-3 proof run TRANSCRIPT is committed as real evidence of a PASS (Gate 8.L3-b / A1).
+# (Previously ignored; now tracked so the proof is verifiable in-repo, not just operator-asserted.)
 
 # Frontend TypeScript incremental build cache — a regenerable build artifact, never committed.
 *.tsbuildinfo
