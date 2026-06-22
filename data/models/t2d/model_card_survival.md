@@ -14,8 +14,9 @@ NEVER a clinical prediction.
 
 - Source: SYNTHETIC cohort, clearly labelled `synthetic=True` on every row.
 - No PHI. No real participant identifiers or clinical records.
-- censoring: ~0.03% of rows are admin-censored (non-informative: only ~61 participants
-  from a single trial whose planned duration exceeded the snapshot date). This censoring
+- censoring: ~0.03% of rows are admin-censored (non-informative: only 39 participants
+  whose planned duration exceeded the snapshot date — `n_admin_censored=39` in
+  `data/synthetic/t2d/calibration_report_v2.json`, matching `PHASE3_CARD.md`). This censoring
   is non-informative (driven by trial recency, independent of participant biology or the
   planted miss trajectory). It is NOT the value driver; the primary signal is the
   planted trajectory assumption (consecutive missed visits -> elevated dropout hazard).

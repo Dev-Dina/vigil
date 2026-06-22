@@ -5,10 +5,15 @@
   `/specs/infra.md` for routing is superseded by this file. `specs/infra.md` names "routing
   tables" and "model registry pointers" as ConfigMap contents but defines no schema or protocol;
   that contract lives here.
-- **The resolver does not exist yet.** `score_trial(model_version=None)` currently resolves to
-  the sentinel constant `"sequence_v1.1:demo"` (`vigil/workers/tasks.py:23`), not a DB lookup.
-  `specs/scoring.md:152`'s phrase "registered champion at job time" is aspirational. This spec
-  defines the contract that implementation will satisfy.
+- **The resolver EXISTS (built B1–B3).** `_load_scorer(model_version=None, regime)` resolves the
+  champion via `_resolve_champion_version(regime)` → `routing_state` (`vigil/workers/tasks.py`) — a
+  real DB lookup that raises a hard error when no champion row exists, not the sentinel constant.
+  **Still open — regime delivery:** `ScoringTriggerIn` carries no `regime` field
+  (`vigil/api/routers/scoring.py`) and `trigger_scoring` drops it, so real API callers never pass a
+  regime; the production hard-raise is therefore unreachable from real callers and demo mode falls
+  back to `regime='t2d'`. Threading `regime` through the trigger path — and adding a persisted
+  indication source on the operational `trial` table — is the remaining routing-delivery work
+  (`FUTURE_WORK.md` § Scaffolded).
 - **`audit_log` is immutable transition history; the routing-state table is current projection.**
   These are distinct. The routing-state table holds the live champion/challenger/shadow mapping
   per regime. `audit_log` records every state transition permanently. Never read `audit_log` to
@@ -75,9 +80,13 @@ set by routing code until that spec is ratified.
    current champion `model_version`.
 3. If no champion row exists for the regime, raise a hard error — there is no silent default.
 
-**Current reality:** this query does not exist. `_load_scorer` uses `_DEMO_MODEL_VERSION =
-"sequence_v1.1:demo"` as the sentinel (Gate 9.7a: the calibrated champion). The resolver query is
-the implementation obligation this spec creates.
+**Current reality:** this query EXISTS — `_resolve_champion_version(regime)` runs
+`routing_state WHERE regime = <regime> AND role = 'champion'` and raises a hard error when absent
+(no silent default), satisfying steps 2–3. `_DEMO_MODEL_VERSION = "sequence_v1.1:demo"` (Gate 9.7a:
+the calibrated champion) now survives ONLY as the demo-mode `regime='t2d'` fallback and the
+test-override default — NOT as the production champion source. The remaining gap is **delivery**:
+`regime` is not threaded from `ScoringTriggerIn` / `trigger_scoring`, so resolution from real
+callers always runs the demo-mode `'t2d'` path (`FUTURE_WORK.md` § Scaffolded).
 
 ## Champion / challenger / shadow
 

@@ -56,7 +56,11 @@ feature; build-time AACT ingestion is never reached at runtime. No PHI, at any s
 ## What's built — the system
 
 Vigil has **two surfaces that never share credentials, DB, or endpoints**: the full operational
-app, and an isolated public Guide. The platform spans Phases 1–9 (see `ROADMAP.md`).
+app, and an isolated public Guide. The platform spans Phases 1–9 (see `ROADMAP.md`) — Phases 1–7
+and 9 are complete; **Phase 8 (production-readiness) is a deliberate partial**: the Guide's
+three-layer isolation proof is done (the layer-3 kind+Calico network denial is hand-verified, with a
+committed PASS transcript), while full production k8s/HPA, app-side egress, and cloud-KMS Vault
+auto-unseal remain deferred future work (`FUTURE_WORK.md`).
 
 ### Multi-tenant platform & isolation
 - **Sponsor is the hard tenant boundary**, enforced by **Postgres row-level security** (FORCE RLS,

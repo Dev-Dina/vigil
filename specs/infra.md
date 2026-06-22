@@ -61,12 +61,13 @@ endpoints/the app Service are DENIED; the approved-doc vector store is the only 
 Everything runs locally on **kind/minikube** — no paid cluster. Two deployment surfaces:
 
 ### Docker Compose (dev)
-`docker-compose.yml` brings up the full app for local development: `api`, `worker`, `scheduler`,
+`docker-compose.dev.yml` brings up the full app for local development: `api`, `worker`, `scheduler`,
 `guide`, `postgres` (pgvector image, RLS migrations applied), `pgbouncer`, `redis`, `vault`
 (dev mode), and the approved-doc vector store. Secrets come from Vault dev, not the compose file.
 `guide` is on a **separate compose network** from the app datastores so even in dev it cannot
-reach Postgres/Redis/Vault — the boundary holds locally too. One `make up` / `docker compose up`
-gives a runnable two-surface stack.
+reach Postgres/Redis/Vault — the boundary holds locally too. `make db-up` (Postgres + Redis) or
+`docker compose -f docker-compose.dev.yml --profile app up` (add `--profile guide` for the Guide)
+gives a runnable two-surface stack. (There is no `docker-compose.yml` and no `make up` target.)
 
 **LLM posture — stubbed by default, live behind an explicit opt-in (Gate L1).** The default app
 stack runs **`VIGIL_LLM_STUB=true`** against the in-memory dev Vault (deterministic `StubLLMClient`,
