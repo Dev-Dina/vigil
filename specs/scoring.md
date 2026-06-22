@@ -69,8 +69,17 @@ Fixed decisions:
   rejected for this champion: the LSTM is already globally near-calibrated (ECE ≈ 0.008, Platt
   slope ≈ 1.06), so a global sigmoid cannot stretch the compressed top past 0.6. Isotonic
   corrects the **local under-confidence at the top of the score range** (the highest raw-score
-  decision points have an empirical dropout rate ≈ 0.74, well above their raw ≈ 0.5), which is
+  decision points have an **asserted** empirical dropout rate ≈ 0.74 — a build-time observation,
+  not a figure persisted to a committed artifact — well above their raw ≈ 0.5), which is
   what makes `> 0.6` both reachable **and honest**.
+- **Provenance note — build-time figures.** The calibration *quality* numbers cited here and in
+  `data/models/t2d/model_card.md` (the ECE ≈ 0.008 near-calibration figure, the ECE/calibrated-Brier
+  raw → calibrated, the ROC-AUC raw → calibrated, and the ≈ 0.74 empirical rate) are **reported at
+  build time and are NOT regenerable from a committed artifact** — unlike the headline test metrics in
+  `sequence_metrics.json`, which are. The isotonic **mechanism** is reproducible (the
+  `raw_prob → calibrated_prob` knot-map is persisted in the `.pt`); only these quality sub-metrics
+  lack a backing JSON, the ECE/calibrated-Brier are validation-fold figures inside the `.pt`
+  `calibration_report`, and the ≈ 0.74 rate is asserted, not computed.
 - **Fit split: the held-out `val` fold ONLY** — the temporal, group-disjoint-by-`nct_id` fold
   that sits between train and test (`/specs/data.md` "Evaluation contract"). The calibrator is
   fit on data **disjoint from both the LSTM's training fold AND the reported test fold**; the

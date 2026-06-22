@@ -114,22 +114,41 @@ def test_scoreability_score_trial_end_to_end(migrated_db: dict[str, str]) -> Non
             regime="t2d",
         )
     )
-    assert result["n_scored"] == 1, (
-        f"Expected 1 participant scored, got {result['n_scored']}"
-    )
-    assert result["model_version"] == "sequence_v1.1:demo"
+    # score_trial must score EVERY participant in the trial. The SEED-DEMO enrichment gives trial_a
+    # a spread of participants (was 1), so derive the expected count from the fixture — never a magic
+    # number — so a future seed change doesn't re-break this assertion.
+    from sqlalchemy import select
 
-    # Verify score is in range via participant read-back.
     from vigil.db.models import Participant
     from vigil.repositories.session import sponsor_bootstrap_session
 
     with sponsor_bootstrap_session(ids["sponsor_a"]) as session:
-        p = session.get(Participant, uuid.UUID(ids["participant_a"]))
-    assert p is not None
-    assert 0.0 <= p.risk_score <= 1.0, f"risk_score {p.risk_score} out of range"
-    # LSTM scores are not identical to random(seed=42)=0.6394... value for n=1
+        trial_participants = list(
+            session.execute(
+                select(Participant).where(
+                    Participant.trial_id == uuid.UUID(ids["trial_a"])
+                )
+            ).scalars()
+        )
+    n_participants = len(trial_participants)
+    assert n_participants > 0, "fixture must seed at least one participant in trial_a"
+    assert result["n_scored"] == n_participants, (
+        f"score_trial must score every participant in trial_a "
+        f"(expected {n_participants}, got {result['n_scored']})"
+    )
+    assert result["model_version"] == "sequence_v1.1:demo"
+
+    # Scoreability invariant (UNCHANGED): every participant's score is a real LSTM value in [0, 1].
+    for p in trial_participants:
+        assert 0.0 <= p.risk_score <= 1.0, (
+            f"risk_score {p.risk_score} out of range for {p.coded_ref}"
+        )
+
+    # The canonical first participant (participant_a) is NOT the random(seed=42)=0.6394… value —
+    # i.e. the real LSTM is wired, not the rng _demo_scorer fallback.
+    pa = next(p for p in trial_participants if str(p.id) == ids["participant_a"])
     random_seed42_n1 = 0.6394267984578837
-    assert abs(p.risk_score - random_seed42_n1) > 1e-6, (
+    assert abs(pa.risk_score - random_seed42_n1) > 1e-6, (
         "risk_score matches random(seed=42) — LSTM not wired, still using _demo_scorer"
     )
 
