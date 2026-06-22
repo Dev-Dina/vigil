@@ -46,6 +46,29 @@ def _is_cohort_triage_question(question: str) -> bool:
     return bool(_COHORT_TRIAGE.search(question))
 
 
+# A participant reference in the message: the internal UUID OR the human-readable coded_ref
+# (e.g. "A-0001", "PT-DEMO-LOOP"). Extraction is a CONVENIENCE, not the security boundary —
+# resolution in tools.participant_risk_facts is scope-bound, so a candidate that does NOT resolve
+# to an in-scope participant is simply ignored. A false match (e.g. "follow-up") is therefore
+# harmless: it resolves to nothing and the turn falls through to cohort-triage / vector grounding.
+_PARTICIPANT_REF = re.compile(
+    r"\b([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"  # UUID
+    # coded_ref e.g. A-0001 / PT-DEMO-LOOP. Uppercase first char (the seed convention) so common
+    # lowercase compounds in prose ("high-risk", "follow-up", "at-risk") are NOT mistaken for a ref.
+    r"|[A-Z][A-Za-z0-9]{0,7}-[A-Za-z0-9][A-Za-z0-9-]{0,30})\b"
+)
+
+
+def _extract_participant_ref(question: str) -> str | None:
+    """Pull a participant reference (coded_ref or UUID) out of the message, or None.
+
+    Lets a free-text "why is A-0001 flagged?" route to the participant path with the friendly
+    code. Resolution in the scoped tool is the safety gate; this only decides WHICH ref to try.
+    """
+    m = _PARTICIPANT_REF.search(question)
+    return m.group(1) if m else None
+
+
 @dataclass(frozen=True, slots=True)
 class AgentAnswer:
     content: str
@@ -81,31 +104,38 @@ def grounded_answer(
     citations: list[dict] = []
     context_blocks: list[str] = []
 
-    # 1. Structured risk facts (champion-only, dual-axis scoped) when a participant is named.
-    if participant_id:
-        facts = participant_risk_facts(ctx, participant_id)
-        if facts is not None:
-            citations.append(
-                {
-                    "source_type": "structured",
-                    "source_id": f"participant:{facts.participant_id}",
-                    "locator": f"model_version={facts.model_version}",
-                }
+    # 1. Structured risk facts (champion-only, dual-axis scoped) when a participant is named —
+    #    EITHER explicitly (participant_id from the page) OR by a reference in the message text (the
+    #    coded_ref "A-0001" or the UUID). Both forms resolve to the same participant WITHIN scope;
+    #    resolution is the scope-bound safety gate (tools.participant_risk_facts).
+    participant_ref = participant_id or _extract_participant_ref(question)
+    facts = participant_risk_facts(ctx, participant_ref) if participant_ref else None
+    if facts is not None:
+        # Refer to the participant by coded_ref when available — concise + matches the page; the
+        # UUID is the internal locator used only when no coded_ref is surfaced (non-identity role).
+        ref_label = facts.coded_ref or facts.participant_id
+        citations.append(
+            {
+                "source_type": "structured",
+                "source_id": f"participant:{ref_label}",
+                "locator": f"model_version={facts.model_version}",
+            }
+        )
+        context_blocks.append(
+            fence_untrusted(
+                f"participant={ref_label} risk_score={facts.risk_score} "
+                f"risk_band={facts.risk_band} top_factors={facts.top_factors} "
+                f"model_version={facts.model_version} synthetic={facts.synthetic}",
+                label="participant_risk",
             )
-            context_blocks.append(
-                fence_untrusted(
-                    f"participant_id={facts.participant_id} risk_score={facts.risk_score} "
-                    f"risk_band={facts.risk_band} top_factors={facts.top_factors} "
-                    f"model_version={facts.model_version} synthetic={facts.synthetic}",
-                    label="participant_risk",
-                )
-            )
+        )
 
     # 1b. Scoped cohort TRIAGE (Gate OPS-ASSIST): "who needs intervention / who's at risk in MY
     #     cohort". Deterministic intent match (not the LLM) → inject the caller's OWN scoped at-risk
     #     list as grounded DATA. cohort_at_risk reads ONLY under ctx.scope (RLS + dual-axis), coded
-    #     refs only, champion-only facts — operational triage, never clinical advice.
-    if participant_id is None and _is_cohort_triage_question(question):
+    #     refs only, champion-only facts — operational triage, never clinical advice. Fires only when
+    #     no individual participant was grounded above (a named participant takes precedence).
+    if facts is None and _is_cohort_triage_question(question):
         at_risk = cohort_at_risk(ctx)
         if at_risk:
             citations.append(
@@ -153,7 +183,8 @@ def grounded_answer(
                 "user",
                 f"Grounded context:\n{grounded}\n\nQuestion: {question}\n\n"
                 "Answer the question directly and concisely, grounded ONLY in the context above, "
-                "and cite the sources.",
+                "and cite the sources. Refer to any participant by their coded reference (e.g. "
+                "A-0001) exactly as it appears in the context — never a raw UUID.",
             ),
         ],
         temperature=0.0,

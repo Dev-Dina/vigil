@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/vigil"
 import { getCohort, ApiError } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
+import { participantLabel } from "@/lib/utils"
 import type { CohortRow } from "@/lib/types"
 
 // The clinical-ops AT-RISK surface (Gate 9.4). Scope-binding is enforced by the BACKEND
@@ -98,7 +99,9 @@ export default function AtRiskPage() {
                     onClick={() => router.push(`/participant/${r.participant_id}`)}
                     className="group cursor-pointer border-t-[0.5px] border-border transition-colors hover:bg-secondary/50"
                   >
-                    <td className="px-4 py-3 font-mono text-foreground">{r.participant_id}</td>
+                    <td className="px-4 py-3 font-mono text-foreground">
+                      {participantLabel(r.coded_ref, r.participant_id)}
+                    </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1.5 rounded-md bg-status-risk/10 px-2 py-0.5 font-mono text-xs font-semibold text-status-risk">
                         {Math.round(r.risk_score * 100)}% · {r.risk_band.toUpperCase()}

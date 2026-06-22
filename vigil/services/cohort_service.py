@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from vigil.core.scope import Scope
+from vigil.domain import IDENTITY_ROLES
 from vigil.repositories import routing as routing_repo
 from vigil.repositories import scoring as scoring_repo
 from vigil.repositories import tenancy as tenancy_repo
@@ -27,7 +28,10 @@ from vigil.services import scope_filter
 
 @dataclass(frozen=True, slots=True)
 class CohortRow:
-    participant_id: str
+    participant_id: str  # internal UUID locator
+    coded_ref: (
+        str | None
+    )  # human-readable pseudonymous ref; identity roles ONLY (None otherwise)
     trial_id: str
     site_id: str
     risk_score: float
@@ -87,12 +91,17 @@ def list_cohort(
             [p.id for p in rows],
             champion_versions=champion_versions,
         )
+        # coded_ref is the human-readable pseudonymous label, surfaced ONLY to identity (site)
+        # roles — the SAME gate as ParticipantDetail.identity. No scope/RLS change: this only
+        # decides whether the already-in-scope row's coded_ref is included in the response.
+        is_identity = scope.role in IDENTITY_ROLES
         result: list[CohortRow] = []
         for p in rows:
             champ = champ_scores.get(p.id)
             result.append(
                 CohortRow(
                     participant_id=str(p.id),
+                    coded_ref=p.coded_ref if is_identity else None,
                     trial_id=str(p.trial_id),
                     site_id=str(p.site_id),
                     # risk_score/band: denorm cache (champion-only write guard — B2c).

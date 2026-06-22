@@ -66,6 +66,18 @@ _SECRET = re.compile(
     r"connection string|database (?:dsn|password|credential)|service account)\b",
     re.IGNORECASE,
 )
+# Identity / de-anonymisation asks. Participants are CODED (coded_ref only) — there is NO name in
+# the system to give, so a name/identity-reveal ask is refused (structurally true AND here). Making
+# the coded_ref a resolvable reference (Gate CODED-REF) does NOT open identity answers. Narrow by
+# design: targets name/identity-reveal phrasing about a patient/participant or a coded ref (e.g.
+# "what is A-0001's name") — NOT "model name" / "file name" / a bare coded ref in a risk question.
+_IDENTITY = re.compile(
+    r"\b(?:real|full|legal|actual|patient'?s?|participant'?s?)\s+name\b"
+    r"|\bname\s+(?:of|for)\s+(?:this\s+|the\s+)?(?:patient|participant|[A-Za-z]{1,8}-\d+)"
+    r"|\b[A-Za-z]{1,8}-\d{2,}(?:'s)?\s+(?:real\s+|full\s+)?name\b"
+    r"|\b(?:de-?anonymi[sz]e|unmask|identify (?:the )?(?:patient|participant))\b",
+    re.IGNORECASE,
+)
 
 
 def check_content(text: str) -> GuardrailResult:
@@ -79,6 +91,12 @@ def check_content(text: str) -> GuardrailResult:
     if _CLINICAL.search(text):
         return GuardrailResult(
             "blocked", "clinical", "clinical/diagnostic advice is out of scope"
+        )
+    if _IDENTITY.search(text):
+        return GuardrailResult(
+            "blocked",
+            "identity",
+            "participant identity/name is never available (coded refs only)",
         )
     return GuardrailResult("allowed")
 

@@ -53,7 +53,10 @@ class AgentScopeError(Exception):
 
 @dataclass(frozen=True, slots=True)
 class RiskFacts:
-    participant_id: str
+    participant_id: str  # the internal UUID (stable locator)
+    coded_ref: (
+        str | None
+    )  # human-readable pseudonymous ref; identity roles ONLY (None otherwise)
     risk_score: float
     risk_band: str
     model_version: str  # the champion-of-record version (never a shadow/challenger)
@@ -138,41 +141,68 @@ def agent_tool_context(
 # ---------------------------------------------------------------------------
 
 
-def participant_risk_facts(ctx: ToolContext, participant_id: str) -> RiskFacts | None:
+def _resolve_in_scope_participant(ctx: ToolContext, ref: str):
+    """Resolve a participant the caller may see from EITHER a UUID or a coded_ref (e.g. ``A-0001``).
+
+    Scope-bound by construction and identical to every other tool read — there is NO new
+    cross-tenant query and NO scope widening:
+    - the lookup runs under ``ctx.session`` so Postgres RLS hides other sponsors (axis 1);
+    - ``scope.permits`` then enforces the cross-site narrowing RLS can't express (axis 2).
+    A ref outside the caller's scope (or unknown / malformed) returns ``None`` — never an error
+    that leaks existence. coded_ref resolution is the SAME scoped read ``cohort_at_risk`` uses.
+    """
+    candidates: list = []
+    try:
+        pid = uuid.UUID(ref)
+    except (ValueError, AttributeError, TypeError):
+        pid = None
+    if pid is not None:
+        p = tenancy_repo.get_participant(ctx.session, pid)
+        if p is not None:
+            candidates = [p]
+    else:
+        # Not a UUID → treat as a coded_ref (RLS-scoped; may match >1 within a sponsor's sites).
+        candidates = tenancy_repo.get_participants_by_coded_ref(ctx.session, ref)
+    for p in candidates:
+        # axis 2: cross-site within the tenant — RLS is sponsor-only, so enforce site/trial here.
+        if ctx.scope.permits(
+            ScopeTuple(
+                sponsor_id=str(p.sponsor_id),
+                trial_id=str(p.trial_id),
+                site_id=str(p.site_id),
+            )
+        ):
+            return p
+    return None
+
+
+def participant_risk_facts(ctx: ToolContext, participant_ref: str) -> RiskFacts | None:
     """Champion-only risk facts for a participant the caller may see, else ``None``.
 
-    Dual-axis: ``scoped_session`` (RLS) hides other sponsors (axis 1); ``scope.permits`` on the
-    row's (sponsor, trial, site) hides other SITES within the tenant for a site-scoped caller
-    (axis 2). Risk comes through the champion allowlist — a shadow/challenger row can never be
-    returned. Out-of-scope / not-found / unscored → ``None`` (no error that leaks existence).
+    ``participant_ref`` is EITHER the internal UUID OR the human-readable coded_ref
+    (e.g. ``A-0001``) — both resolve to the same participant WITHIN the caller's scope (dual-axis:
+    RLS cross-tenant + ``scope.permits`` cross-site; see ``_resolve_in_scope_participant``). Risk
+    comes through the champion allowlist — a shadow/challenger row can never be returned.
+    Out-of-scope / not-found / unscored → ``None`` (no error that leaks existence). The returned
+    ``coded_ref`` is surfaced ONLY to identity roles (same gate as ``cohort_at_risk`` / participant
+    detail), ``None`` otherwise — resolution is scope-bound regardless of role.
     """
-    try:
-        pid = uuid.UUID(participant_id)
-    except (ValueError, AttributeError):
-        return None
+    from vigil.domain import IDENTITY_ROLES  # local: avoid import cycle at module load
 
-    p = tenancy_repo.get_participant(ctx.session, pid)
+    p = _resolve_in_scope_participant(ctx, participant_ref)
     if p is None:
-        return None  # axis 1: cross-tenant / not found (RLS-hidden)
-
-    # axis 2: cross-site within the tenant — RLS is sponsor-only, so enforce site/trial here.
-    if not ctx.scope.permits(
-        ScopeTuple(
-            sponsor_id=str(p.sponsor_id),
-            trial_id=str(p.trial_id),
-            site_id=str(p.site_id),
-        )
-    ):
         return None
 
     champ = scoring_repo.get_surfaceable_score(
-        ctx.session, pid, champion_versions=ctx.champion_versions
+        ctx.session, p.id, champion_versions=ctx.champion_versions
     )
     if champ is None:
         return None  # no champion score — never fall back to a non-champion row
 
+    is_identity = ctx.scope.role in IDENTITY_ROLES
     return RiskFacts(
-        participant_id=str(pid),
+        participant_id=str(p.id),
+        coded_ref=p.coded_ref if is_identity else None,
         risk_score=champ.risk_score,
         risk_band=champ.risk_band,
         model_version=champ.model_version,

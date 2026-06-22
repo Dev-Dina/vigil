@@ -20,7 +20,7 @@ import {
   ApiError,
 } from "@/lib/api"
 import { useAuth } from "@/lib/auth-context"
-import { daysSince } from "@/lib/utils"
+import { daysSince, participantLabel } from "@/lib/utils"
 import { PLATFORM_ROLES, CAN_LOG_INTERVENTIONS } from "@/lib/role-gates"
 import { groupFactors } from "@/lib/factors"
 import type {
@@ -208,7 +208,10 @@ export default function ParticipantDetailPage() {
             </Link>
             <div className="h-5 w-px bg-border" />
             <div>
-              <h1 className="font-mono text-lg font-semibold text-foreground">{id}</h1>
+              {/* Coded ref is the primary label (identity roles); the UUID stays in the URL/keys. */}
+              <h1 className="font-mono text-lg font-semibold text-foreground">
+                {participantLabel(detail?.identity?.coded_ref, id)}
+              </h1>
               <p className="text-xs text-muted-foreground">
                 {detail ? `Trial ${detail.trial_id} · Site ${detail.site_id}` : "Loading…"}
               </p>

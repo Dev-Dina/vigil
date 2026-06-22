@@ -59,7 +59,9 @@ export interface MeOut {
 export type RiskBand = "high" | "medium" | "low"
 
 export interface CohortRow {
-  participant_id: string // coded id, never identifiable
+  participant_id: string // internal UUID locator (links/keys/API calls)
+  coded_ref: string | null // human-readable pseudonymous ref (e.g. "A-0001"); the primary
+  // user-facing label. Identity (site) roles only — null otherwise (same gate as identity).
   trial_id: string
   site_id: string
   risk_score: number // 0..1
@@ -79,9 +81,10 @@ export interface CohortSummary {
 // ---- participants (/participants) ----
 export type ParticipantStatus = "active" | "completed" | "withdrawn" | "censored"
 
-// api.md: identity populated ONLY for site roles; null otherwise. The detailed
-// shape of ParticipantIdentity is owned by the backend (PII) — kept opaque here.
+// api.md: identity populated ONLY for site roles; null otherwise. The coded_ref is the
+// human-readable PSEUDONYMOUS reference (e.g. "A-0001") — NOT a real name (no name exists).
 export interface ParticipantIdentity {
+  coded_ref?: string | null
   [key: string]: unknown
 }
 

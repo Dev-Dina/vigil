@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/lib/auth-context"
 import { PLATFORM_ROLES } from "@/lib/role-gates"
 import { groupFactors } from "@/lib/factors"
+import { participantLabel } from "@/lib/utils"
 import type {
   CohortRow,
   CohortSummary,
@@ -301,7 +302,7 @@ function RiskSpotlight({
                   : "rounded-md border-[0.5px] border-border bg-card px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground"
               }
             >
-              {r.participant_id} · {Math.round(r.risk_score * 100)}%
+              {participantLabel(r.coded_ref, r.participant_id)} · {Math.round(r.risk_score * 100)}%
             </button>
           )
         })}

@@ -125,10 +125,14 @@ def test_done_when_in_scope_answered_with_citations(
     # The routed agent is surfaced in the turn RESULT (not just message_events.route_or_agent).
     assert res["agent"] == "retention"
     assert res["citations"], "answered turn must carry citations (grounded)"
-    # A structured (champion) citation for the in-scope participant is present.
-    assert any(
-        c["source_type"] == "structured" and ids["participant_a"] in c["source_id"]
-        for c in res["citations"]
+    # A structured (champion) citation for the in-scope participant is present. Gate CODED-REF:
+    # it now refers to the participant by its CODED_REF (concise, matches the page) — NEVER the
+    # raw UUID (coordinator_a is an identity/site role, so the coded_ref is surfaced).
+    structured = [c for c in res["citations"] if c["source_type"] == "structured"]
+    assert structured, "answered turn must carry a structured participant citation"
+    assert any(c["source_id"].startswith("participant:") for c in structured)
+    assert all(ids["participant_a"] not in c["source_id"] for c in structured), (
+        "structured citation must reference the coded_ref, not the raw UUID"
     )
     rows = _events(ids, res["_conversation_id"])
     assert len(rows) == 1 and rows[0].guardrail_decision == "allowed"

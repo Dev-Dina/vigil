@@ -90,6 +90,25 @@ def get_participant(session: Session, participant_id: uuid.UUID) -> Participant 
     return session.get(Participant, participant_id)
 
 
+def get_participants_by_coded_ref(
+    session: Session, coded_ref: str
+) -> list[Participant]:
+    """RLS-scoped participants whose ``coded_ref`` matches (caller's tenant only).
+
+    The ``coded_ref`` (e.g. ``A-0001``) is the human-readable pseudonymous id. This is the
+    SAME scoped read as every other participant query — RLS already hides other sponsors'
+    rows, so cross-tenant resolution is impossible here. coded_ref is unique within a sponsor
+    in practice, but we return ALL in-scope matches so the caller never has to assume
+    uniqueness (it applies the SEC-1 site narrowing and picks the permitted one). Empty list
+    when none in scope — never an error that leaks existence.
+    """
+    return list(
+        session.execute(
+            select(Participant).where(Participant.coded_ref == coded_ref)
+        ).scalars()
+    )
+
+
 def list_participants(
     session: Session,
     *,

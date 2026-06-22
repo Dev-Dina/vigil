@@ -17,7 +17,10 @@ router = APIRouter(prefix="/cohort", tags=["cohort"])
 
 
 class CohortRow(BaseModel):
-    participant_id: str
+    participant_id: str  # internal UUID locator
+    coded_ref: str | None = (
+        None  # human-readable pseudonymous ref; identity roles only (null else)
+    )
     trial_id: str
     site_id: str
     risk_score: float = Field(ge=0, le=1)
@@ -65,6 +68,7 @@ async def list_cohort(
     items = [
         CohortRow(
             participant_id=r.participant_id,
+            coded_ref=r.coded_ref,
             trial_id=r.trial_id,
             site_id=r.site_id,
             risk_score=r.risk_score,

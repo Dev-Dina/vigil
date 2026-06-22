@@ -32,6 +32,7 @@ function humanizeFactor(tag: string): string {
 function toRow(r: CohortRow): Participant {
   return {
     id: r.participant_id,
+    codedRef: r.coded_ref, // primary user-facing label (UUID stays the route/key)
     riskScore: Math.round(r.risk_score * 100),
     riskTrend: [], // TODO(phase5): no CohortRow field; needs a risk-history endpoint
     topRiskReason: r.top_factors[0] ? humanizeFactor(r.top_factors[0]) : "—",
@@ -76,6 +77,7 @@ export default function CohortTriagePage() {
     return rows.filter(
       (r) =>
         r.participant_id.toLowerCase().includes(q) ||
+        (r.coded_ref?.toLowerCase().includes(q) ?? false) ||
         r.top_factors.some((f) => f.toLowerCase().includes(q)),
     )
   }, [rows, searchQuery])

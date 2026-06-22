@@ -3,14 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Phone, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn, participantLabel } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { StatusDot } from "./status-dot"
 import { MiniRiskDial } from "./mini-risk-dial"
 import { Sparkline } from "./sparkline"
 
 export interface Participant {
-  id: string
+  id: string // internal UUID — routing/keys only, never the primary display label
+  codedRef?: string | null // human-readable pseudonymous ref (e.g. "A-0001"); the primary label
   riskScore: number
   riskTrend: number[]
   topRiskReason: string
@@ -60,7 +61,11 @@ export function TriageTable({
     if (sortKey === "daysEnrolled") {
       return (a.daysEnrolled - b.daysEnrolled) * modifier
     }
-    return a.id.localeCompare(b.id) * modifier
+    // Sort by the displayed label (coded_ref when present), not the internal UUID.
+    return (
+      participantLabel(a.codedRef, a.id).localeCompare(participantLabel(b.codedRef, b.id)) *
+      modifier
+    )
   })
 
   const highestRiskId =
@@ -133,7 +138,7 @@ export function TriageTable({
                   onClick={() => handleSort("id")}
                   className="inline-flex items-center text-xs font-medium uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  Participant ID
+                  Participant
                   <SortIcon column="id" />
                 </button>
               </th>
@@ -198,7 +203,7 @@ export function TriageTable({
                         href={`/participant/${participant.id}`}
                         className="font-mono text-sm font-medium text-foreground underline-offset-4 hover:underline"
                       >
-                        {participant.id}
+                        {participantLabel(participant.codedRef, participant.id)}
                       </Link>
                       {syntheticIds?.has(participant.id) && (
                         <span className="inline-flex w-fit items-center rounded border border-status-watch/30 bg-status-watch/10 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-status-watch">

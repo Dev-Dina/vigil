@@ -138,7 +138,10 @@ class CohortQuery(BaseModel):
     cursor: str | None = None
     limit: int = Field(50, le=200)
 class CohortRow(BaseModel):
-    participant_id: str                     # coded id, never identifiable
+    participant_id: str                     # internal UUID locator (links/keys/API calls)
+    coded_ref: str | None = None            # human-readable pseudonymous ref (e.g. "A-0001"); the
+                                            # PRIMARY user-facing label. Identity roles ONLY (same
+                                            # gate as ParticipantDetail.identity); null otherwise.
     trial_id: str
     site_id: str
     risk_score: float = Field(ge=0, le=1)
@@ -233,7 +236,12 @@ redacted `message_events` row (`/specs/observability.md`).
 ```python
 class AssistantMessageIn(BaseModel):
     content: str = Field(max_length=8000)
-    participant_id: str | None = None       # if set, must be within scope; grounds the answer
+    participant_id: str | None = None       # if set, must be within scope; grounds the answer.
+                                            # A participant may ALSO be named in `content` by EITHER
+                                            # the coded_ref ("A-0001") or the UUID — both resolve to
+                                            # the same participant within scope (scoped read; a ref
+                                            # outside scope resolves to nothing). Resolving a coded_ref
+                                            # does NOT relax the clinical/identity guardrails.
 class JobAccepted(BaseModel):
     job_id: str
     conversation_id: str
