@@ -2,8 +2,8 @@
 
 Ordering is load-bearing: the pre-registration file is written from 1b's actual PR-AUC *before*
 any LSTM weight is touched; the evaluated result is appended only afterwards. Every artifact lands
-under ``data/models/t2d/`` (git-ignored); the pan-indication ``data/models/`` artifacts are never
-touched.
+under ``data/models/t2d/`` (committed; only ``data/raw`` is git-ignored); the pan-indication
+``data/models/`` artifacts are never touched.
 """
 
 from __future__ import annotations

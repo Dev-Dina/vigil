@@ -6,7 +6,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-# Repo-root-relative output roots. ``data/`` is git-ignored; extracts never committed.
+# Repo-root-relative output roots. Only ``data/raw`` (extracts) is git-ignored; the rest of
+# ``data/`` (clean, synthetic, models) is committed.
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATA_ROOT = REPO_ROOT / "data"
 RAW_ROOT = DATA_ROOT / "raw" / "aact"

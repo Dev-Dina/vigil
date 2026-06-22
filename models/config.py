@@ -1,7 +1,7 @@
 """Phase 3 build-time model configuration.
 
-Build-time only: artifacts live under ``data/models/`` (git-ignored) and are never reached at
-runtime or by an agent. The modelling cohort, horizon, seed, and split fractions are pinned
+Build-time only: artifacts live under ``data/models/`` (committed; only ``data/raw`` is git-ignored)
+and are never reached at runtime or by an agent. The modelling cohort, horizon, seed, and split fractions are pinned
 here once and shared by the cohort/split/feature layers so the three never drift.
 """
 
@@ -22,7 +22,7 @@ HORIZON_DAYS: int = 28
 #: Single fixed seed, reused from ingestion (one seed for the whole build).
 MODEL_SEED: int = SYNTHETIC_SEED
 
-#: Git-ignored artifacts root (model cards, plots, metrics).
+#: Committed artifacts root (model cards, plots, metrics); only ``data/raw`` is git-ignored.
 MODELS_ROOT = DATA_ROOT / "models"
 
 #: Temporal split fractions by trial count (train is the remainder). Stated once.

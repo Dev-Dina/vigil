@@ -13,8 +13,8 @@ scalers/encoders fit on **train only**, inherited from the Step-0 feature contra
   **missing-indicator method**, NOT silent value-imputation: the matrix already carries the
   explicit ``<col>_missing`` indicator columns, so missingness is preserved as a feature.
 
-Build-time only: every artifact lands under ``MODELS_ROOT`` (``data/models/``, git-ignored) and
-is never reached at runtime or by an agent. Leakage is checked LOUD before any model is fit.
+Build-time only: every artifact lands under ``MODELS_ROOT`` (``data/models/``, committed; only
+``data/raw`` is git-ignored) and is never reached at runtime or by an agent. Leakage is checked LOUD before any model is fit.
 """
 
 from __future__ import annotations
