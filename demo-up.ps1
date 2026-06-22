@@ -90,6 +90,36 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# --- 3b. VERIFY the bring-up — a PARTIAL start must fail LOUD, not silently print "Stack up" -----
+# `docker compose up` can return 0 while a service later exits (e.g. a build/runtime issue), so we
+# explicitly confirm every expected container is running. This is the check that was missing when
+# frontend/guide/mailpit silently stayed down after a host restart.
+$expected = @(
+    "vigil-postgres-1", "vigil-redis-1", "vigil-vault-1", "vigil-api-1",
+    "vigil-worker-1", "vigil-guide-1", "vigil-frontend-1", "vigil-mailpit-1"
+)
+Write-Host "Verifying all $($expected.Count) services are running..." -ForegroundColor Cyan
+$deadline = (Get-Date).AddSeconds(90)
+$down = @()
+do {
+    $down = @()
+    foreach ($name in $expected) {
+        $state = (docker inspect -f '{{.State.Status}}' $name 2>$null)
+        if ($state -ne "running") { $down += "$name = $([string]$state)" }
+    }
+    if ($down.Count -eq 0) { break }
+    Start-Sleep -Seconds 3
+} while ((Get-Date) -lt $deadline)
+
+if ($down.Count -gt 0) {
+    Write-Host "ERROR: these services are NOT running after bring-up:" -ForegroundColor Red
+    $down | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+    Write-Host "Inspect:  docker compose -f docker-compose.dev.yml -f docker-compose.live.yml -f docker-compose.mail.yml ps -a" -ForegroundColor Yellow
+    Write-Host "Logs:     docker logs <name> --tail 50   (e.g. docker logs vigil-guide-1 --tail 50)" -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "All $($expected.Count) services are running (healthchecks settle within ~40s)." -ForegroundColor Green
+
 # --- 4. URLs + next steps -----------------------------------------------------------------------
 Write-Host ""
 Write-Host "Stack up. Open:" -ForegroundColor Green

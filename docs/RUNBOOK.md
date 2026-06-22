@@ -175,6 +175,13 @@ docker compose -f docker-compose.dev.yml --profile app --profile guide --profile
 The **UI is then at http://localhost:3000**, the API at :8000, the Guide at :8080. (Fresh-volume DBs
 still need the one-time role/migrate/seed from §1.A.)
 
+> The stateless services (`frontend`/`guide`/`mailpit`) carry `restart: unless-stopped` so they
+> survive a Docker Desktop / host restart on their own. The **persistent Vault always restarts
+> SEALED** by design (Shamir keys off-repo) — re-unseal it (§1.B) and re-run the bring-up to recover
+> the app. For the demo, `.\demo-up.ps1` wraps the LIVE command below (secret-load + Vault-unseal
+> check) and now **verifies every service is running after `up`** — a partial bring-up fails loud
+> instead of printing "Stack up". `demo-up.ps1` also adds `--profile mail` (Mailpit at :8025).
+
 ```bash
 # LIVE (real tokens) — layer the live override + export the two keys first (§1.A→1.C pre-conditions):
 export VAULT_TOKEN=<scoped-read-token>          # persistent Vault, RUNBOOK §1.B

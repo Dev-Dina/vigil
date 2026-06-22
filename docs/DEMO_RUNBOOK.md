@@ -59,6 +59,13 @@ Equivalent raw command (what the script runs):
 docker compose -f docker-compose.dev.yml -f docker-compose.live.yml -f docker-compose.mail.yml \
   --profile app --profile guide --profile frontend --profile mail up -d --build
 ```
+`.\demo-up.ps1` is the **single command for the WHOLE stack** — frontend (`:3000`), guide (`:8080`),
+api (`:8000`), worker, postgres, redis, vault, mailpit (`:8025`). After the `up` it **verifies every
+service is running** and fails loud if any didn't come up (no more silent half-bring-ups). The
+stateless services (frontend/guide/mailpit) carry `restart: unless-stopped`, so they survive a Docker
+Desktop / host restart on their own. The **persistent Vault always restarts SEALED** (its Shamir keys
+are off-repo by design) — after any host restart, re-unseal it (step 1 above) and re-run `.\demo-up.ps1`,
+which brings the rest back up. (Postgres has no named volume, so a re-seed (step 3) is the normal PREP.)
 
 ### 3. Re-seed the clean fixture (wipe pollution + ops users + drift recipient)
 Run from the repo root in **Git Bash**. Migrations run as the **owner** (`vigil`); the seed runs as the

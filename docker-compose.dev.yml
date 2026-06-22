@@ -41,6 +41,10 @@ services:
     # instead; start this one explicitly with `--profile prod-vault` when exercising the prod
     # unseal lifecycle (operator init/unseal — see docs/RUNBOOK.md / README.md).
     profiles: ["prod-vault"]
+    # NOTE: deliberately NO `restart:` policy. The persistent Vault always starts SEALED; a compose
+    # recreate (which any `restart:`/config change forces) re-seals it → its `vault status` healthcheck
+    # fails → api/worker (depends_on vault healthy) cannot start → the bring-up aborts. demo-up.ps1
+    # manages Vault explicitly (ensures it is running + UNSEALED before the app `up`).
     # Run as the NON-ROOT vault user (uid 100, gid 1000 in the image). We bypass the image's
     # docker-entrypoint.sh (entrypoint: ["vault"]) and invoke vault directly with our single
     # file config — that wrapper, on the `server` branch, injects `-config=/vault/config` +
@@ -68,6 +72,7 @@ services:
     # Gated behind the `guide` profile (Gate D1) so it does not start with the dev app stack;
     # the Guide is its own (D3) gate. Start with `--profile guide`.
     profiles: ["guide"]
+    restart: unless-stopped  # survive a host/Docker restart (isolation unchanged — still guide-net only)
     build:
       context: .
       dockerfile: guide/Dockerfile
@@ -241,6 +246,7 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     profiles: ["mail"]
+    restart: unless-stopped
     ports:
       - "1025:1025"  # SMTP (also reachable in-network as mailpit:1025; published for host senders)
       - "8025:8025"  # web inbox — http://localhost:8025
@@ -263,6 +269,7 @@ services:
   # (it never reaches app services itself). Out of the default stack — only under --profile frontend.
   frontend:
     profiles: ["frontend"]
+    restart: unless-stopped
     build:
       context: ./frontend
       dockerfile: Dockerfile
