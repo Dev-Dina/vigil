@@ -90,17 +90,22 @@ async def post_message(
 
 
 async def get_job(job_id: str) -> AssistantTurn | JobPending | None:
-    """Poll an assistant turn job → the finished AssistantTurn, JobPending, or None if unknown."""
+    """Poll an assistant turn job → the finished AssistantTurn, JobPending, or None if not found.
+
+    A Redis/connection failure is an INFRASTRUCTURE outage, NOT "job not found": it raises
+    ``ServiceUnavailableError`` (router → 503) so it is never masqueraded as None → 404. A genuinely
+    unknown / unfinished / resultless job stays None → 404 (unchanged).
+    """
     from arq import create_pool
     from arq.jobs import Job, JobStatus
+    from redis.exceptions import RedisError
 
+    from vigil.core.errors import ServiceUnavailableError
     from vigil.workers.settings import _redis_settings
 
+    pool = None
     try:
         pool = await create_pool(_redis_settings())
-    except Exception:  # noqa: BLE001 - redis unreachable → treat as unknown
-        return None
-    try:
         job = Job(job_id, pool)
         raw_status = await job.status()
         if raw_status == JobStatus.not_found:
@@ -112,8 +117,13 @@ async def get_job(job_id: str) -> AssistantTurn | JobPending | None:
         if info is None or not info.success or not isinstance(info.result, dict):
             return None
         return _turn_from_result(info.result)
+    except (RedisError, OSError) as exc:
+        raise ServiceUnavailableError(
+            "assistant job store (redis) is unavailable"
+        ) from exc
     finally:
-        await pool.aclose()
+        if pool is not None:
+            await pool.aclose()
 
 
 def _turn_from_result(result: dict) -> AssistantTurn:

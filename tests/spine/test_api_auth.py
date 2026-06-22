@@ -116,3 +116,52 @@ def test_logout_revokes_session(client):
 def test_unauthenticated_is_rejected(client):
     assert client.get("/api/v1/auth/me").status_code == 401
     assert client.get("/api/v1/cohort").status_code == 401
+
+
+def _expired_token() -> str:
+    """A correctly-SIGNED token whose ``exp`` is in the past — fails at decode (before the session
+    check). Crafted directly so we don't depend on a positive TTL setting."""
+    import time
+    import uuid
+
+    import jwt
+
+    from vigil.core.config import get_settings
+
+    s = get_settings()
+    now = int(time.time())
+    claims = {
+        "iss": s.jwt_issuer,
+        "sub": str(uuid.uuid4()),
+        "iat": now - 7200,
+        "exp": now - 3600,  # expired an hour ago
+        "jti": "sess_expired",
+        "role": "coordinator",
+        "home_sponsor_id": None,
+        "home_cro_id": None,
+        "scope": [],
+        "scope_ver": 1,
+    }
+    return jwt.encode(claims, s.jwt_signing_key, algorithm=s.jwt_algorithm)
+
+
+def test_expired_token_is_401_not_500(client):
+    # C3: an expired token must be a clean 401, never an unhandled TokenError → 500.
+    token = _expired_token()
+    r = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 401, r.text
+
+
+def test_malformed_token_is_401_not_500(client):
+    # C3: a malformed / unsigned / garbage bearer token must be 401, never 500.
+    for bad in ("not-a-jwt", "a.b.c", "totally junk"):
+        r = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {bad}"})
+        assert r.status_code == 401, (bad, r.text)
+
+
+def test_valid_token_still_works_after_fix(client):
+    # The fix only changes the failure path: a valid token authenticates exactly as before.
+    token = _login(client, "coord.a@vigil.example")
+    r = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200, r.text
+    assert r.json()["role"] == "coordinator"

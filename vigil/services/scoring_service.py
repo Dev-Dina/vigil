@@ -94,58 +94,69 @@ async def trigger_scoring(
 
 
 async def get_job_status(job_id: str) -> ScoringJobStatus | None:
-    """Look up an Arq job by id and map to ScoringJobStatus."""
+    """Look up an Arq job by id and map to ScoringJobStatus, or None if the job is not found.
+
+    A Redis/connection failure is an INFRASTRUCTURE outage, NOT "job not found": it raises
+    ``ServiceUnavailableError`` (router → 503) so it is never masqueraded as None → 404. A genuinely
+    unknown job stays None → 404 (unchanged).
+    """
+    from arq import create_pool
+    from arq.jobs import Job, JobStatus
+    from redis.exceptions import RedisError
+
+    from vigil.core.errors import ServiceUnavailableError
+    from vigil.workers.settings import _redis_settings
+
+    pool = None
     try:
-        from arq.jobs import Job, JobStatus
-        from vigil.workers.settings import _redis_settings
-        from arq import create_pool
-
         pool = await create_pool(_redis_settings())
-        try:
-            job = Job(job_id, pool)
-            raw_status = await job.status()
+        job = Job(job_id, pool)
+        raw_status = await job.status()
 
-            if raw_status == JobStatus.not_found:
-                return None
+        if raw_status == JobStatus.not_found:
+            return None
 
-            result_info = await job.result_info()
-            trial_id = ""
-            n_scored: int | None = None
-            error: str | None = None
-            triggered_at = datetime.utcnow()
-            completed_at: datetime | None = None
+        result_info = await job.result_info()
+        trial_id = ""
+        n_scored: int | None = None
+        error: str | None = None
+        triggered_at = datetime.utcnow()
+        completed_at: datetime | None = None
 
-            if result_info is not None:
-                triggered_at = result_info.enqueue_time or datetime.utcnow()
-                if result_info.success and isinstance(result_info.result, dict):
-                    res = result_info.result
-                    trial_id = res.get("trial_id", "")
-                    n_scored = res.get("n_scored")
-                    completed_at = result_info.finish_time
-                elif not result_info.success:
-                    error = str(result_info.result)
-                    completed_at = result_info.finish_time
+        if result_info is not None:
+            triggered_at = result_info.enqueue_time or datetime.utcnow()
+            if result_info.success and isinstance(result_info.result, dict):
+                res = result_info.result
+                trial_id = res.get("trial_id", "")
+                n_scored = res.get("n_scored")
+                completed_at = result_info.finish_time
+            elif not result_info.success:
+                error = str(result_info.result)
+                completed_at = result_info.finish_time
 
-            # Map arq JobStatus to our enum.
-            status_map = {
-                JobStatus.queued: "queued",
-                JobStatus.deferred: "queued",
-                JobStatus.in_progress: "running",
-                JobStatus.complete: "done",
-                JobStatus.not_found: "failed",
-            }
-            mapped = status_map.get(raw_status, "failed")
+        # Map arq JobStatus to our enum.
+        status_map = {
+            JobStatus.queued: "queued",
+            JobStatus.deferred: "queued",
+            JobStatus.in_progress: "running",
+            JobStatus.complete: "done",
+            JobStatus.not_found: "failed",
+        }
+        mapped = status_map.get(raw_status, "failed")
 
-            return ScoringJobStatus(
-                job_id=job_id,
-                trial_id=trial_id,
-                status=mapped,  # type: ignore[arg-type]
-                n_scored=n_scored,
-                error=error,
-                triggered_at=triggered_at,
-                completed_at=completed_at,
-            )
-        finally:
+        return ScoringJobStatus(
+            job_id=job_id,
+            trial_id=trial_id,
+            status=mapped,  # type: ignore[arg-type]
+            n_scored=n_scored,
+            error=error,
+            triggered_at=triggered_at,
+            completed_at=completed_at,
+        )
+    except (RedisError, OSError) as exc:
+        raise ServiceUnavailableError(
+            "scoring job store (redis) is unavailable"
+        ) from exc
+    finally:
+        if pool is not None:
             await pool.aclose()
-    except Exception:  # noqa: BLE001
-        return None

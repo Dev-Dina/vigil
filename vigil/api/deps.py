@@ -39,7 +39,9 @@ async def require_scope(authorization: str = Header(default="")) -> Scope:
     token = _bearer(authorization)
     try:
         scope = await authenticate_token(token)
-    except AuthError as exc:
+    except (AuthError, TokenError) as exc:
+        # AuthError = dead session / stale scope; TokenError = bad signature / expired / malformed
+        # (decode_token). Both are auth failures → 401 (never an unhandled 500); mirrors require_jti.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
         ) from exc

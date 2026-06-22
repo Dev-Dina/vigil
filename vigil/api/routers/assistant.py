@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from vigil.api.deps import ScopeDep
+from vigil.core.errors import ServiceUnavailableError
 from vigil.core.logging import request_id_var
 from vigil.core.scope import Scope
 from vigil.services import assistant_service
@@ -67,8 +68,16 @@ async def list_messages(
 
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str, scope: Scope = ScopeDep) -> AssistantTurn | JobPending:
-    """Poll an enqueued turn: the finished AssistantTurn, or JobPending; 404 if unknown."""
-    result = await assistant_service.get_job(job_id)
+    """Poll an enqueued turn: the finished AssistantTurn, or JobPending; 404 if unknown.
+
+    A Redis/job-store outage surfaces as 503 (honest "temporarily unavailable"), never a 404.
+    """
+    try:
+        result = await assistant_service.get_job(job_id)
+    except ServiceUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="job not found"

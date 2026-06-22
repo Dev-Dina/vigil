@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from vigil.api.deps import ScopeDep
 from vigil.core.config import get_settings
+from vigil.core.errors import ServiceUnavailableError
 from vigil.core.scope import Scope, ScopeError
 from vigil.domain import Role
 from vigil.services import scoring_service
@@ -62,8 +63,16 @@ async def trigger(body: ScoringTriggerIn, scope: Scope = ScopeDep) -> JobAccepte
 
 @router.get("/jobs/{job_id}", response_model=ScoringJobStatus)
 async def job_status(job_id: str, scope: Scope = ScopeDep) -> ScoringJobStatus:
-    """Poll job completion. Any authenticated user may call this."""
-    result = await scoring_service.get_job_status(job_id)
+    """Poll job completion. Any authenticated user may call this.
+
+    A Redis/job-store outage surfaces as 503 (honest "temporarily unavailable"), never a 404.
+    """
+    try:
+        result = await scoring_service.get_job_status(job_id)
+    except ServiceUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
     if result is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="job not found"
