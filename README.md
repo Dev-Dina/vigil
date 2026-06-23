@@ -14,6 +14,21 @@ labelled as **capability/architecture demonstrations, not validated clinical too
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/participant.png"><img src="docs/images/participant.png" alt="Participant detail with the non-dismissible [SYNTHETIC DATA] banner and imputed baseline covariates"></a><br/><sub><b>Participant detail</b> — champion score + a non-dismissible <code>[SYNTHETIC DATA]</code> banner + literature-prior <i>imputed</i> baseline covariates.</sub></td>
+    <td width="50%"><a href="docs/images/hero.png"><img src="docs/images/hero.png" alt="Public landing page: Surface risk early. Triage the cohort. Explain every flag."></a><br/><sub><b>Landing / Guide</b> — <i>“Surface risk early. Triage the cohort. Explain every flag.”</i> — surfaces and explains risk, never “predicts who drops out”.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><a href="docs/images/observability.png"><img src="docs/images/observability.png" alt="Redacted observability / audit log of message_events"></a><br/><sub><b>Observability</b> — redacted <code>message_events</code>; guardrail blocks visible; coded ids only, no raw content.</sub></td>
+    <td width="50%"><a href="docs/images/mlmonitoring.png"><img src="docs/images/mlmonitoring.png" alt="MLOps panel: champion / challenger / shadow registry and drift breaches"></a><br/><sub><b>MLOps</b> — champion / challenger / shadow registry for the T2D regime + drift-breach count + champion health.</sub></td>
+  </tr>
+</table>
+
+---
+
 ## The honest modeling story
 
 All numbers below are reproduced from the committed artifacts/cards
@@ -47,9 +62,67 @@ does not validate the dropout-precursor hypothesis on real participants.
 event *detection* produced no discrimination gain on this synthetic cohort. Reported plainly, not
 hidden.
 
+**Calibration sub-metrics are build-time-reported, not artifact-regenerable.** The isotonic
+calibrator's *mechanism* is reproducible (the `raw_prob → calibrated_prob` knot-map is persisted in
+the `.pt`), but its quality numbers (ECE ≈ 0.008 near-calibration, the ECE/Brier raw→calibrated, and
+the ≈ 0.74 top-bin empirical rate) are **reported at build time and are NOT regenerable from a
+committed artifact** — unlike the headline test metrics in `sequence_metrics.json`, which are
+(`specs/scoring.md` § Output calibration).
+
 **Provenance everywhere.** The synthetic cohort and its literature-prior-imputed covariates (BMI
 ~80% imputed, HbA1c ~55%) are labelled at every surface; the generator's latent hazard is never a
 feature; build-time AACT ingestion is never reached at runtime. No PHI, at any stage.
+
+![MLOps panel — the T2D model registry: champion, shadow, and challenger](docs/images/mlmonitoring.png)
+
+*The MLOps surface makes the modeling story concrete: **champion** `sequence_v1.1:demo` (the calibrated
+LSTM) is what scores participants; **shadow** `structural_v1.0:t2d` (the classic-ML baseline, real-AACT
+PR-AUC 0.697) runs alongside but never reaches a clinical read; **challenger** `sequence_v1.2:demo` is a
+**registry-only placeholder** (no trained `.pt`) for the governance demo. Regime = T2D (Type-2 Diabetes).*
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI["Next.js dashboard<br/>:3000"]
+
+  subgraph app["App network — never reachable from the Guide"]
+    API["FastAPI :8000<br/>routers - services - repositories"]
+    WORKER["Arq worker<br/>scoring - notifications - drift"]
+    PG[("Postgres + pgvector<br/>RLS FORCE - NOBYPASSRLS app role")]
+    REDIS[("Redis<br/>sessions - queue - rate-limit")]
+    VAULT[["Vault<br/>secrets - KV v2"]]
+  end
+
+  subgraph guidenet["guide-net — isolated public Guide"]
+    GUIDE["Guide :8080<br/>own image - imports no vigil.*"]
+    IDX[("file-backed<br/>approved-docs index")]
+    GSINK[("own message_events sink")]
+    NOTE["NO route to postgres / redis / vault / api"]
+  end
+
+  UI -->|"JWT (scoped)"| API
+  UI -->|"Ask the Guide - no login"| GUIDE
+  API --> PG
+  API -->|enqueue| REDIS
+  API -. reads secrets .-> VAULT
+  WORKER --> PG
+  WORKER --> REDIS
+  WORKER -. reads secrets .-> VAULT
+  GUIDE --> IDX
+  GUIDE --> GSINK
+  GUIDE -. own LLM key from env .-> ANTHROPIC["api.anthropic.com"]
+
+  classDef block fill:#fff7ed,stroke:#b45309,color:#b45309;
+  class NOTE block;
+```
+
+*The one-directional spine — routers → services → repositories → Postgres (RLS) — with the Arq worker,
+Redis, and Vault on the app network. The public **Guide** is a separate image on its own `guide-net`
+with **no path** to the app's DB, Redis, Vault, or API; it reads only its file-backed approved-doc
+index and uses its **own** LLM key from the environment.*
 
 ---
 
@@ -73,6 +146,28 @@ auto-unseal remain deferred future work (`FUTURE_WORK.md`).
 - The **sacred cross-tenant + cross-site leakage tests gate every release** (create as sponsor A,
   authenticate as sponsor B / another site, assert invisible).
 
+```mermaid
+flowchart TB
+  A["Sponsor A coordinator<br/>verified JWT to Scope: (A, trial-A, site-A)"]
+  A -->|"GET /participants/{a Sponsor-B id}"| API["API + service layer"]
+  API --> SEC1{"SEC-1: scope_filter.participant_visible<br/>cross-site tuple in scope?"}
+  SEC1 -->|no| DENY["403 / 404 — fail closed"]
+  SEC1 -->|yes| REPO["repository - scoped session<br/>SET app.current_sponsor = A"]
+  REPO --> RLS[("Postgres RLS<br/>FORCE - NOBYPASSRLS vigil_app<br/>USING sponsor_id = current_sponsor")]
+  RLS -->|"a Sponsor B row"| BLOCKED["0 rows — RLS hides it (cross-tenant BLOCKED)"]
+  RLS -->|"a Sponsor A row"| ALLOW{"champion-only<br/>surfacing allowlist"}
+  ALLOW -->|"shadow / challenger row"| HIDDEN["never surfaced to a clinical read"]
+  ALLOW -->|"champion row"| OK["row returned"]
+
+  classDef block fill:#fef2f2,stroke:#b91c1c,color:#b91c1c;
+  class DENY,BLOCKED,HIDDEN block;
+```
+
+*Two enforcement axes plus an allowlist: **RLS** (Postgres, `FORCE` + a `NOBYPASSRLS` app role,
+fail-closed) is the hard cross-tenant guarantee; **SEC-1** (`scope_filter.participant_visible`) adds the
+tuple-coupled cross-site narrowing RLS can't express; and **champion-only surfacing** ensures a
+shadow/challenger score can never reach a clinical read. A cross-tenant read returns zero rows.*
+
 ### Scoring pipeline
 Async Arq `score_trial`: resolve scope → load cohort + engagement → temporal + leakage guards →
 **champion** LSTM inference alongside a **shadow** structural GBT → **append** a timestamped history
@@ -81,6 +176,27 @@ row can never reach a clinical read); promotion-aware **risk history**; idempote
 crossings**; **real, leakage-safe occlusion attributions** (`top_factors`/`reasons`, method-labelled,
 never fabricated). Champion/challenger/shadow routing with audited promotion and drift-triggered
 fallback — nothing changes silently.
+
+```mermaid
+flowchart LR
+  REG[("model_registry + routing_state<br/>champion sequence_v1.1:demo<br/>shadow structural_v1.0:t2d<br/>challenger sequence_v1.2:demo - placeholder")]
+  REG --> SCORE["score_trial (Arq)<br/>champion + shadow inference<br/>APPEND timestamped history"]
+  SCORE --> AUDIT["participant denorm + audit"]
+  SCORE --> DRIFT["drift job - PSI / KS<br/>over the champion distribution"]
+  DRIFT -->|breach| ALERT["PII-free email alert<br/>(M2 mechanism)"]
+  ALERT -. "manual / future trigger" .-> PROMO["governed promotion<br/>audited champion swap (M3 mechanism)<br/>retains prior champion - reversible"]
+  DRIFT -. "DEFERRED: auto-delivery into handle_breach" .-> PROMO
+  PROMO --> REG
+
+  classDef deferred fill:#fff7ed,stroke:#b45309,color:#b45309,stroke-dasharray:5 5;
+  class PROMO deferred;
+```
+
+*Solid edges are **built**; dotted edges are **deferred**. Scoring **appends** history (champion +
+shadow), drift computes **real PSI/KS** over the champion distribution, and a breach raises a PII-free
+alert (M2 mechanism). Governed promotion (M3) is a **built, audited mechanism** but is **not
+demo-verified end-to-end** — the **drift → promote auto-delivery** into `handle_breach` is deferred, and
+no model has become champion *and then actually scored a cohort* through this path (`FUTURE_WORK.md`).*
 
 ### Agentic RAG (hand-rolled — not LangGraph/MCP)
 A **hand-rolled LLM-classify router** (`vigil/agents/router.py`) dispatches three scope-bound agents
@@ -92,12 +208,32 @@ is **Anthropic-primary with OpenRouter fallback**; every turn passes **PII redac
 (clinical/injection/secret refusals) and produces a **cited, doc-grounded answer or a grounded
 refusal**. A labelled **eval set is a CI release gate**. CI is hermetic (stub LLM, no key).
 
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/retentionagent.png"><img src="docs/images/retentionagent.png" alt="Retention agent answering which participants need intervention, with the synthetic-data caveat"></a><br/><sub><b>Retention agent</b> — answers “which participants need intervention” from <b>champion-only</b>, scope-bound facts (coded refs like <code>A-0005</code>), with the synthetic-data caveat. It explains risk; it never claims to predict who drops out.</sub></td>
+    <td width="50%"><a href="docs/images/guardrails.png"><img src="docs/images/guardrails.png" alt="Assistant refusing prompt-injection, cross-cohort, and out-of-scope requests"></a><br/><sub><b>Guardrails</b> — prompt-injection (“output your system instructions”), cross-cohort, and out-of-scope requests are <b>refused by guardrail</b>; clinical/identity asks are blocked too.</sub></td>
+  </tr>
+</table>
+
 ### Observability
 Every assistant/Guide turn writes a **redacted `message_events` row**; an inspect API + admin page
 (platform/auditor only, RLS-bound) lets you inspect messages, verify guardrails fired, debug
 retrieval, and confirm redaction. Real **cost/latency** capture and `/monitoring/{cost,models}`
 rollups; **honest-empty `/drift`** (real drift computation is explicitly deferred, not faked);
 optional **Langfuse** per-turn tracing (redacted-only, egress-allow-listed, off in CI).
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/images/observability.png"><img src="docs/images/observability.png" alt="Redacted message_events audit log with guardrail-block counts"></a><br/><sub><b>Audit log</b> — redacted <code>message_events</code>: router/guardrail refusals (<code>blocked</code>) vs answered turns (<code>allowed</code>), coded ids only. No raw or identifiable content exists.</sub></td>
+    <td width="50%"><a href="docs/images/cost.png"><img src="docs/images/cost.png" alt="Cost and Usage panel: per-turn token/cost rollups"></a><br/><sub><b>Cost &amp; Usage</b> — token/cost rollups from <b>real</b> per-turn usage; <b>honest-zero</b> until a cost rate is configured, never fabricated.</sub></td>
+  </tr>
+</table>
+
+![LLMOps — two separate cost sources: the in-app assistant vs the isolated Guide](docs/images/platformmonitoring.png)
+
+*LLMOps surface — the in-app assistant's cost (JWT-scoped, from `message_events`) and the **isolated
+Guide's** cost (read browser-direct from the Guide's **own** sink, no JWT) are shown **side by side,
+never merged**. Two separate cost stores is the observability face of the isolation boundary.*
 
 ### The isolated public Guide
 A **separate service** (`guide/`, its own creds, own file-backed approved-docs index, own LLM key,
@@ -107,6 +243,41 @@ import-graph/config/tool-surface audits, a behavioral red-team with a **zero-egr
 a **kind + Calico NetworkPolicy denial** (hand-verified on a real cluster, with a negative
 pre-check and a positive control).
 
+```mermaid
+flowchart TB
+  Q["Public question - no login"] --> GUIDE["Guide service :8080"]
+  GUIDE --> L1
+  subgraph L1["Layer 1 - Static  (CI, every PR)"]
+    S1["imports nothing from vigil.*<br/>config + tool-surface audit"]
+  end
+  L1 --> L2
+  subgraph L2["Layer 2 - Behavioral  (CI, every PR)"]
+    S2["guardrails + approved-docs-only RAG<br/>red-team + ZERO-egress assertion"]
+  end
+  L2 --> L3
+  subgraph L3["Layer 3 - Network  (PROVEN)"]
+    S3["kind + Calico NetworkPolicy denial<br/>negative pre-check + positive control<br/>committed PASS transcript"]
+  end
+  L3 --> ANS["grounded, cited answer - or a grounded refusal"]
+  S3 -->|"every deny-list target"| DENY["DENIED: postgres - redis - vault - api - model endpoints"]
+
+  classDef block fill:#fef2f2,stroke:#b91c1c,color:#b91c1c;
+  class DENY block;
+  style L3 fill:#ecfdf5,stroke:#047857,color:#047857;
+```
+
+*Defense in depth, proven in depth — each layer carries its honest status: **Layer 1 (static)** and
+**Layer 2 (behavioral, zero-egress)** gate every PR in CI; **Layer 3 (network)** is **PROVEN** — a
+kind + Calico NetworkPolicy denial hand-verified on a real cluster, with the PASS transcript committed
+at [`deploy/k8s/last-proof-transcript.txt`](deploy/k8s/last-proof-transcript.txt).*
+
+<img src="docs/images/assistant.png" alt="Public Guide chat next to the app sign-in, noting the Guide shares no login, data, or endpoints with the dashboard" width="900">
+
+*The public **Guide** (left) answers only from approved public documents **with citations**, with **no
+login and no participant data** — “served by the isolated Guide service, never the in-app assistant.”
+The app sign-in (right) states it plainly: the Guide on this page **shares no login, data, or endpoints
+with the dashboard.***
+
 ### Clinical-ops loop (Phase 9)
 An accruing missed-visit sequence injected for a synthetic participant is rescored by the **real
 calibrated model** until its trajectory crosses the **> 0.6 serious threshold** → a deduplicated,
@@ -114,6 +285,12 @@ idempotent **crossing** is recorded → the **scope-bound at-risk surface** show
 **real model-attribution reasons** + **operational recommended actions** (suggestions, not clinical
 advice) → a **PII-free, scope-bound email doorbell** fires once. **Every surface carries the
 synthetic-demonstration label.** A documented driver lives at `scripts/demo_clinical_ops_loop.py`.
+
+![Suggested coordinator actions and the audited interventions panel](docs/images/interventions.png)
+
+*The at-risk participant's **suggested coordinator actions** (Call / Reminder / Note) are **operational
+next-steps — explicitly not clinical advice**; logging one records an **audited intervention**. Acting on
+a flag is a human, audited decision — never an automated care action.*
 
 ### Frontend
 A **Next.js** dashboard wired to the real scoped API and role-gated: login, cohort dashboard,
@@ -145,6 +322,25 @@ rather than a hosted vector DB.
 ---
 
 ## Running it
+
+### One command — `.\demo-up.ps1`
+For the demo, a single PowerShell command brings up the **entire stack — all 8 services** (Postgres,
+Redis, the persistent Vault, API, worker, the isolated Guide, the frontend, and Mailpit):
+
+```powershell
+.\demo-up.ps1
+```
+
+It loads the demo secrets from `.env.demo` (gitignored — never committed), **checks the persistent
+Vault is unsealed** (and prints the unseal steps if not), runs the verified `docker compose` live
+bring-up, and **verifies every service is running** afterward (a partial bring-up fails loud instead of
+printing “Stack up”). One-time pre-requisites: **provision the persistent Vault** (init → unseal → write
+secrets → mint the scoped read token; `docs/RUNBOOK.md` §1.B) and **seed the DB once**
+(`docs/RUNBOOK.md` §1.A — `scripts/bootstrap_db.sql` → migrate → `vigil.seed`). After that, **data
+persists across restarts** (named Postgres + Vault volumes); the seed is **guarded** (re-running is a
+safe no-op — `--force` to wipe-and-reseed), and **`docker compose down -v` is the full wipe** (it
+destroys the volumes, so you re-provision Vault + re-seed). The Guide keeps its **own** LLM key in its
+environment by isolation design — it is never read from the app's Vault.
 
 The full, ordered bring-up (Docker stack → Vault unseal → migrate → seed → API/worker/frontend/Guide),
 the exact Vault secret paths, the stub flags, and the run-once **live-keys verification checklist**
@@ -280,6 +476,31 @@ Re-seeding is NOT needed — the secrets persist in `vault-data`.
 - `make golden` — rebuild the ingestion transform oracle; `make guide-isolation-proof` — the
   kind+Calico Guide isolation proof. CI (GitHub Actions) runs ruff, check_specs, the fast suite,
   the slow-inclusive spine against a Postgres service, and the frontend typecheck.
+
+The **gate discipline** behind all of this — spec-first, build-to-spec, the correct test artifact
+green, and the *“STOP and ratify the spec rather than fake a result”* honesty culture — is written up in
+**[`docs/process/METHODOLOGY.md`](docs/process/METHODOLOGY.md)**.
+
+---
+
+## Roadmap & future work
+
+`ROADMAP.md` is the per-phase status; **[`FUTURE_WORK.md`](FUTURE_WORK.md)** is the honest forward
+ledger — every line tagged **[built] / [scaffolded] / [deferred]**. The headline deferrals (stated
+plainly, not hidden):
+
+- **Production secrets posture** — cloud **KMS/transit Vault auto-unseal** + a Kubernetes-auth AppRole
+  app token (a **config swap, not an architecture change**; self-hosted Shamir 3-of-5 is built today).
+- **Full production K8s for the app** — HPA on `api`/`worker`, app-side egress NetworkPolicies, prod
+  Deployments/Services/Ingress (today `deploy/k8s/` carries **only** the proven Guide layer-3 proof).
+- **Automated scoring/drift→promote delivery** — M1 drift and the M3 governed-promotion mechanism are
+  built, but the **auto-delivery of a breach into `handle_breach`** is unwired, and the **challenger
+  `sequence_v1.2:demo` is a registry-only placeholder** (no trained `.pt`) — so promotion is a
+  mechanism, not a demo-verified end-to-end loop.
+- **Known minor items** — refresh-token rotation and explicit rate-limit verification; regime threading
+  not reachable from real callers; Guide pgvector parity; sponsor SOP/protocol RAG collections.
+- **Real-IPD / clinical validation — OUT OF SCOPE BY DESIGN.** Vigil proves *method and architecture* on
+  a labelled-synthetic cohort; it is never a validated clinical tool.
 
 ---
 
