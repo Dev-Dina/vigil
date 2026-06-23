@@ -62,6 +62,17 @@ def list_sites(session: Session) -> list[Site]:
     return list(session.execute(select(Site)).scalars())
 
 
+def get_trial(session: Session, trial_id: uuid.UUID) -> Trial | None:
+    """RLS-scoped trial fetch (caller's tenant only). None when RLS-hidden or nonexistent —
+    so an out-of-tenant trial id is indistinguishable from "not found" and leaks nothing."""
+    return session.get(Trial, trial_id)
+
+
+def get_site(session: Session, site_id: uuid.UUID) -> Site | None:
+    """RLS-scoped site fetch (caller's tenant only). None when RLS-hidden or nonexistent."""
+    return session.get(Site, site_id)
+
+
 # --- participant ---
 def create_participant(
     session: Session,

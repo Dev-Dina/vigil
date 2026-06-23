@@ -13,6 +13,12 @@ services:
       POSTGRES_DB: vigil
     ports:
       - "55432:5432"
+    volumes:
+      # Named volume → seeded demo data survives a recreate (parity with vault-data). Without this,
+      # data lived in the container writable layer and ANY recreate wiped it. `down -v` still wipes
+      # intentionally. NOTE: the FIRST up after adding this starts EMPTY (old writable-layer data is
+      # not migrated) → a one-time reseed (migrate + seed) is expected, then it persists.
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vigil"]
       interval: 10s
@@ -289,6 +295,7 @@ services:
 
 volumes:
   vault-data:
+  pgdata: # persistent Postgres data — seeded demo data survives recreates (see postgres service)
 
 networks:
   # Dedicated network for the Guide so it cannot resolve/reach the app datastores (which use the

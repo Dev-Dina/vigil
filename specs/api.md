@@ -162,9 +162,10 @@ the cohort service currently ignores them and 9.2 wires the `risk_band` filter +
 `sort=risk_desc` server-side (scope-bound exactly as today via RLS + `scope_filter`). See
 `/specs/dashboard.md § At-risk surface (Phase 9)`.
 
-### participants (`/participants`) — detail, factors, interventions
+### participants (`/participants`) — intake, detail, factors, interventions
 | Method · Path | Request | Response | Notes |
 |---|---|---|---|
+| `POST /participants` | `ParticipantCreateIn` | `ParticipantCreatedOut` (201) | **INTAKE-1** — the scoped intake front door. Creates a participant (coded_ref id + a labeled-synthetic visit trajectory) WITHIN the caller's scope, then **enqueues a champion score** (async; never inline) so it appears scored without a manual batch trigger. **Site roles only** (coordinator/PI) — 403 for every other role even within their sponsor. **Cross-tenant create is impossible**: `sponsor_id` is derived SERVER-SIDE from the (scope-read) trial, the SEC-1 site axis is enforced, and the write runs under RLS (`WITH CHECK` backstop). Out-of-scope trial/site → 403 `scope_denied`; malformed body → 422. |
 | `GET /participants/{participant_id}` | path | `ParticipantDetail` | 403 if id outside scope; identities only for site roles (PI/CRC) |
 | `GET /participants/{participant_id}/risk` | path | `RiskExplanation` | per-feature contributions behind the flag; champion-only (`model_version` is always the champion — shadow/challenger rows are filtered out per routing.md § (i)); `404` if no champion score (fail-closed, never a non-champion fallback) |
 | `GET /participants/{participant_id}/risk/history` | path | `RiskHistory` | champion risk **trajectory** over time (H1 appended history), ordered by `computed_at` ASC. **Semantic (b) — champion-at-each-point:** each point is the row whose `model_version` was the CHAMPION-OF-RECORD at its `computed_at` (reconstructed from the B3 promotion/fallback timeline); the trajectory spans version changes and each point carries its real `model_version`/`model_card_ref`/`synthetic` (B4) — a cross-version trajectory is honestly labeled, never smoothed. Shadow/challenger rows, and rows outside their version's champion tenure, NEVER appear. **Visibility vs emptiness:** out-of-scope / not-found (RLS-hidden) → `404`; platform role → `403`; an in-scope participant with no champion points yet → `200` with `points: []` (a normal data state, not an error). |
@@ -209,6 +210,28 @@ class RiskHistoryPoint(BaseModel):
 class RiskHistory(BaseModel):
     participant_id: str
     points: list[RiskHistoryPoint]          # champion-at-each-point, ordered by computed_at ASC
+class VisitIn(BaseModel):                        # one visit in the intake trajectory
+    attended: bool                               # ONLY field taken from the client; missed-visit
+                                                 # counters are DERIVED server-side and visit
+                                                 # timestamps are server-anchored in the past
+                                                 # (leakage-safe). Every row persists synthetic=True.
+class ParticipantCreateIn(BaseModel):            # INTAKE-1 — scoped participant creation
+    coded_ref: str                               # human-readable pseudonymous id (the primary label)
+    trial_id: str                                # must be within the caller's scope; else 403
+    site_id: str                                 # must be the caller's site (SEC-1); else 403
+    enrolled_at: datetime | None = None          # caller assertion; else the trajectory start
+    age_years: float | None = None; age_imputed: bool = False
+    hba1c_pct: float | None = None; hba1c_imputed: bool = False
+    bmi: float | None = None; bmi_imputed: bool = False
+    sex: str | None = None; arm_type: str | None = None
+    visits: list[VisitIn] = []                   # empty → a minimal documented attended trajectory
+class ParticipantCreatedOut(BaseModel):
+    participant_id: str; coded_ref: str; trial_id: str; site_id: str
+    enrolled_at: datetime
+    synthetic: bool                              # always True — intake is labeled-synthetic demo data
+    n_visits: int                                # engagement rows persisted (the scored trajectory)
+    scoring_job_id: str                          # the enqueued champion score (async; never inline)
+    note: str
 class InterventionIn(BaseModel):
     kind: Literal["call", "visit_reschedule", "reminder", "note"]
     note: str = Field(max_length=2000)
@@ -220,6 +243,17 @@ class InterventionOut(BaseModel):
     actor_user_id: str
     created_at: datetime
 ```
+
+- **Intake scope safety (INTAKE-1, sacred).** `POST /participants` creates only within the caller's
+  scope. The participant's `sponsor_id` is **derived server-side** from the trial row (which is read
+  under the caller's RLS session — an out-of-tenant trial is invisible, so another sponsor can never
+  be reached), **never** taken from the client. The trial/site narrowing is enforced via the SEC-1
+  `scope.permits` axis (a site role may create ONLY at its own `(sponsor, trial, site)`), and the
+  INSERT runs through the scoped session so Postgres RLS `WITH CHECK` is the defense-in-depth
+  backstop. A cross-tenant create attempt fails with 403 and persists nothing. Creation is a **site
+  action** — only coordinator/PI may call it. The auto-enqueued score uses the routing-resolved
+  champion (never a hardcoded version) and runs in the worker; the request returns immediately.
+  Every create writes an `audit_log` row (`participant_created`); intake data is labeled-synthetic.
 
 ### assistant (`/assistant`) — the REAL-app authenticated chatbot (NOT the public Guide)
 Distinct from the isolated public Guide (`/specs/isolation.md`); this assistant is scope-bound and

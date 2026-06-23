@@ -78,12 +78,18 @@ Write-Host "Vault is unsealed." -ForegroundColor Green
 # frontend = the Next.js UI (:3000)
 # mail   = Mailpit catch-all SMTP (:1025) + inbox (:8025); the mail override flips email->real SMTP
 Write-Host "Bringing up the live stack (app + worker + guide + frontend + mailpit + live Langfuse)..." -ForegroundColor Cyan
+# NAME the services explicitly (matching the live override's documented intent, docker-compose.live.yml
+# header). Without names, `--profile app` would also start vault-dev + vault-seed (the DEV-path vault),
+# running TWO vaults at once. Naming brings up EXACTLY the persistent vault + app stack; api/worker's
+# !override depends_on points at the persistent `vault`, so vault-dev/vault-seed do NOT start here.
+# postgres + redis come up automatically as api/worker dependencies. One vault on the live path = the
+# persistent one this script already ensured is unsealed.
 docker compose `
     -f docker-compose.dev.yml `
     -f docker-compose.live.yml `
     -f docker-compose.mail.yml `
     --profile app --profile guide --profile frontend --profile mail `
-    up -d --build
+    up -d --build vault api worker guide frontend mailpit
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: docker compose up failed (exit $LASTEXITCODE). Check the output above." -ForegroundColor Red

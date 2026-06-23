@@ -17,8 +17,8 @@ from pydantic import BaseModel, Field
 
 from vigil.api.deps import ScopeDep
 from vigil.core.schemas import Page
-from vigil.core.scope import Scope
-from vigil.domain import PLATFORM_ROLES, InterventionKind
+from vigil.core.scope import Scope, ScopeError
+from vigil.domain import PLATFORM_ROLES, SITE_ROLES, InterventionKind
 
 router = APIRouter(prefix="/participants", tags=["participants"])
 
@@ -109,6 +109,48 @@ class RiskHistory(BaseModel):
     points: list[RiskHistoryPoint]  # champion-only, ordered by computed_at ASC
 
 
+class VisitIn(BaseModel):
+    """One visit in the intake trajectory. Only ``attended`` is taken from the client; the
+    missed-visit counters are DERIVED server-side and timestamps are server-anchored in the past
+    (leakage-safe). Every persisted engagement row is ``synthetic=True``."""
+
+    attended: bool
+
+
+class ParticipantCreateIn(BaseModel):
+    """INTAKE-1 request body. ``trial_id``/``site_id`` must be within the caller's scope (else
+    403); the participant's ``sponsor_id`` is derived SERVER-SIDE from the trial, never from here."""
+
+    coded_ref: str = Field(min_length=1, max_length=64)
+    trial_id: str
+    site_id: str
+    enrolled_at: datetime | None = None
+    age_years: float | None = None
+    age_imputed: bool = False
+    hba1c_pct: float | None = None
+    hba1c_imputed: bool = False
+    bmi: float | None = None
+    bmi_imputed: bool = False
+    sex: str | None = Field(default=None, max_length=16)
+    arm_type: str | None = Field(default=None, max_length=64)
+    # The visit trajectory the model scores. Empty → a minimal documented attended trajectory.
+    visits: list[VisitIn] = Field(default_factory=list)
+
+
+class ParticipantCreatedOut(BaseModel):
+    participant_id: str
+    coded_ref: str
+    trial_id: str
+    site_id: str
+    enrolled_at: datetime
+    synthetic: bool  # always True — intake is labeled-synthetic demo data
+    n_visits: int
+    scoring_job_id: (
+        str  # the enqueued champion score (async; risk populates when the worker runs)
+    )
+    note: str = "scoring enqueued — risk score/band populate asynchronously"
+
+
 class InterventionIn(BaseModel):
     kind: InterventionKind
     note: str = Field(max_length=2000)
@@ -148,9 +190,83 @@ def _deny_auditor_write(scope: Scope) -> None:
         )
 
 
+def _require_site_role(scope: Scope) -> None:
+    """Only site roles (coordinator / PI) may CREATE a participant — enrollment is a site action.
+
+    Every non-site role (platform, auditor, sponsor-oversight, CRO) → 403, even when the requested
+    trial is within their sponsor scope (the role gate is independent of the data-scope check).
+    """
+    if scope.role not in SITE_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="only site roles (coordinator/PI) may create participants",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+
+@router.post("", status_code=201, response_model=ParticipantCreatedOut)
+async def create_participant(
+    body: ParticipantCreateIn,
+    scope: Scope = ScopeDep,
+) -> ParticipantCreatedOut:
+    """POST /participants — the scoped intake front door (INTAKE-1).
+
+    Creates a participant (coded_ref id + a synthetic visit trajectory) WITHIN the caller's scope,
+    then ENQUEUES a champion score so the new participant appears scored without a manual batch
+    trigger. SACRED: cross-tenant creation is impossible — the ``sponsor_id`` is derived server-side
+    from the scoped trial, the write runs under RLS (``WITH CHECK`` backstop), and the caller's site
+    scope is enforced (SEC-1). 403 for non-site roles and for any trial/site outside scope; 422 on a
+    malformed body. Returns 201 promptly with the participant + the async scoring handle — the
+    request never blocks on the model.
+    """
+    from vigil.services import participant_service, scoring_service
+
+    _require_site_role(scope)
+    try:
+        view = participant_service.create_participant(
+            scope,
+            coded_ref=body.coded_ref,
+            trial_id=body.trial_id,
+            site_id=body.site_id,
+            enrolled_at=body.enrolled_at,
+            age_years=body.age_years,
+            age_imputed=body.age_imputed,
+            hba1c_pct=body.hba1c_pct,
+            hba1c_imputed=body.hba1c_imputed,
+            bmi=body.bmi,
+            bmi_imputed=body.bmi_imputed,
+            sex=body.sex,
+            arm_type=body.arm_type,
+            attended=[v.attended for v in body.visits],
+        )
+    except ScopeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    # AUTO-SCORE: enqueue a scoped trial rescore — champion resolved at job time (NOT hardcoded),
+    # reusing the SAME scope-validated enqueue every manual trigger uses. Async: the new
+    # participant's risk_score/band populate when the worker runs (it then surfaces in the cohort /
+    # at-risk views, and the existing crossing-detection path applies if it crosses high).
+    job_id = await scoring_service.trigger_scoring(scope, trial_id=view.trial_id)
+    return ParticipantCreatedOut(
+        participant_id=view.participant_id,
+        coded_ref=view.coded_ref,
+        trial_id=view.trial_id,
+        site_id=view.site_id,
+        enrolled_at=view.enrolled_at,
+        synthetic=view.synthetic,
+        n_visits=view.n_visits,
+        scoring_job_id=job_id,
+    )
 
 
 @router.get("/{participant_id}", response_model=ParticipantDetail)
