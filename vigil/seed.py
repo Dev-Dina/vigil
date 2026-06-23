@@ -29,22 +29,26 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pandas as pd
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
 from vigil.core.logging import configure_logging, get_logger
 from vigil.core.security import hash_password
 from vigil.db.models import (
     AssignmentGrant,
+    Cro,
     Engagement,
     ModelRegistry,
     Participant,
     RoutingState,
     Site,
+    Sponsor,
     Trial,
     User,
 )
@@ -85,6 +89,90 @@ _SYNTH_DIR: Path = Path(__file__).parent.parent / "data" / "synthetic" / "t2d"
 # keeps every seeded visit strictly in the past, while a uniform shift preserves every
 # inter-visit gap (the relative structure the sequence model consumes).
 _SEED_FUTURE_MARGIN_DAYS = 1
+
+# SEED-GUARD: stable natural keys that identify a PRIOR demo seed. UUIDs are random per run, but
+# these are constant — the sponsor names are committed in the seed's very first step (so even a
+# partially-crashed prior run is detected), and every seeded user lives at the RFC-2606 example
+# domain @vigil.example (the drift-proof selector the --force wipe deletes by).
+_SEED_SPONSOR_NAMES: tuple[str, ...] = ("Sponsor A", "Sponsor B")
+_SEED_USER_EMAIL_LIKE = "%@vigil.example"
+
+
+class SeedExistsError(RuntimeError):
+    """Raised when :func:`seed` runs against a DB that already holds the demo seed (no ``force``).
+
+    The seed APPENDS with fresh UUIDs every run, so a second unguarded run doubles the cohort. This
+    turns that accident into a clean, explicit refusal. ``n_participants`` is the live count for the
+    operator message.
+    """
+
+    def __init__(self, n_participants: int) -> None:
+        self.n_participants = n_participants
+        super().__init__(f"DB already seeded ({n_participants} participants present)")
+
+
+def _existing_seed_sponsors(session: Session) -> list[Sponsor]:
+    """The demo seed sponsors present in the DB — the stable 'already seeded' signal (RLS-readable
+    under the platform session via the sponsor_self ``is_platform`` clause)."""
+    return list(
+        session.execute(
+            select(Sponsor).where(Sponsor.name.in_(_SEED_SPONSOR_NAMES))
+        ).scalars()
+    )
+
+
+def _count_seeded_participants(sponsor_ids: list[uuid.UUID]) -> int:
+    """Total participants across the existing seed sponsors. Participants are sponsor-RLS'd (NOT
+    visible under the platform session), so the count is taken under each sponsor's bound session."""
+    total = 0
+    for sid in sponsor_ids:
+        with sponsor_bootstrap_session(str(sid)) as session:
+            total += int(
+                session.execute(select(func.count()).select_from(Participant)).scalar()
+                or 0
+            )
+    return total
+
+
+def _wipe_demo_data(sponsor_ids: list[uuid.UUID]) -> None:
+    """Delete the prior demo seed so a ``--force`` reseed lands a clean cohort (36, not 72).
+
+    FK-safe deletion order (RESTRICT edges force this sequence):
+      1. participants — under each sponsor's RLS session; cascades engagement/participant_score/
+         risk_crossing/intervention (ON DELETE CASCADE). This also clears the intervention→user
+         RESTRICT edge so the users can be removed next.
+      2. assignment_grants then @vigil.example users — under the platform session. Grants go first
+         (the users' ``granted_by`` is a RESTRICT self-edge). Users carry ``home_site_id``/
+         ``home_trial_id``/``home_sponsor_id`` RESTRICT edges, so they MUST be gone before sites/
+         trials/sponsors.
+      3. sites then trials — under each sponsor's RLS session (now unreferenced by any user).
+      4. the t2d routing/registry projection, the sponsors, and the demo CRO — platform session.
+    ``audit_log`` history is intentionally retained (append-only; its FKs are SET NULL on delete).
+    Runs as the app role: DELETE (RLS-scoped), never TRUNCATE (needs no owner/BYPASSRLS privilege).
+    """
+    # 1) Participants first (cascades engagement/score/crossing/intervention → clears the
+    #    intervention→user RESTRICT edge).
+    for sid in sponsor_ids:
+        with sponsor_bootstrap_session(str(sid)) as session:
+            session.execute(delete(Participant))
+    # 2) Grants then users (users RESTRICT-reference site/trial/sponsor via home_*, so they precede
+    #    those deletes; grants precede users for the granted_by RESTRICT self-edge).
+    with platform_session() as session:
+        session.execute(
+            delete(AssignmentGrant).where(AssignmentGrant.sponsor_id.in_(sponsor_ids))
+        )
+        session.execute(delete(User).where(User.email.like(_SEED_USER_EMAIL_LIKE)))
+    # 3) Sites then trials (now unreferenced by any user.home_* edge).
+    for sid in sponsor_ids:
+        with sponsor_bootstrap_session(str(sid)) as session:
+            session.execute(delete(Site))
+            session.execute(delete(Trial))
+    # 4) Routing/registry projection, sponsors, CRO.
+    with platform_session() as session:
+        session.execute(delete(RoutingState).where(RoutingState.regime == "t2d"))
+        session.execute(delete(ModelRegistry).where(ModelRegistry.regime == "t2d"))
+        session.execute(delete(Sponsor).where(Sponsor.id.in_(sponsor_ids)))
+        session.execute(delete(Cro).where(Cro.name == "Acme CRO"))
 
 
 def _map_synthetic_pid(demo_uuid: uuid.UUID, n_participants: int) -> int:
@@ -398,8 +486,31 @@ def _build_sponsor_cohort(sponsor_id: uuid.UUID, prefix: str) -> dict:
     return out
 
 
-def seed() -> dict[str, str]:
+def seed(*, force: bool = False) -> dict[str, str]:
+    """Seed the demo cohort. Idempotent-by-guard: refuses to run on an ALREADY-seeded DB (the seed
+    APPENDS with fresh UUIDs, so a second unguarded run doubles the cohort). ``force=True`` first
+    wipes the prior demo data, then reseeds. A clean/empty DB always seeds normally (the tests/CI
+    path). Raises :class:`SeedExistsError` when already seeded and ``force`` is False."""
     configure_logging("INFO")
+
+    # SEED-GUARD: detect a prior seed by its stable natural key (the demo sponsor names — committed
+    # in step 1 below, so even a partially-crashed prior run is caught). A clean DB has none → seeds
+    # normally (the conftest/CI path). With the persistent postgres volume this is the line between
+    # an idempotent no-op and silent data bloat (36 → 72 → ...).
+    with platform_session() as session:
+        existing = _existing_seed_sponsors(session)
+    if existing:
+        sponsor_ids = [sp.id for sp in existing]
+        if not force:
+            raise SeedExistsError(_count_seeded_participants(sponsor_ids))
+        log.warning(
+            "seed.force_reset",
+            extra={
+                "extra": {"sponsors": len(sponsor_ids), "action": "wipe_and_reseed"}
+            },
+        )
+        _wipe_demo_data(sponsor_ids)
+
     ids: dict[str, str] = {}
 
     # 1) Tenant roots + global CRO registry (platform-privileged bootstrap).
@@ -743,7 +854,18 @@ def _seed_score(
 
 
 def main() -> None:
-    ids = seed()
+    # --force / --reset: wipe the prior demo data, then reseed (an INTENTIONAL reseed in one command).
+    # Without it, an already-seeded DB is a clean no-op (exit 0) — never a silent doubling.
+    force = any(arg in ("--force", "--reset") for arg in sys.argv[1:])
+    try:
+        ids = seed(force=force)
+    except SeedExistsError as exc:
+        print(
+            f"DB already seeded — {exc.n_participants} participants present. "
+            "Re-run with --force to wipe-and-reseed, or DROP DATABASE first.",
+            file=sys.stderr,
+        )
+        return  # clean skip (exit 0): an accidental re-run is a NO-OP, not an error
     print(json.dumps(ids, indent=2))
 
 
