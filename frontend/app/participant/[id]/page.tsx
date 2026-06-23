@@ -218,7 +218,7 @@ export default function ParticipantDetailPage() {
             </div>
           </div>
 
-          <RiskDial value={riskPct} size="md" />
+          <RiskDial value={detail ? riskPct : null} size="md" />
         </div>
       </header>
 

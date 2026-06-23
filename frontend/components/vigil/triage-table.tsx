@@ -77,6 +77,11 @@ export function TriageTable({
         ).id
       : null
 
+  // The Sparkline needs ≥2 points; riskTrend has no CohortRow source yet, so it's currently empty for
+  // every row. Hide the whole "7-Day Trend" column unless SOME row actually has trend data — no
+  // permanently-blank labelled column. (When a risk-history source is wired, the column returns.)
+  const hasAnyTrend = participants.some((p) => (p.riskTrend?.length ?? 0) >= 2)
+
   const SortIcon = ({ column }: { column: SortKey }) => {
     if (sortKey !== column) {
       return <ChevronsUpDown className="ml-1 h-3 w-3 text-muted-foreground/50" />
@@ -153,11 +158,13 @@ export function TriageTable({
                   <SortIcon column="riskScore" />
                 </button>
               </th>
-              <th className="px-4 py-3 text-center">
-                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  7-Day Trend
-                </span>
-              </th>
+              {hasAnyTrend && (
+                <th className="px-4 py-3 text-center">
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    7-Day Trend
+                  </span>
+                </th>
+              )}
               <th className="px-4 py-3 text-left">
                 <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Top Risk Reason
@@ -222,11 +229,17 @@ export function TriageTable({
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-center">
-                      <Sparkline data={participant.riskTrend} width={56} height={20} />
-                    </div>
-                  </td>
+                  {hasAnyTrend && (
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center">
+                        {participant.riskTrend.length >= 2 ? (
+                          <Sparkline data={participant.riskTrend} width={56} height={20} />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </div>
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <span className="text-sm text-muted-foreground">
                       {participant.topRiskReason}

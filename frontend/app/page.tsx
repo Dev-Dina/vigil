@@ -87,7 +87,7 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center pt-4">
-              <RiskDial value={summary ? Math.round(summary.mean_risk * 100) : 0} size="lg" />
+              <RiskDial value={summary ? Math.round(summary.mean_risk * 100) : null} size="lg" />
               <p className="mt-4 max-w-[180px] text-center text-xs text-muted-foreground">
                 {summary
                   ? `${summary.by_band.high} participants in the high-risk band.`

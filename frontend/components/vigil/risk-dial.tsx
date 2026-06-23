@@ -4,7 +4,7 @@ import { cn, statusFromScore, type RiskStatus } from "@/lib/utils"
 import { StatusType } from "./status-dot"
 
 interface RiskDialProps {
-  value: number // 0-100
+  value: number | null // 0-100; null = loading/no score yet → renders "—", never a confident "0"
   size?: "sm" | "md" | "lg"
   showLabel?: boolean
   className?: string
@@ -27,9 +27,13 @@ const statusColors: Record<StatusType, string> = {
 
 export function RiskDial({ value, size = "md", showLabel = true, className, status }: RiskDialProps) {
   const config = sizeConfig[size]
+  // null = loading / no score yet → empty state ("—" + no progress arc), so the dial never shows a
+  // confident "0" while data is loading (matching the "—" metric cards beside it).
+  const isEmpty = value == null
+  const numeric = value ?? 0
   // Authoritative band-derived status when given; else cuts ALIGNED to the backend bands (>60/>30)
   // so a score-only dial never contradicts a banded chip elsewhere on the same participant.
-  const resolvedStatus = status ?? statusFromScore(value)
+  const resolvedStatus = status ?? statusFromScore(numeric)
   const color = statusColors[resolvedStatus]
   
   // Semicircle calculations
@@ -43,8 +47,8 @@ export function RiskDial({ value, size = "md", showLabel = true, className, stat
   // Calculate the arc length
   const circumference = Math.PI * radius
   
-  // Progress as percentage of semicircle
-  const progress = (value / 100) * circumference
+  // Progress as percentage of semicircle (0 when empty → the colored arc is invisible).
+  const progress = isEmpty ? 0 : (numeric / 100) * circumference
   
   return (
     <div className={cn("flex flex-col items-center", className)}>
@@ -77,10 +81,14 @@ export function RiskDial({ value, size = "md", showLabel = true, className, stat
           x={centerX}
           y={centerY - 8}
           textAnchor="middle"
-          className={cn("font-mono font-semibold fill-foreground", config.fontSize)}
+          className={cn(
+            "font-mono font-semibold",
+            isEmpty ? "fill-muted-foreground" : "fill-foreground",
+            config.fontSize
+          )}
           style={{ fontSize: size === "sm" ? "18px" : size === "md" ? "24px" : "32px" }}
         >
-          {value}
+          {isEmpty ? "—" : numeric}
         </text>
       </svg>
       {showLabel && (

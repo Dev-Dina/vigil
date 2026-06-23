@@ -130,6 +130,20 @@ export function RiskTrajectory({ points, height = 160, className }: RiskTrajecto
             data-synthetic={p.synthetic}
           />
         ))}
+
+        {/* A single history point has no line to draw — label the lone dot so it reads as one
+            observation, not a broken chart. (The zero-point empty state is handled above.) */}
+        {n === 1 && (
+          <text
+            x={xScale(0)}
+            y={yScale(points[0].risk_score) - 10}
+            textAnchor="middle"
+            className="fill-muted-foreground text-[9px]"
+            data-testid="risk-trajectory-single"
+          >
+            single observation
+          </text>
+        )}
       </svg>
       <div className="mt-1 flex items-center gap-4 px-2 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1">
