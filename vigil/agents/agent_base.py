@@ -27,22 +27,43 @@ from vigil.agents.tools import (
 )
 
 _REFUSAL = "I don't have grounded information for that within your scope."
+# Honest answer for a cohort-triage question whose scoped read found NOBODY at risk (the read
+# SUCCEEDED — the truth is "nobody"), used instead of the generic _REFUSAL on that path.
+_COHORT_NONE_AT_RISK = "No participants in your cohort are currently flagged at risk."
 
-# Deterministic (NOT LLM) intent match for the scoped triage tool (Gate OPS-ASSIST): "who needs
-# intervention", "who's at risk in my cohort", "which participants need follow-up". Keyword-gated so
-# the cohort tool is invoked ONLY for cohort/triage questions, never on every turn.
+# The triage CONCEPT terms — a risk STATE or an operational ACTION. The intent match keys on these
+# concepts (Gate FIX-TRIAGE-INTENT), not brittle literals: broadened to include drop-out / dropout /
+# disengagement on top of the original at-risk / high-risk / flagged / intervention / follow-up /
+# outreach / attention / triage / contact set.
+_TRIAGE_TERMS = (
+    r"(?:at[- ]risk|high[- ]risk|flagged|drop(?:ping|s|ped)?[ -]?out|disengag\w*|"
+    r"intervention|follow[- ]?up|outreach|attention|triage|contact)"
+)
+
+# Deterministic (NOT LLM) intent match for the scoped triage tool (Gate OPS-ASSIST): route a cohort
+# "who in my cohort is at risk / needs attention / might drop out" question to cohort_at_risk. Keyword-
+# gated so the cohort tool is invoked ONLY for cohort/triage questions, never on every turn. Broadened
+# (Gate FIX-TRIAGE-INTENT) so natural phrasings — "which of my participants are at risk", "who might
+# drop out", "which participants need follow-up" — match too, WITHOUT routing single-participant
+# ("why is A-0005 at risk") or methodology ("how does the model assess risk") questions here.
 _COHORT_TRIAGE = re.compile(
-    r"(who\b[^?]*\b(?:need|needs|at[- ]risk|high[- ]risk|flagged|follow[- ]?up|"
-    r"intervention|contact|outreach|attention|triage)"
-    r"|which\s+participants?\b[^?]*\b(?:at[- ]risk|high[- ]risk|need|follow|intervention|flag)"
-    r"|\b(?:my|our)\s+cohort\b"
-    r"|\bneeds?\s+(?:an?\s+)?(?:intervention|follow[- ]?up|outreach))",
+    # (1) "who ... <triage term>" — who's at risk / who needs intervention / who might drop out
+    rf"(who\b[^?]*\b{_TRIAGE_TERMS}"
+    # (2) "which / my / our ... participants ... <triage term>" — allows "which OF MY participants …"
+    rf"|(?:which|my|our)\b[^?]*\bparticipants?\b[^?]*\b{_TRIAGE_TERMS}"
+    # (3) a risk adjective directly qualifying participants — "at-risk / high-risk / flagged participants"
+    rf"|(?:at[- ]risk|high[- ]risk|flagged)\s+participants?\b"
+    # (4) "my / our cohort" as a standalone triage signal (preserved from the original gate)
+    rf"|\b(?:my|our)\s+cohort\b"
+    # (5) a bare operational action — "needs (an) intervention / follow-up / outreach"
+    rf"|\bneeds?\s+(?:an?\s+)?(?:intervention|follow[- ]?up|outreach))",
     re.IGNORECASE,
 )
 
 
 def _is_cohort_triage_question(question: str) -> bool:
-    """True for scoped 'who's at risk / who needs follow-up in my cohort' triage questions."""
+    """True for scoped 'who's at risk / who needs follow-up / who might drop out in my cohort'
+    triage questions — the intent gate that decides whether to inject the cohort_at_risk block."""
     return bool(_COHORT_TRIAGE.search(question))
 
 
@@ -135,6 +156,7 @@ def grounded_answer(
     #     list as grounded DATA. cohort_at_risk reads ONLY under ctx.scope (RLS + dual-axis), coded
     #     refs only, champion-only facts — operational triage, never clinical advice. Fires only when
     #     no individual participant was grounded above (a named participant takes precedence).
+    cohort_checked_empty = False
     if facts is None and _is_cohort_triage_question(question):
         at_risk = cohort_at_risk(ctx)
         if at_risk:
@@ -159,6 +181,10 @@ def grounded_answer(
                     label="cohort_at_risk",
                 )
             )
+        else:
+            # The scoped read SUCCEEDED and found nobody at risk — remember so the turn answers
+            # honestly ("none at risk") below instead of the generic grounded refusal.
+            cohort_checked_empty = True
 
     # 2. Vector retrieval over the doc/card corpus (RLS-scoped) — grounds method/metric claims.
     for hit in search_documents(ctx, question, k=k):
@@ -171,8 +197,22 @@ def grounded_answer(
         )
         context_blocks.append(fence_untrusted(hit.chunk_text, label=hit.source_ref))
 
-    # 3. Grounded refusal: nothing retrieved → refuse, never hallucinate.
+    # 3. Grounded refusal: nothing retrieved → refuse, never hallucinate. EXCEPTION: a cohort-triage
+    #    question whose scoped read found ZERO at-risk participants gets an HONEST "none at risk"
+    #    answer (the read succeeded; the truth is "nobody"), not the generic grounded refusal.
     if not context_blocks:
+        if cohort_checked_empty:
+            return AgentAnswer(
+                content=_COHORT_NONE_AT_RISK,
+                citations=[
+                    {
+                        "source_type": "structured",
+                        "source_id": "cohort:at_risk",
+                        "locator": "n=0 band=high",
+                    }
+                ],
+                status="ok",
+            )
         return AgentAnswer(content=_REFUSAL, citations=[], status="refused")
 
     grounded = "\n\n".join(context_blocks)
