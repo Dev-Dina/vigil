@@ -78,10 +78,10 @@ docker exec vigil-postgres-1 psql -U vigil -d postgres -c "DROP DATABASE vigil W
 # b. MIGRATE as owner (use `uv run python -m alembic`; App Control blocks the bare `alembic` shim)
 VIGIL_DB_ADMIN_DSN=postgresql+psycopg://vigil:vigil@localhost:55432/vigil uv run python -m alembic upgrade head
 
-# c. RE-GRANT vigil_app (per-DB grants were dropped with the DB). The CREATE ROLE line prints a
-#    harmless parse error (psql can't interpolate :'var' inside a $$ block) — it's a NO-OP (the role
-#    already exists cluster-wide, password untouched); the GRANT/ALTER DEFAULT PRIVILEGES all apply.
-docker exec -i vigil-postgres-1 psql -U vigil -d vigil -v app_password=vigil_app_pw -f - < scripts/bootstrap_db.sql
+# c. RE-GRANT vigil_app (per-DB grants were dropped with the DB). Idempotent + interpolation-free:
+#    it CREATEs the role on a fresh cluster (vigil_app/vigil_app_pw) and is a clean no-op if it
+#    already exists; the GRANT/ALTER DEFAULT PRIVILEGES always apply. No psql -v needed (runs over stdin).
+docker exec -i vigil-postgres-1 psql -U vigil -d vigil -f - < scripts/bootstrap_db.sql
 
 # d. SEED as vigil_app (env backend). VIGIL_JWT_SIGNING_KEY here is a throwaway DEV key (the seed
 #    mints no tokens), NOT a secret — any dev string works.

@@ -2,15 +2,23 @@
 --
 -- RLS is bypassed by superusers and by roles with BYPASSRLS. The app MUST connect as a
 -- non-superuser, non-bypass role so row-level security actually binds. In production these
--- credentials are issued dynamically by Vault (infra.md); locally/CI we create a fixed role.
+-- credentials are issued dynamically by Vault (infra.md); locally/CI we create a fixed role
+-- with the dev password (vigil_app_pw — matches the dev DSN).
 --
--- Run as a superuser against the target database:
---   psql -U <super> -d vigil -v app_password=<pw> -f scripts/bootstrap_db.sql
+-- Interpolation-free + idempotent: safe over piped STDIN (no psql -v needed) and a re-run on an
+-- existing role is a clean no-op. Run as a superuser against the target database, e.g.:
+--   psql -U vigil -d vigil -f - < scripts/bootstrap_db.sql   # piped stdin (documented call sites)
+--   psql -U vigil -d vigil -f scripts/bootstrap_db.sql       # or as a file argument
 
+-- The password is a literal DEV/DEMO value, NOT psql :'var' interpolation: psql does NOT substitute
+-- variables inside a dollar-quoted (DO ...) block, so the old :'app_password' was a parse error on a
+-- FRESH DB (the role got created only because it already existed cluster-wide). Production uses Vault.
+-- NOBYPASSRLS is the tenancy guarantee and is preserved here — never grant this role BYPASSRLS.
+-- (No dollar-quote markers in any comment INSIDE the block below — that would close the quote early.)
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vigil_app') THEN
-    CREATE ROLE vigil_app LOGIN PASSWORD :'app_password' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+    CREATE ROLE vigil_app LOGIN PASSWORD 'vigil_app_pw' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
   END IF;
 END
 $$;
