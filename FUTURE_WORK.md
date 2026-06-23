@@ -64,6 +64,26 @@ clinical capability the system does not have.
   model; the real demo challenger `sequence_v1.2:demo` is a **registry-only placeholder with no trained
   `.pt`** (see § Scaffolded) and **drift→promote auto-delivery is unwired** — so no model has become
   champion *and then actually scored participants* through this path.
+- **[built]** Participant intake front door (INTAKE-1) — a scope-safe `POST /participants` that creates a
+  participant + a synthetic visit trajectory WITHIN the caller's scope (`sponsor_id` derived **server-side**
+  from the scoped trial, RLS `WITH CHECK`, the SEC-1 site axis, **site-roles-only**) and **auto-enqueues a
+  champion score** so a new participant appears scored without a manual batch trigger —
+  [vigil/api/routers/participants.py](vigil/api/routers/participants.py),
+  [vigil/services/participant_service.py](vigil/services/participant_service.py). Cross-tenant create is
+  impossible (proven by the cross-tenant-create-403 test, [tests/spine/test_intake.py](tests/spine/test_intake.py)).
+- **[built]** Seed idempotency (SEED-GUARD) — re-running `vigil.seed` on an already-seeded DB now **refuses
+  by default** (`SeedExistsError` → clean skip, exit 0) instead of APPENDING a second cohort (the old
+  36 → 72 → 112 bloat); `--force` does an FK-safe wipe + reseed — [vigil/seed.py](vigil/seed.py),
+  [tests/spine/test_seed_guard.py](tests/spine/test_seed_guard.py). *Optional future nicety: more granular
+  partial/corrupt-state detection (today the "already seeded" signal is "the demo sponsors exist").*
+- **[built]** Fresh-DB bootstrap (FIX-BOOTSTRAP) — `scripts/bootstrap_db.sql` created `vigil_app` with
+  `:'app_password'` **inside a `DO $$` block**, where psql never substitutes the variable → a parse error
+  on a truly fresh DB (it only ever "worked" because the role pre-existed cluster-wide). Replaced with the
+  literal dev password; the role now bootstraps cleanly + **idempotently** on a fresh cluster, with
+  **`NOBYPASSRLS` preserved** (the tenancy guarantee) — [scripts/bootstrap_db.sql](scripts/bootstrap_db.sql).
+- **[built]** Postgres durability (HARDEN-1) — added the `pgdata` named volume; seeded data now **persists
+  across restarts/recreates** (`docker compose down -v` still intentionally wipes) —
+  [docker-compose.dev.yml](docker-compose.dev.yml).
 
 ## 2. SCAFFOLDED / partial — built, but NOT complete
 
@@ -92,15 +112,39 @@ clinical capability the system does not have.
   a persisted source — `ref_trial.therapeutic_area` exists in ingestion but is not written to the
   operational `trial`), and the second-regime (`alz`) seed for end-to-end multi-regime dispatch is not
   built (`ROADMAP.md` Phase-4 register).
+- **[scaffolded]** **Automated scoring pipeline** — the **primitives all exist**: the Arq worker +
+  `score_trial` ([vigil/workers/tasks.py:486](vigil/workers/tasks.py#L486)),
+  `scoring_service.trigger_scoring` ([vigil/services/scoring_service.py](vigil/services/scoring_service.py)),
+  the worker **cron** mechanism `compute_drift` already uses ([vigil/workers/settings.py](vigil/workers/settings.py)),
+  and the idempotent **crossing-detection → PII-free alert** path; and **INTAKE-1** auto-enqueues a score on
+  create. **NOT built — the automatic enqueueing:** (a) a **scheduled nightly batch re-score** of all active
+  participants (wrap `trigger_scoring` in a `WorkerSettings.cron_jobs` entry, mirroring `compute_drift`);
+  (b) **event-triggered re-scoring** on an engagement change (a logged missed visit → enqueue a score → the
+  existing crossing-detection + alert). Batch for completeness, events for urgency. Note:
+  **single-participant scoring does not yet exist** (`score_trial` is whole-trial only) — that's the unit to
+  add first.
 
 ## 3. DEFERRED & why — genuine future phases
 
 - **[deferred]** **Full production K8s for the real app** — HPA on `api`/`worker`, app-side egress
   NetworkPolicies, prod Deployments/Services/Ingress. `deploy/k8s/` today carries **only** the Guide
   layer-3 isolation proof (kind + Calico); the rest of Phase 8 prod infra is future work.
-- **[deferred]** **Cloud KMS / transit Vault auto-unseal** — the self-hosted Shamir 3-of-5 unseal is
-  built and documented; cloud auto-unseal (+ a Kubernetes-auth AppRole token) is a **config swap, not
-  an architecture change**, and is not wired (no KMS available here). See `README.md` / `infra.md`.
+- **[deferred]** **Production secrets — auth method + KMS auto-unseal.** Today the app authenticates to
+  Vault with a **STATIC scoped read token** (`VAULT_TOKEN` in `.env.demo` locally — the dev stand-in for
+  production auth), and the persistent Vault uses **manual Shamir 3-of-5 unseal**. Production hardening:
+  replace the static token with a **Vault auth method** (AppRole / Kubernetes service-account / cloud IAM)
+  so the app holds **no static token**, and use **cloud-KMS / transit auto-unseal** (no human keys) —
+  eliminating static secrets outside Vault. Both are a **config swap, not an architecture change**
+  (non-root + persistent file storage + sealed-at-rest are identical). Not wired here (no KMS available).
+  **By design — NOT a gap:** the public **Guide keeps its OWN LLM key in an env var**. It is
+  network-isolated (`guide-net`), has **no Vault client**, and no path to the app/DB — so vaulting the
+  Guide's key would *breach* that isolation. The Guide's env-key is intentional, not a secrets-management
+  oversight.
+- **[deferred]** **Dev-vault profile separation** — the principled follow-up from the two-vault
+  investigation. `demo-up.ps1` (HARDEN-1) **names the services** so exactly ONE vault — the persistent one
+  — runs on the live path; the cleaner structural version moves `vault-dev` + `vault-seed` into their own
+  compose profile so *which vault runs* is a property of the **activated profiles**, not a service-naming
+  workaround. Touches the base `depends_on` wiring → needs a dev-path test before shipping.
 - **[deferred]** **Guide pgvector parity** — the Guide reads its **own file-backed** approved-doc index
   by design (strongest isolation); migrating it to a pgvector store at parity with the app is deferred
   to Phase 8 ([specs/isolation.md](specs/isolation.md) § Phase 7 ratified decisions).
@@ -113,3 +157,30 @@ clinical capability the system does not have.
   *method and architecture* on a clearly-labelled synthetic cohort; it is never a validated clinical
   tool and must not be presented as one. Validating on real individual patient data is a different
   project with its own regulatory/ethics surface.
+
+## 4. Known minor issues & polish
+
+> Recorded honestly from the behavioral bug-hunt — none alarming, all deliberately deferred. These are
+> nits / UX, **not** correctness, tenancy, or isolation defects.
+
+- **Cohort-triage intent match is narrow** — some natural phrasings ("which of my participants are at
+  risk") fall through to a generic *"I don't have grounded information"* instead of routing to the
+  `cohort_at_risk` tool or answering *"no at-risk participants in your scope"*. Broaden the intent match /
+  improve the empty-scope message ([vigil/agents/agent_base.py](vigil/agents/agent_base.py)).
+- **UUID shown to non-identity roles in ASSISTANT answers** — when no `coded_ref` is surfaced the
+  assistant falls back to the internal UUID
+  ([vigil/agents/agent_base.py:116](vigil/agents/agent_base.py#L116)). It is the caller's OWN-scope id (not
+  a cross-tenant leak) but contradicts the coded-ref-everywhere intent.
+- **Empty / whitespace assistant message accepted** → a billable router turn (`AssistantMessageIn.content`
+  has `max_length` but **no `min_length`** — [vigil/api/routers/assistant.py:29](vigil/api/routers/assistant.py#L29)).
+- **Admin malformed-UUID body → 500** on the admin-only write path (should be a 422).
+- **Render polish** — the loading risk dial shows `0`; a blank 7-day-trend column; a single risk-history
+  point renders as a lone dot; a traffic-split divide-by-zero is latent (currently shielded).
+- **Participant "explanation" is a client-side template** under a *"generated by the model"* footer —
+  reword to *"assembled from the model's outputs"* OR wire `/assistant` for a true generated explanation.
+- **Guide cache hit logs $0 / 0-token** → slightly **understates** cumulative Guide cost on the LLMOps card.
+- **`datetime.utcnow()` deprecation** ([vigil/services/scoring_service.py:123](vigil/services/scoring_service.py#L123)).
+- **`demo_secret` hardcoded** ([vigil/core/config.py:67](vigil/core/config.py#L67)) — safe only because
+  `demo_mode` defaults off (it gates `POST /scoring/inject_events`).
+- **No refresh-token rotation** — `/auth/refresh` is deferred (see *Auth hardening* in § 3); a 30-min JWT
+  TTL means re-login on expiry.

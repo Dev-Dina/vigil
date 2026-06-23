@@ -65,9 +65,19 @@ service is running** and fails loud if any didn't come up (no more silent half-b
 stateless services (frontend/guide/mailpit) carry `restart: unless-stopped`, so they survive a Docker
 Desktop / host restart on their own. The **persistent Vault always restarts SEALED** (its Shamir keys
 are off-repo by design) — after any host restart, re-unseal it (step 1 above) and re-run `.\demo-up.ps1`,
-which brings the rest back up. (Postgres has no named volume, so a re-seed (step 3) is the normal PREP.)
+which brings the rest back up. **Seeded Postgres data PERSISTS** (the `pgdata` named volume), so after a
+normal restart you do **NOT** re-seed — only re-unseal Vault (step 1) + `.\demo-up.ps1`. Step 3 below is a
+**one-time** setup (or a deliberate clean-slate reset), **not** a per-restart step. (`docker compose down
+-v` is the intentional full wipe — it destroys `pgdata` **and** `vault-data`; see PART 4.)
 
-### 3. Re-seed the clean fixture (wipe pollution + ops users + drift recipient)
+### 3. Seed the fixture — ONE-TIME (or a deliberate clean-slate reset)
+> **Persistent + guarded.** Seeded data persists across restarts (the `pgdata` volume), so this is a
+> **one-time** step — **not** per-restart. The `DROP DATABASE` flow below is the clean-slate path (wipe
+> pollution + ops users + drift recipient). Note: a bare `uv run python -m vigil.seed` on an
+> already-seeded DB now **refuses** (`SeedExistsError`, exit 0) to prevent the cohort doubling that used
+> to happen (36 → 72 → 112) — use `vigil.seed --force` to wipe-and-reseed in place, or the `DROP DATABASE`
+> flow below.
+
 Run from the repo root in **Git Bash**. Migrations run as the **owner** (`vigil`); the seed runs as the
 least-privilege **`vigil_app`** (env backend → exercises RLS-on-insert). The FORCE drop evicts
 api/worker, so restart them after.
@@ -241,7 +251,13 @@ State these **once** so the per-answer caveats stay short.
 docker compose -f docker-compose.dev.yml -f docker-compose.live.yml -f docker-compose.mail.yml \
   --profile app --profile guide --profile frontend --profile mail down
 ```
-(Add `-v` only if you want to drop volumes — that wipes Postgres + the Vault data; you'd re-init/unseal.)
+> **⚠️ `down -v` is the FULL wipe.** Adding `-v` destroys the named volumes — **`pgdata`** (all seeded
+> data) **and `vault-data`** (the Vault). After `down -v` the Vault comes back **uninitialised**: your OLD
+> unseal keys + root token are **dead**, so you must **re-initialise** it (`vault operator init` → NEW keys
+> + root token) and **re-provision** it from scratch — enable KV v2, write the secrets, write the policy,
+> mint a **NEW** scoped `VAULT_TOKEN` into `.env.demo` — per **[docs/RUNBOOK.md](RUNBOOK.md) §1.B**; then
+> redo the one-time DB seed (PART 1 step 3). A plain `down` (no `-v`) keeps both volumes — you only
+> re-unseal and re-run `.\demo-up.ps1`.
 
 **Common gotchas:**
 - **Env vars are per-window.** Use `.\demo-up.ps1` (it sets the session env from `.env.demo`); don't

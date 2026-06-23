@@ -288,6 +288,14 @@ docker compose -f docker-compose.dev.yml exec vault vault operator unseal <key-3
 > manager. `infra/vault/data/`, `infra/vault/init.json`, and `infra/vault/*.local` are git-ignored
 > precisely so unseal material is never committed.
 
+> **⚠️ After `docker compose down -v` (the full wipe).** `-v` **destroys the `vault-data` volume**, so the
+> persistent Vault comes back **uninitialised** — your OLD unseal keys + root token are **dead**. You must
+> **re-initialise** it (`vault operator init` → record the **NEW** 5 keys + root token) and **re-provision**
+> it from scratch per **§1.B**: enable KV v2 at `secret` → write the secrets → write the `vigil-app-ro`
+> policy → mint a **NEW** scoped read token → put it in `.env.demo` as `VAULT_TOKEN`. `down -v` also wipes
+> the `pgdata` volume, so re-run the one-time DB bootstrap/migrate/seed (§1.A). A plain `down` (no `-v`)
+> keeps **both** volumes — then you only re-unseal (above) and bring the stack back up.
+
 ### 1.3 Environment for the app processes
 Point the app at Vault (the production source of truth):
 ```bash
@@ -310,6 +318,12 @@ uv run alembic upgrade head                # apply the RLS schema (Makefile: `ma
 export VIGIL_DEMO_NOTIFY_EMAIL=you@example.com
 uv run python -m vigil.seed
 ```
+
+> **Seed once — it persists, and re-running is guarded.** With the `pgdata` named volume the seeded data
+> **survives restarts/recreates**, so seeding is a **one-time** step (NOT per-restart). Re-running
+> `vigil.seed` on an already-seeded DB now **refuses** (`SeedExistsError` → clean skip, exit 0) so it can
+> never silently double the cohort; pass **`vigil.seed --force`** to wipe-and-reseed in place, or
+> `DROP DATABASE` first. Only `docker compose down -v` wipes the seeded data (see §1.2).
 
 ### 1.5 Start the processes
 ```bash
