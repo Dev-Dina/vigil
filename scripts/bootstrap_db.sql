@@ -2,26 +2,38 @@
 --
 -- RLS is bypassed by superusers and by roles with BYPASSRLS. The app MUST connect as a
 -- non-superuser, non-bypass role so row-level security actually binds. In production these
--- credentials are issued dynamically by Vault (infra.md); locally/CI we create a fixed role
--- with the dev password (vigil_app_pw — matches the dev DSN).
+-- credentials are issued dynamically by Vault (infra.md); locally/CI the dev password is supplied
+-- at RUN TIME — it is NEVER hardcoded in this file.
 --
--- Interpolation-free + idempotent: safe over piped STDIN (no psql -v needed) and a re-run on an
--- existing role is a clean no-op. Run as a superuser against the target database, e.g.:
---   psql -U vigil -d vigil -f - < scripts/bootstrap_db.sql   # piped stdin (documented call sites)
---   psql -U vigil -d vigil -f scripts/bootstrap_db.sql       # or as a file argument
+-- Supply the password one of two ways (the dev value is `vigil_app_pw` — it matches the dev DSN):
+--   psql -U vigil -d vigil -v app_pw=vigil_app_pw -f - < scripts/bootstrap_db.sql     # a psql var
+--   VIGIL_APP_PW=vigil_app_pw psql -U vigil -d vigil -f - < scripts/bootstrap_db.sql  # or an env var
+-- Idempotent (a re-run on an existing role is a clean no-op) and safe over piped STDIN.
 
--- The password is a literal DEV/DEMO value, NOT psql :'var' interpolation: psql does NOT substitute
--- variables inside a dollar-quoted (DO ...) block, so the old :'app_password' was a parse error on a
--- FRESH DB (the role got created only because it already existed cluster-wide). Production uses Vault.
--- NOBYPASSRLS is the tenancy guarantee and is preserved here — never grant this role BYPASSRLS.
--- (No dollar-quote markers in any comment INSIDE the block below — that would close the quote early.)
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vigil_app') THEN
-    CREATE ROLE vigil_app LOGIN PASSWORD 'vigil_app_pw' NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
-  END IF;
-END
-$$;
+-- 1. Resolve the password: prefer `-v app_pw`, else fall back to the VIGIL_APP_PW env var (psql >= 14).
+--    Fail LOUD if neither is set — no silent default, no empty-password role (CLAUDE.md: errors never
+--    pass silently).
+\if :{?app_pw}
+\else
+  \getenv app_pw VIGIL_APP_PW
+\endif
+\if :{?app_pw}
+\else
+  \warn '[bootstrap_db] ERROR: no app-role password. Pass  -v app_pw=<pw>  or set  VIGIL_APP_PW=<pw>  (dev value: vigil_app_pw).'
+  \quit
+\endif
+
+-- 2. Create the role idempotently, WITHOUT a literal password. `:'app_pw'` is interpolated at the
+--    TOP LEVEL — NOT inside a dollar-quoted (DO ...) block, where psql would not substitute it — so
+--    this works over piped stdin. The SELECT emits the CREATE statement (with the password quoted via
+--    format %L) ONLY when the role is absent; \gexec runs it, so a re-run is a clean no-op.
+--    NOSUPERUSER / NOBYPASSRLS is the tenancy guarantee and is preserved — never grant this role BYPASSRLS.
+SELECT format(
+  'CREATE ROLE vigil_app LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE',
+  :'app_pw'
+)
+WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vigil_app')
+\gexec
 
 -- Schema usage + table DML. The app never owns tables (so it cannot ALTER away RLS) and
 -- never gets BYPASSRLS. Migrations run as the owner/superuser, not as vigil_app.

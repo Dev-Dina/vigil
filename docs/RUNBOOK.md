@@ -52,7 +52,8 @@ First-time / fresh-volume DB only (the existing dev volume already has these) â€
 `vigil_app` role + grants once, then migrate (as the owner) + seed (as `vigil_app`):
 ```bash
 docker compose -f docker-compose.dev.yml exec -T postgres \
-  psql -U vigil -d vigil -f - < scripts/bootstrap_db.sql  # role (vigil_app/vigil_app_pw) + grants; idempotent
+  psql -U vigil -d vigil -v app_pw=vigil_app_pw -f - < scripts/bootstrap_db.sql  # role + grants; idempotent
+  # the dev password is passed at run time (-v app_pw=â€¦ or a VIGIL_APP_PW env var), never hardcoded in the SQL
 docker compose -f docker-compose.dev.yml --profile tools run --rm migrate              # alembic (owner)
 docker compose -f docker-compose.dev.yml --profile tools run --rm seed                 # vigil.seed (vigil_app)
 ```
